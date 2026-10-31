@@ -1,0 +1,103 @@
+Larry: Farming Runs
+Copyright (c) 2026, agrahamlincoln
+
+Larry: Farming Runs is licensed under the BSD 2-Clause License (see LICENSE). It includes, or
+is derived from, the works below. Each keeps its own license; Larry's license does not cover
+them.
+
+
+RuneLite
+--------
+https://github.com/runelite/runelite
+
+Larry's farming patch decoding, crop table, farming regions and growth-tick timing are derived
+from RuneLite's Time Tracking plugin code. Its farming item tags come from the Item
+Identification plugin, and its achievement diary varbit ids from the Varbits table. The Java
+files derived from that code keep their upstream notices. Those source files carry these:
+
+  Copyright (c) 2018 Abex
+  Copyright (c) 2019 Abex
+  Copyright (c) 2018, NotFoxtrot <https://github.com/NotFoxtrot>
+  Copyright (c) 2019, Hydrox6 <ikada@protonmail.ch>
+
+RuneLite's own license:
+
+  BSD 2-Clause License
+
+  Copyright (c) 2016-2017, Adam <Adam@sigterm.info>
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright notice, this
+    list of conditions and the following disclaimer.
+
+  * Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+Quest Helper
+------------
+https://github.com/Zoinkwiz/quest-helper
+
+The quest var ids and stage thresholds that gate farm-run routes come from Quest Helper's quest
+data (its QuestVarbits and QuestVarPlayer tables and its quest files). Quest Helper's license:
+
+  BSD 2-Clause License
+
+  Copyright (c) 2020, Zoinkwiz
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+
+  1. Redistributions of source code must retain the above copyright notice, this
+     list of conditions and the following disclaimer.
+
+  2. Redistributions in binary form must reproduce the above copyright notice,
+     this list of conditions and the following disclaimer in the documentation
+     and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+Old School RuneScape Wiki
+-------------------------
+https://oldschool.runescape.wiki/
+
+Item, patch, teleport and game-mechanic facts were checked against the OSRS Wiki, whose content
+is available under CC BY-NC-SA 3.0 (https://creativecommons.org/licenses/by-nc-sa/3.0/).
+
+
+Other references
+----------------
+- Shortest Path plugin (https://github.com/Skretzo/shortest-path): its transport tables helped
+  locate teleport landing tiles and the requirements that gate them.
+- Item Charges Improved plugin (tictac7x): the bottomless bucket's chat wordings.
+- Dude, Where's My Stuff? plugin: the stored bucket's compost-type varbit values.
+
+
+Old School RuneScape and RuneScape are trademarks of Jagex Ltd. Larry: Farming Runs is not
+affiliated with or endorsed by Jagex.

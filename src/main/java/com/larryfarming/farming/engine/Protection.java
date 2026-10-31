@@ -1,0 +1,104 @@
+package com.larryfarming.farming.engine;
+
+import com.larryfarming.engine.ItemCounts;
+import com.larryfarming.engine.farming.Crop;
+import com.larryfarming.engine.farming.PatchType;
+import com.larryfarming.farming.model.RunStop;
+import com.larryfarming.model.PlayerState;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * What a farmer takes to protect a stop's patches, planned only from what the player already
+ * owns.
+ *
+ * <p>Protection is worth paying for only with the payment to spare, so a player short of it
+ * is never sent to gather it. Owned counts the bank, as the bag does: the trip starts at a
+ * bank, so a banked payment comes along.
+ *
+ * <p>Paid per patch planted this visit. A patch left growing was paid for when it went in,
+ * and a player owning one patch's fee of two protects one.
+ */
+final class Protection {
+
+    /** Fossil Island's currency. Stackable, so any amount takes one slot. */
+    static final int NUMULITE = 21555;
+
+    /** Mernia's fee for one seaweed patch. */
+    private static final int NUMULITE_PER_SEAWEED_PATCH = 200;
+
+    private static final Map<PatchType, Fee> PER_PATCH = Map.of(
+            PatchType.SEAWEED,
+            new Fee("Mernia", NUMULITE, "Numulite", NUMULITE_PER_SEAWEED_PATCH, 1));
+
+    /** Chet's fee for one coral nursery: five of the coral below, or giant seaweed. */
+    private static final int CORAL_FEE = 5;
+
+    private static final int GIANT_SEAWEED = 21504;
+
+    /** The fees that follow the crop planted, not the patch: each coral costs its own. */
+    private static final Map<Crop, Fee> PER_CROP = Map.of(
+            Crop.ELKHORN_CORAL, new Fee("Chet", GIANT_SEAWEED, "Giant seaweed", CORAL_FEE, 1),
+            Crop.PILLAR_CORAL, new Fee("Chet", Crop.ELKHORN_CORAL.getItemId(),
+                    "Elkhorn coral", CORAL_FEE, 1),
+            Crop.UMBRAL_CORAL, new Fee("Chet", Crop.PILLAR_CORAL.getItemId(),
+                    "Pillar coral", CORAL_FEE, 1));
+
+    private Protection() {
+    }
+
+    /** One farmer's payment: who takes it, what, how many, and for how many patches. */
+    static final class Fee {
+        final String farmer;
+        final int itemId;
+        final String name;
+        final int amount;
+        final int patches;
+
+        Fee(String farmer, int itemId, String name, int amount, int patches) {
+            this.farmer = farmer;
+            this.itemId = itemId;
+            this.name = name;
+            this.amount = amount;
+            this.patches = patches;
+        }
+    }
+
+    /**
+     * What this stop pays its farmer this visit for these plantings, one entry per patch
+     * planted. The first crop prices every patch. A stop whose fee follows the crop has a
+     * fixed crop, and plants that one crop on every open patch. See
+     * {@link #paymentAt(RunStop, int, Crop, PlayerState)}.
+     */
+    static Fee paymentAt(RunStop stop, List<Crop> planting, PlayerState state) {
+        return paymentAt(stop, planting.size(), planting.isEmpty() ? null : planting.get(0),
+                state);
+    }
+
+    /**
+     * What this stop pays its farmer this visit, or null where it pays nobody: the stop does
+     * not ask to, no fee is known for its patch type or crop, nothing goes in, or the player
+     * owns too little for one patch.
+     *
+     * @param planting how many of the stop's patches are planted this visit
+     * @param crop what goes in them, which sets the fee where the fee follows the crop; null
+     *             where it is not known, which pays no such fee
+     */
+    static Fee paymentAt(RunStop stop, int planting, Crop crop, PlayerState state) {
+        if (planting <= 0 || !stop.getActions().contains(RunStop.StopAction.PAY_PROTECTION)) {
+            return null;
+        }
+        PatchType type = stop.patchType();
+        Fee each = type == null ? null : PER_PATCH.get(type);
+        if (each == null && crop != null) {
+            each = PER_CROP.get(crop);
+        }
+        if (each == null) {
+            return null;
+        }
+        int affordable = ItemCounts.countOwned(state, each.itemId, null) / each.amount;
+        int patches = Math.min(Math.min(planting, stop.getPatches().size()), affordable);
+        return patches == 0 ? null
+                : new Fee(each.farmer, each.itemId, each.name, each.amount * patches, patches);
+    }
+}
