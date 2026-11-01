@@ -1,9 +1,7 @@
 package com.larryfarming.farming.catalogue;
 
 import com.larryfarming.farming.model.RunId;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * The item that stands for each run, for the infobox and the run list.
@@ -28,13 +26,11 @@ public final class RunIcons {
         icons.put(RunId.CONTRACT, 22993);      // Seed pack
         icons.put(RunId.HESPORI, 22875);       // Hespori seed
         icons.put(RunId.ANIMA, 22881);         // Attas seed
-        icons.put(RunId.CORAL, 31487);         // Umbral coral
         icons.put(RunId.CALQUAT, 5980);        // Calquat fruit
         icons.put(RunId.FRUIT_TREE, 5972);     // Papaya fruit
         icons.put(RunId.HERB, 207);            // Grimy ranarr weed
         icons.put(RunId.REGULAR_TREE, 1515);   // Yew logs
         icons.put(RunId.SEAWEED, 21504);       // Giant seaweed
-        icons.put(RunId.ULTRACOMPOST, 21483);  // Ultracompost
         return Collections.unmodifiableMap(icons);
     }
 

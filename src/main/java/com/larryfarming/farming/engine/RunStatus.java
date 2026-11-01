@@ -3,9 +3,9 @@ package com.larryfarming.farming.engine;
 /**
  * Whether a farming run is worth doing right now.
  *
- * <p>"Not now" splits four ways because each calls for a different message: waiting
- * (count down), locked (name what is missing), no route (name what blocks the way), and
- * unseen (admit we cannot tell).
+ * <p>"Not now" splits three ways because each draws differently: waiting (count down),
+ * locked (grey, naming what is missing or what blocks the way), and unseen (admit we
+ * cannot tell).
  */
 public enum RunStatus {
 
@@ -22,22 +22,17 @@ public enum RunStatus {
     /** Everything is growing. There is a time to count down to. */
     PENDING,
 
-    /** The player has not unlocked this run yet, and we can name what is missing. */
-    LOCKED,
-
     /**
-     * Unlocked, but no stop on the route proper has a route this player can take: every
-     * one is a definite refusal, such as a run only fairy rings reach with every way to a
-     * ring switched off. Like {@link #LOCKED}, nothing the player does today on the run
-     * itself helps, so it is never due.
+     * Nothing the player does today on the run itself helps, so it is never due. Either the
+     * run is not unlocked yet, or no stop on the route proper has a route this player can
+     * take: every one a definite refusal, such as a run only fairy rings reach with every
+     * way to a ring switched off. The detail names what is missing or what blocks the way.
      *
-     * <p>Judged on the variant {@link RunVariants} chose, the same one the walkthrough
-     * shows, not on every version of the run.
-     *
-     * <p>Only a definite refusal counts. A route resting on something unread (an unseen
-     * bank, a house whose town is unknown) is a guess, and a guess leaves the run as it is.
+     * <p>Routes are judged on the variant {@link RunVariants} chose, the one the walkthrough
+     * shows. A route resting on something unread (an unseen bank, a house whose town is
+     * unknown) is a guess, and a guess leaves the run as it is.
      */
-    NO_ROUTE,
+    LOCKED,
 
     /**
      * Not one of this run's patches has ever been observed, so there is nothing to

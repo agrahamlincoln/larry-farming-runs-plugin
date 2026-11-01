@@ -2,15 +2,9 @@ package com.larryfarming.farming.engine;
 
 import com.larryfarming.farming.detection.CapabilityResolver;
 import com.larryfarming.farming.detection.CapabilityState;
-import com.larryfarming.farming.model.FarmingPreferences;
-import com.larryfarming.farming.model.FarmingRun;
-import com.larryfarming.farming.model.Spellbook;
-import com.larryfarming.farming.model.Zone;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import lombok.Value;
 
 /**
@@ -71,16 +65,14 @@ public final class RunVariants {
      * @param resolvers a cache of one resolver per book, since building one is the
      *                  expensive half of answering this and a schedule asks it repeatedly
      */
-    public static Choice best(List<FarmingRun> variants, PlayerState state,
-            Spellbook openBook, FarmingInputs inputs,
+    public static Choice best(List<FarmingRun> variants, PlayerState state, Spellbook openBook, FarmingInputs inputs,
             Map<Spellbook, CapabilityResolver> resolvers) {
         Choice best = null;
         for (FarmingRun run : variants) {
             for (Spellbook book : booksWorthTrying(run, openBook)) {
-                CapabilityResolver resolver = resolverFor(book, inputs, resolvers);
+                CapabilityResolver resolver = resolvers.computeIfAbsent(book, inputs::resolverOn);
                 Choice candidate = score(run, book, state, resolver, inputs.getPreferences());
-                if (best == null
-                        || beats(candidate, best, state, inputs.getPreferences(), openBook)) {
+                if (best == null || beats(candidate, best, state, inputs.getPreferences(), openBook)) {
                     best = candidate;
                 }
             }
@@ -113,8 +105,7 @@ public final class RunVariants {
      * many patches it names: a Lunar variant gated behind Lunar Diplomacy must not win on
      * patches alone.
      */
-    private static boolean beats(Choice candidate, Choice best, PlayerState state,
-            FarmingPreferences prefs, Spellbook openBook) {
+    private static boolean beats(Choice candidate, Choice best, PlayerState state, FarmingPreferences prefs, Spellbook openBook) {
         boolean candidateOpen = isAvailable(candidate.run, state, prefs);
         boolean bestOpen = isAvailable(best.run, state, prefs);
         if (candidateOpen != bestOpen) {
@@ -140,8 +131,7 @@ public final class RunVariants {
         return candidate.planFor == openBook && best.planFor != openBook;
     }
 
-    private static boolean isAvailable(FarmingRun run, PlayerState state,
-            FarmingPreferences prefs) {
+    private static boolean isAvailable(FarmingRun run, PlayerState state, FarmingPreferences prefs) {
         return RunAvailability.of(RunAvailability.gateOf(run, prefs), state)
                 != CapabilityState.LACK;
     }
@@ -151,8 +141,7 @@ public final class RunVariants {
      * reason to prefer one route over another, and neither are stops the player has
      * switched off: Harmony, once dropped, must not tip the herb run to the Lunar variant.
      */
-    private static Choice score(FarmingRun run, Spellbook book, PlayerState state,
-            CapabilityResolver resolver, FarmingPreferences prefs) {
+    private static Choice score(FarmingRun run, Spellbook book, PlayerState state, CapabilityResolver resolver, FarmingPreferences prefs) {
         // Sometimes two plans: the counts are blind to position and the kept plans are not
         // (see the fields on Choice). A sighted and a blind resolver differ only where a
         // zone covers the player's region or a teleport is spent on the way, because
@@ -160,17 +149,13 @@ public final class RunVariants {
         // same test. Otherwise the two plans are provably the same list, so the second is
         // skipped.
         List<StopPlan> plans = new RunPlanner(resolver).plan(run, state);
-        boolean positionCouldMatter = resolver.readsPosition()
-                && (Zone.covering(state == null ? null : state.getRegionId()) != null
+        boolean positionCouldMatter = resolver.readsPosition() && (Zone.covering(state == null ? null : state.getRegionId()) != null
                         || resolver.hasTravelTaken());
-        List<StopPlan> anywhere = positionCouldMatter
-                ? new RunPlanner(resolver.blindToPosition()).plan(run, state)
-                : plans;
+        List<StopPlan> anywhere = positionCouldMatter ? new RunPlanner(resolver.blindToPosition()).plan(run, state) : plans;
         int certain = 0;
         int reachable = 0;
         for (StopPlan plan : anywhere) {
-            if (!plan.isVisit() || plan.getStop().isOptional()
-                    || PlantingGate.silences(run, plan.getStop(), prefs)) {
+            if (!plan.isVisit() || plan.getStop().isOptional() || PlantingGate.silences(run, plan.getStop(), prefs)) {
                 continue;
             }
             int patches = plan.getStop().getPatches().size();
@@ -180,12 +165,6 @@ public final class RunVariants {
             }
         }
         return new Choice(run, book, certain, reachable, plans);
-    }
-
-    /** One resolver per book, built on demand and shared for the rest of the schedule. */
-    private static CapabilityResolver resolverFor(Spellbook book, FarmingInputs inputs,
-            Map<Spellbook, CapabilityResolver> resolvers) {
-        return resolvers.computeIfAbsent(book, inputs::resolverOn);
     }
 
     /** A fresh cache, for a caller that has no schedule to share one with. */

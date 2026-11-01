@@ -1,16 +1,11 @@
 package com.larryfarming.engine;
 
-import com.larryfarming.model.EquipmentSlot;
-import com.larryfarming.model.ItemStack;
-import com.larryfarming.model.PlayerState;
+import com.larryfarming.model.*;
 import lombok.Value;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.VarbitID;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * How many of an item the player has, and where: carried, banked, or in storage they must
@@ -37,10 +32,8 @@ public final class ItemCounts {
             return 0;
         }
         SideContainerCounts side = sideContainerCounts(state, itemId, itemName);
-        return countIn(state.getInventory(), itemId, itemName)
-                + countInEquipment(state.getEquipment(), itemId, itemName)
-                + countIn(state.getBank(), itemId, itemName)
-                + side.carried + side.banked + side.stored;
+        return countIn(state.getInventory(), itemId, itemName) + countInEquipment(state.getEquipment(), itemId, itemName)
+                + countIn(state.getBank(), itemId, itemName) + side.carried + side.banked + side.stored;
     }
 
     /**
@@ -52,8 +45,7 @@ public final class ItemCounts {
         if (state == null || (itemId == 0 && itemName == null)) {
             return 0;
         }
-        return countIn(state.getInventory(), itemId, itemName)
-                + countInEquipment(state.getEquipment(), itemId, itemName)
+        return countIn(state.getInventory(), itemId, itemName) + countInEquipment(state.getEquipment(), itemId, itemName)
                 + sideContainerCounts(state, itemId, itemName).carried;
     }
 
@@ -71,14 +63,10 @@ public final class ItemCounts {
      * plant cure, buckets, either secateurs and the bottomless compost bucket.
      */
     public static boolean leprechaunStores(int itemId) {
-        return LEPRECHAUN_STORAGE_VARBITS.containsKey(itemId)
-                || itemId == SECATEURS_ITEM_ID || itemId == MAGIC_SECATEURS_ITEM_ID
-                || itemId == BOTTOMLESS_BUCKET_EMPTY || itemId == BOTTOMLESS_BUCKET_FILLED;
+        return LEPRECHAUN_STORAGE_VARBITS.containsKey(itemId) || itemId == ItemID.SECATEURS || itemId == ItemID.FAIRY_ENCHANTED_SECATEURS
+                // The bottomless compost bucket's stored slot has varbits of its own.
+                || itemId == ItemID.BOTTOMLESS_COMPOST_BUCKET || itemId == ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED;
     }
-
-    /** The bottomless compost bucket, empty and filled; its stored slot has varbits of its own. */
-    private static final int BOTTOMLESS_BUCKET_EMPTY = 22994;
-    private static final int BOTTOMLESS_BUCKET_FILLED = 22997;
 
     /** Whether the player owns at least one of the item anywhere; see {@link #countOwned}. */
     public static boolean ownsAny(PlayerState state, int itemId) {
@@ -111,8 +99,7 @@ public final class ItemCounts {
         return countItemInStorage(items, itemId, itemName) + countContainerContents(items, itemId);
     }
 
-    private static int countInEquipment(Map<EquipmentSlot, ItemStack> equipment, int itemId,
-            String itemName) {
+    private static int countInEquipment(Map<EquipmentSlot, ItemStack> equipment, int itemId, String itemName) {
         int total = 0;
         for (ItemStack item : equipment.values()) {
             if (itemMatches(item, itemId, itemName)) {
@@ -142,14 +129,11 @@ public final class ItemCounts {
         static final SideContainerCounts NONE = new SideContainerCounts(0, 0, 0);
 
         static SideContainerCounts of(int carried, int banked, int stored) {
-            return (carried | banked | stored) == 0
-                    ? NONE
-                    : new SideContainerCounts(carried, banked, stored);
+            return (carried | banked | stored) == 0 ? NONE : new SideContainerCounts(carried, banked, stored);
         }
     }
 
-    private static SideContainerCounts sideContainerCounts(PlayerState state, int itemId,
-            String itemName) {
+    private static SideContainerCounts sideContainerCounts(PlayerState state, int itemId, String itemName) {
         int carried = 0;
         int banked = 0;
         int stored = 0;
@@ -173,16 +157,14 @@ public final class ItemCounts {
             int unvouched = boxed - trusted;
             if (unvouched > 0 && SeedBox.banked(state)) {
                 banked += unvouched;
-            } else if (unvouched > 0
-                    && (SeedBox.carried(state) || state.getBankLastSeen() == null)) {
+            } else if (unvouched > 0 && (SeedBox.carried(state) || state.getBankLastSeen() == null)) {
                 // Owned, whereabouts unsettled: an unread box in the bag, or a bank never seen.
                 // A box absent from both the inventory and a seen bank is gone, seeds and all.
                 stored += unvouched;
             }
         }
 
-        stored += countItemInStorage(state.getSeedVault(), itemId, itemName)
-                + leprechaunStorageQuantity(state, itemId);
+        stored += countItemInStorage(state.getSeedVault(), itemId, itemName) + leprechaunStorageQuantity(state, itemId);
 
         return SideContainerCounts.of(carried, banked, stored);
     }
@@ -302,27 +284,21 @@ public final class ItemCounts {
      * 100 for tools. The comments below state the low field's width, which the next slice's
      * shift must match.
      */
-    private static final Map<Integer, List<StoredSlice>> LEPRECHAUN_STORAGE_VARBITS =
-            Map.ofEntries(
+    private static final Map<Integer, List<StoredSlice>> LEPRECHAUN_STORAGE_VARBITS = Map.ofEntries(
             // Supplies. Ultracompost and plant cure each have a single ten-bit varbit (0-1023).
             Map.entry(21483, List.of(new StoredSlice(5732, 0))),   // Ultracompost
             Map.entry(6036, List.of(new StoredSlice(6268, 0))),    // Plant cure
             Map.entry(6034, List.of(new StoredSlice(1443, 0),      // Supercompost, 8 bits
-                    new StoredSlice(6267, 8))),
-            Map.entry(6032, List.of(new StoredSlice(1442, 0),      // Compost, 8 bits
+                    new StoredSlice(6267, 8))), Map.entry(6032, List.of(new StoredSlice(1442, 0),      // Compost, 8 bits
                     new StoredSlice(6266, 8))),
             // The bucket takes three slices: 5 bits, then 3, then 2.
             Map.entry(1925, List.of(new StoredSlice(1441, 0),      // Bucket
-                    new StoredSlice(4731, 5),
-                    new StoredSlice(6265, 8))),
+                    new StoredSlice(4731, 5), new StoredSlice(6265, 8))),
             // Tools: a one-bit low field, the low bit of a seven-bit count.
             Map.entry(952, List.of(new StoredSlice(1437, 0),       // Spade
-                    new StoredSlice(8361, 1))),
-            Map.entry(5343, List.of(new StoredSlice(1436, 0),      // Seed dibber
-                    new StoredSlice(8358, 1))),
-            Map.entry(5341, List.of(new StoredSlice(1435, 0),      // Rake
-                    new StoredSlice(8357, 1))),
-            Map.entry(5325, List.of(new StoredSlice(1440, 0),      // Gardening trowel
+                    new StoredSlice(8361, 1))), Map.entry(5343, List.of(new StoredSlice(1436, 0),      // Seed dibber
+                    new StoredSlice(8358, 1))), Map.entry(5341, List.of(new StoredSlice(1435, 0),      // Rake
+                    new StoredSlice(8357, 1))), Map.entry(5325, List.of(new StoredSlice(1440, 0),      // Gardening trowel
                     new StoredSlice(8360, 1)))
     );
 
@@ -330,14 +306,10 @@ public final class ItemCounts {
      * Varbit slices holding the shared secateurs count. Plain and magic secateurs occupy
      * one storage slot between them, so the count alone cannot say which is in it.
      */
-    private static final List<StoredSlice> SECATEURS_STORAGE_VARBITS =
-            List.of(new StoredSlice(1438, 0), new StoredSlice(8359, 1));
+    private static final List<StoredSlice> SECATEURS_STORAGE_VARBITS = List.of(new StoredSlice(1438, 0), new StoredSlice(8359, 1));
 
     /** Which secateurs fill the shared slot: 1 for magic secateurs, 0 for plain. */
     private static final int SECATEURS_TYPE_VARBIT = 1848;
-
-    private static final int SECATEURS_ITEM_ID = 5329;
-    private static final int MAGIC_SECATEURS_ITEM_ID = 7409;
 
     /**
      * Which watering can the leprechaun is holding, or 0 for none.
@@ -396,9 +368,9 @@ public final class ItemCounts {
      * store. Storage is per account: every leprechaun opens the same store.
      */
     private static int leprechaunStorageQuantity(PlayerState state, int itemId) {
-        if (itemId == SECATEURS_ITEM_ID || itemId == MAGIC_SECATEURS_ITEM_ID) {
+        if (itemId == ItemID.SECATEURS || itemId == ItemID.FAIRY_ENCHANTED_SECATEURS) {
             boolean magicStored = varbitValue(state, SECATEURS_TYPE_VARBIT) == 1;
-            if (magicStored != (itemId == MAGIC_SECATEURS_ITEM_ID)) {
+            if (magicStored != (itemId == ItemID.FAIRY_ENCHANTED_SECATEURS)) {
                 return 0;
             }
             return assemble(state, SECATEURS_STORAGE_VARBITS);

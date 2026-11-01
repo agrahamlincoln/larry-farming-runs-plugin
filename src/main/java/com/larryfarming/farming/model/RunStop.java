@@ -1,13 +1,9 @@
 package com.larryfarming.farming.model;
 
-import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.FarmingWorldMap;
-import com.larryfarming.engine.farming.PatchType;
+import com.larryfarming.engine.farming.*;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Value;
+import lombok.*;
 
 /**
  * One stop on a run: somewhere the player travels to, and what they do once there.
@@ -46,8 +42,6 @@ public class RunStop {
         COMPOST,
         PLANT,
         PAY_PROTECTION,
-        FILL_COMPOST_BIN,
-        EMPTY_COMPOST_BIN,
         KILL_HESPORI;
 
         /**
@@ -79,8 +73,15 @@ public class RunStop {
                 // as a fruit tree does. Unlike a fruit tree, picking never makes it spent
                 // ground (PatchWork.standsEmpty). Once grown it is dug up and replanted each
                 // visit, so a fresh plant pays its check again (PatchWork.comesOut).
+                //
+                // Fruit trees, calquat and celastrus are checked and then picked: fruit trees
+                // and calquat offer Pick-fruit once healthy, and celastrus offers Harvest.
+                // Without HARVEST a grown fruit tree reads as empty ground wanting a replant.
                 case BUSH:
                 case CACTUS:
+                case FRUIT_TREE:
+                case CALQUAT:
+                case CELASTRUS:
                     return List.of(CHECK_HEALTH, HARVEST, DIG_UP, COMPOST, PLANT);
                 case HESPORI:
                     return List.of(KILL_HESPORI, COMPOST, PLANT);
@@ -88,30 +89,14 @@ public class RunStop {
                 // planted, and cleared once it dies.
                 case ANIMA:
                     return List.of(PLANT);
-                // Picked once and gone, and no compost of any kind goes on a nursery. Chet
-                // protects a nursery for a payment of the coral below it, or of giant
-                // seaweed for elkhorn.
-                case CORAL:
-                    return List.of(HARVEST, PLANT, PAY_PROTECTION);
-                case COMPOST:
-                case BIG_COMPOST:
-                    return List.of(FILL_COMPOST_BIN, EMPTY_COMPOST_BIN);
                 // The health check pays the Farming experience. Cutting the logs is a
                 // Woodcutting errand, so it is not an action here.
                 case TREE:
                 case HARDWOOD_TREE:
                 case REDWOOD:
                     return List.of(CHECK_HEALTH, DIG_UP, COMPOST, PLANT);
-                // Checked and then picked: fruit trees and calquat offer Pick-fruit once
-                // healthy, and celastrus offers Harvest. Without HARVEST a grown fruit tree
-                // reads as empty ground wanting a replant.
-                case FRUIT_TREE:
-                case CALQUAT:
-                case CELASTRUS:
-                    return List.of(CHECK_HEALTH, HARVEST, DIG_UP, COMPOST, PLANT);
                 default:
-                    throw new IllegalArgumentException(
-                            "no default actions for a " + type + " patch");
+                    throw new IllegalArgumentException("no default actions for a " + type + " patch");
             }
         }
     }
@@ -192,14 +177,6 @@ public class RunStop {
      * (Weiss, before the fire of nourishment).
      */
     Capability accessGate;
-    /**
-     * The compost bin this allotment fills, or null for a patch worked for its own crop.
-     *
-     * <p>A feeding allotment grows watermelons for the bin beside it. Its harvest goes
-     * straight into the bin, so the bin's row says when to pick it, and the allotment shares
-     * the bin's switches rather than having crop switches of its own.
-     */
-    PatchRef feeds;
 
     /** The patch that identifies this stop; the first when a visit works several. */
     public PatchRef primaryPatch() {
@@ -213,29 +190,20 @@ public class RunStop {
      */
     public RunStop withLadder(List<TravelOption> ladder) {
         List<TravelOption> left = new ArrayList<>(travel);
+        boolean same = true;
         for (TravelOption rung : ladder) {
-            if (!left.remove(rung)) {
-                throw new IllegalArgumentException("a reordered ladder may only reorder at "
-                        + primaryPatch().getLabel());
-            }
+            same &= left.remove(rung);
         }
-        if (!left.isEmpty()) {
-            throw new IllegalArgumentException("a reordered ladder may only reorder at "
-                    + primaryPatch().getLabel());
+        if (!same || !left.isEmpty()) {
+            throw new IllegalArgumentException("a reordered ladder may only reorder at " + primaryPatch().getLabel());
         }
         return new RunStop(patches, arrival, List.copyOf(ladder), terminal, actions, gate,
-                fixedCrop, optionalReason, everyNthRun, standingCrop,
-                errandReason, accessGate, feeds);
+                fixedCrop, optionalReason, everyNthRun, standingCrop, errandReason, accessGate);
     }
 
     /** @see #errandReason */
     public boolean isErrand() {
         return errandReason != null;
-    }
-
-    /** @see #feeds */
-    public boolean feedsAbin() {
-        return feeds != null;
     }
 
     /**
@@ -247,7 +215,7 @@ public class RunStop {
         return fixedCrop != null;
     }
 
-    /** Whether something is planted here, as against a bin or a contract errand alone. */
+    /** Whether something is planted here, as against a contract errand alone. */
     public boolean isPlanting() {
         return actions != null && actions.contains(StopAction.PLANT);
     }
@@ -287,7 +255,6 @@ public class RunStop {
         private int everyNthRun = 1;
         private boolean standingCrop;
         private Capability accessGate;
-        private PatchRef feeds;
 
         private Builder(PatchRef... patches) {
             if (patches.length == 0) {
@@ -302,127 +269,7 @@ public class RunStop {
             return this;
         }
 
-        public Builder via(Capability requires, String instruction) {
-            return add(TravelOption.via(requires, instruction));
-        }
-
-        public Builder via(Requirement requires, String instruction) {
-            return add(TravelOption.via(requires, instruction));
-        }
-
-        /**
-         * A rung written as a place rather than as the item that gets you there.
-         *
-         * @param rest what to do on arrival, or "" when arriving is the whole rung
-         */
-        public Builder to(Destination destination, String rest) {
-            return add(TravelOption.to(destination, rest));
-        }
-
-        /** Arriving somewhere, plus something else that also has to hold. */
-        public Builder to(Destination destination, Requirement alsoNeeds, String rest) {
-            return add(TravelOption.to(destination, alsoNeeds, rest));
-        }
-
-        /** Arriving by Spellbook Swap; see {@link TravelOption#swapTo}. */
-        public Builder swapTo(Destination destination, String rest) {
-            return add(TravelOption.swapTo(destination, rest));
-        }
-
-        /**
-         * The rung just added, offered only when it certainly holds; see
-         * {@link TravelOption#isCertainOnly()}.
-         */
-        public Builder onlyWhenCertain() {
-            int last = travel.size() - 1;
-            travel.set(last, travel.get(last).onlyWhenCertain());
-            return this;
-        }
-
-        /**
-         * The rung just added, offered only where the previous stop left the player at its
-         * approach; see {@link TravelOption#isStartOnly()}.
-         */
-        public Builder onlyFromAstart() {
-            int last = travel.size() - 1;
-            travel.set(last, travel.get(last).onlyFromAstart());
-            return this;
-        }
-
-        /** A rung anyone can take, so the chain never needs a skip. */
-        public Builder viaAlways(String instruction) {
-            return add(TravelOption.always(instruction));
-        }
-
-        /**
-         * A fare on the rung just added, so the packing list can carry the coins for it.
-         */
-        public Builder fare(int coins) {
-            if (travel.isEmpty()) {
-                throw new IllegalStateException("a fare needs a route to belong to at "
-                        + patches.get(0).getLabel());
-            }
-            travel.set(travel.size() - 1, travel.get(travel.size() - 1).withFare(coins));
-            return this;
-        }
-
-        /**
-         * How far off the route this rung's bank is, in extra tiles walked, and which bank
-         * that is. Applies to the rung just added, like {@link #fare}.
-         *
-         * @see TravelOption#getBankDetour()
-         */
-        public Builder banks(int tiles, Bank bank) {
-            if (travel.isEmpty()) {
-                throw new IllegalStateException("a bank detour needs a route to belong to at "
-                        + patches.get(0).getLabel());
-            }
-            int last = travel.size() - 1;
-            travel.set(last, travel.get(last).withBank(tiles, false, bank));
-            return this;
-        }
-
-        /**
-         * The rung just added, with its walk measured. Applies like {@link #banks}.
-         *
-         * @see TravelOption#getWalk()
-         */
-        public Builder walks(int tiles, TravelOption.Cost spends) {
-            if (travel.isEmpty()) {
-                throw new IllegalStateException("a walk needs a route to belong to at "
-                        + patches.get(0).getLabel());
-            }
-            int last = travel.size() - 1;
-            travel.set(last, travel.get(last).withWalk(tiles, spends));
-            return this;
-        }
-
-        /** The same, for a bank the player has to change floor to reach. */
-        public Builder banksUpstairs(int tiles, Bank bank) {
-            if (travel.isEmpty()) {
-                throw new IllegalStateException("a bank detour needs a route to belong to at "
-                        + patches.get(0).getLabel());
-            }
-            int last = travel.size() - 1;
-            travel.set(last, travel.get(last).withBank(tiles, true, bank));
-            return this;
-        }
-
-        /**
-         * One bank figure for every rung here that has not been given its own. Call it last.
-         *
-         * <p>Also the only way to put a figure on a shared {@link #chain}: it replaces the
-         * entry in this stop's list and leaves the shared list alone.
-         */
-        public Builder banksAll(int tiles, Bank bank) {
-            for (int i = 0; i < travel.size(); i++) {
-                if (!travel.get(i).hasBankFigure()) {
-                    travel.set(i, travel.get(i).withBank(tiles, false, bank));
-                }
-            }
-            return this;
-        }
-
+        /** The stop's route, every rung in ranking order, each already carrying its figures. */
         public Builder chain(List<TravelOption> shared) {
             for (TravelOption option : shared) {
                 add(option);
@@ -433,10 +280,8 @@ public class RunStop {
         private Builder add(TravelOption option) {
             // A destination rung supplies its own opening clause once the teleport is
             // chosen, so an empty instruction is normal there.
-            if (option.getDestination() == null
-                    && (option.getInstruction() == null || option.getInstruction().isBlank())) {
-                throw new IllegalArgumentException(
-                        "a route needs an instruction at " + patches.get(0).getLabel());
+            if (option.getDestination() == null && (option.getInstruction() == null || option.getInstruction().isBlank())) {
+                throw new IllegalArgumentException("a route needs an instruction at " + patches.get(0).getLabel());
             }
             travel.add(option);
             return this;
@@ -483,12 +328,6 @@ public class RunStop {
             return this;
         }
 
-        /** @see RunStop#feeds */
-        public Builder feeds(PatchRef bin) {
-            this.feeds = bin;
-            return this;
-        }
-
         /** @see RunStop#errandReason */
         public Builder errand(String reason) {
             this.errandReason = reason;
@@ -512,36 +351,27 @@ public class RunStop {
         public RunStop build() {
             PatchType type = resolvePatchType();
             if (arrival == null) {
-                throw new IllegalStateException(
-                        "no arrival named for " + patches.get(0).getLabel());
+                throw new IllegalStateException("no arrival named for " + patches.get(0).getLabel());
             }
             if (travel.isEmpty()) {
                 throw new IllegalStateException("no way to reach " + patches.get(0).getLabel());
             }
             if (terminal == null) {
-                throw new IllegalStateException(
-                        "unstated fallback behaviour for " + patches.get(0).getLabel());
+                throw new IllegalStateException("unstated fallback behaviour for " + patches.get(0).getLabel());
             }
             // A chain anyone can complete never reaches its terminal, so a stated terminal
             // on one is a catalogue error.
             if (terminal != TerminalBehavior.UNSTATED) {
                 for (TravelOption option : travel) {
                     if (option.getRequires().isUnconditional()) {
-                        throw new IllegalStateException(
-                                patches.get(0).getLabel() + " can always be reached, so it "
+                        throw new IllegalStateException(patches.get(0).getLabel() + " can always be reached, so it "
                                         + "never falls through to " + terminal);
                     }
                 }
             }
-            // The bin's row names what goes into it, so a feeding allotment grows one crop.
-            if (feeds != null && fixedCrop == null) {
-                throw new IllegalStateException(patches.get(0).getLabel()
-                        + " feeds a bin without naming its crop");
-            }
             List<StopAction> resolved = actions != null ? actions : StopAction.defaultsFor(type);
-            return new RunStop(patches, arrival, List.copyOf(travel), terminal, resolved, gate,
-                    fixedCrop, optionalReason, everyNthRun,
-                    standingCrop || keepsProducing(type), errandReason, accessGate, feeds);
+            return new RunStop(patches, arrival, List.copyOf(travel), terminal, resolved, gate, fixedCrop, optionalReason, everyNthRun,
+                    standingCrop || keepsProducing(type), errandReason, accessGate);
         }
 
         /**

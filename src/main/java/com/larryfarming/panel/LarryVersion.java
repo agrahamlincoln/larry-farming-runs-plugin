@@ -5,12 +5,11 @@ import net.runelite.client.externalplugins.ExternalPluginManager;
 import net.runelite.client.externalplugins.PluginHubManifest;
 
 /**
- * The plugin's version as the Plugin Hub lists it, "1.0.0", or "dev" for a build the Hub did
- * not ship.
+ * The plugin's version as the Plugin Hub lists it, or "dev" for a build the Hub did not ship.
  */
 public final class LarryVersion
 {
-	/** The version as drawn: "v1.0.0" or "dev". A bug report carries it too. */
+	/** The version as drawn: "v" and the Hub's version, or "dev". */
 	public static final String SHOWN = shown(hubVersion());
 
 	private LarryVersion()
@@ -29,8 +28,7 @@ public final class LarryVersion
 	/** Null outside a Hub build: the Hub's class loader is what carries the listing. */
 	private static String hubVersion()
 	{
-		PluginHubManifest.DisplayData listing =
-			ExternalPluginManager.getDisplayData(LarryPlugin.class);
+		PluginHubManifest.DisplayData listing = ExternalPluginManager.getDisplayData(LarryPlugin.class);
 		return listing == null ? null : listing.getVersion();
 	}
 }

@@ -1,13 +1,9 @@
 package com.larryfarming.panel;
 
 import com.larryfarming.snapshot.FarmingCarryItem;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.GridLayout;
+import java.awt.*;
 import java.util.List;
 import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 import net.runelite.client.ui.ColorScheme;
 
@@ -28,8 +24,6 @@ class CarryView extends JPanel
 	private static final Color COLOR_HELD = ColorScheme.PROGRESS_COMPLETE_COLOR;
 	/** Owned but not carried: one withdrawal away. */
 	static final Color COLOR_TO_WITHDRAW = ColorScheme.BRAND_ORANGE;
-	/** Not owned at all. */
-	private static final Color COLOR_MISSING = ColorScheme.BRAND_ORANGE;
 
 	/**
 	 * Shown when the seeds are only accounted for inside a seed box whose contents have not
@@ -45,10 +39,7 @@ class CarryView extends JPanel
 
 	CarryView()
 	{
-		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		setOpaque(false);
-		setAlignmentX(LEFT_ALIGNMENT);
-
+		PanelText.stack(this);
 		grid = new InventoryBackdrop(null);
 		grid.setBorder(BorderFactory.createEmptyBorder(2, 4, 4, 0));
 
@@ -76,9 +67,7 @@ class CarryView extends JPanel
 		int rows = (carry.size() + COLUMNS - 1) / COLUMNS;
 		grid.setLayout(new GridLayout(rows, COLUMNS, GAP, GAP));
 		// GridLayout divides all the width it gets. Cap it so squares stay sprite-sized.
-		Dimension size = new Dimension(
-			COLUMNS * SQUARE + (COLUMNS - 1) * GAP + 4,
-			rows * SQUARE + (rows - 1) * GAP + 6);
+		Dimension size = new Dimension(COLUMNS * SQUARE + (COLUMNS - 1) * GAP + 4, rows * SQUARE + (rows - 1) * GAP + 6);
 		grid.setMaximumSize(size);
 		grid.setPreferredSize(size);
 
@@ -99,20 +88,13 @@ class CarryView extends JPanel
 	 */
 	static String twoLines(String first, String second)
 	{
-		return "<html>" + escape(first) + "<br>" + escape(second) + "</html>";
-	}
-
-	private static String escape(String text)
-	{
-		return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+		return "<html>" + PanelText.escape(first) + "<br>" + PanelText.escape(second) + "</html>";
 	}
 
 	/** "3 × Toadflax seed", or a bare name where the count is not the point. */
 	static String label(FarmingCarryItem item)
 	{
-		return item.getQuantity() > 0
-			? item.getQuantity() + " × " + item.getName()
-			: item.getName();
+		return item.getQuantity() > 0 ? item.getQuantity() + " × " + item.getName() : item.getName();
 	}
 
 	/** A blank, sprite-sized cell for a grid's trailing slots. */
@@ -124,25 +106,17 @@ class CarryView extends JPanel
 		return cell;
 	}
 
-	/** One inventory square, bordered green when carried and orange when not. */
+	/**
+	 * One inventory square, bordered green when carried or with the leprechaun, orange when
+	 * banked or in the seed box, and unbordered when the player owns none.
+	 */
 	private static JPanel square(FarmingCarryItem item, IconProvider icons)
 	{
-		ImageIcon sprite = icons != null && item.getItemId() > 0
-			? icons.getInventoryIcon(item.getItemId(), item.getQuantity(), item.isOwned())
-			: null;
-		// The game draws the count into the sprite for stacks of two or more. Only a
-		// single item needs one drawn here.
-		ItemSquare cell = new ItemSquare(sprite,
-			item.getQuantity() == 1 ? "1" : null,
-			item.getTag());
-		cell.setPreferredSize(new Dimension(SQUARE, SQUARE));
-		cell.setMinimumSize(new Dimension(SQUARE, SQUARE));
+		ItemSquare cell = ItemSquare.of(item, icons, item.isOwned());
 
 		// The tooltip names the item and the border gives its state. The tooltip adds words
 		// only for what a border cannot show: an item note, or the two states below.
-		cell.setToolTipText(item.getNote() == null || item.getNote().isEmpty()
-			? label(item)
-			: twoLines(label(item), item.getNote()));
+		cell.setToolTipText(item.getNote() == null || item.getNote().isEmpty() ? label(item) : twoLines(label(item), item.getNote()));
 		switch (item.getAvailability())
 		{
 			case CARRIED:

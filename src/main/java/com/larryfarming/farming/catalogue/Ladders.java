@@ -1,9 +1,7 @@
 package com.larryfarming.farming.catalogue;
 
-import com.larryfarming.farming.model.Approach;
-import com.larryfarming.farming.model.RunStop;
-import com.larryfarming.farming.model.RungOrder;
-import com.larryfarming.farming.model.TravelOption;
+import com.larryfarming.farming.model.*;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -13,8 +11,6 @@ import java.util.List;
  * <p>A rung asking for an {@link Approach} has no total until the account says which way in
  * the player takes, so here it keeps its written place, and the planner ranks it per account.
  * Every other rung's figure is the same for everyone, so its place is settled once.
- *
- * <p>Reads only {@link Networks}, so a {@link Site} constant may call it while it is built.
  */
 final class Ladders {
 
@@ -22,19 +18,17 @@ final class Ladders {
     }
 
     /** The stop with its ladder ranked. */
-    static RunStop ranked(RunStop stop) {
-        return stop.withLadder(ranked(stop.getTravel()));
+    static RunStop ranked(RunStop stop, Collection<Approach> approaches) {
+        return stop.withLadder(ranked(stop.getTravel(), approaches));
     }
 
-    /** The ladder ranked, each rung leaning on an approach kept in its written place. */
-    static List<TravelOption> ranked(List<TravelOption> ladder) {
+    /** The ladder ranked, each rung leaning on one of these approaches kept in its place. */
+    static List<TravelOption> ranked(List<TravelOption> ladder, Collection<Approach> approaches) {
         return List.copyOf(RungOrder.rank(ladder, new RungOrder.Figures() {
             @Override
             public int walk(int rung) {
                 TravelOption option = ladder.get(rung);
-                return asksForAnApproach(option) && option.hasWalkFigure()
-                        ? TravelOption.UNMEASURED
-                        : option.getWalk();
+                return asksForAnApproach(option, approaches) && option.hasWalkFigure() ? TravelOption.UNMEASURED : option.getWalk();
             }
 
             @Override
@@ -44,9 +38,8 @@ final class Ladders {
         }));
     }
 
-    /** Whether the rung's walk leaves out an approach the account decides. */
-    static boolean asksForAnApproach(TravelOption rung) {
-        for (Approach approach : Networks.APPROACHES) {
+    private static boolean asksForAnApproach(TravelOption rung, Collection<Approach> approaches) {
+        for (Approach approach : approaches) {
             if (rung.getRequires().contains(approach.getWay())) {
                 return true;
             }

@@ -51,7 +51,7 @@ public final class PatchPrediction {
 
     /** A patch stated outright with no timing. {@link FarmingTracker} never builds one. */
     public static PatchPrediction of(Crop crop, CropState state) {
-        return new PatchPrediction(crop, state, 0, 0, 0L, 0L, 0L);
+        return of(crop, state, 0, 0, 0L, 0L);
     }
 
     /**
@@ -63,26 +63,11 @@ public final class PatchPrediction {
      */
     public static PatchPrediction of(Crop crop, CropState state, int stage, int stages,
             long doneEstimateEpochSec, long observedAtEpochSec) {
-        return new PatchPrediction(crop, state, stage, stages,
-                doneEstimateEpochSec, doneEstimateEpochSec, observedAtEpochSec);
+        return new PatchPrediction(crop, state, stage, stages, doneEstimateEpochSec, doneEstimateEpochSec, observedAtEpochSec, false, 0L);
     }
 
     PatchPrediction(Crop crop, CropState state, int stage, int stages,
-            long earliestDoneEpochSec, long doneEstimateEpochSec, long observedAtEpochSec) {
-        this(crop, state, stage, stages, earliestDoneEpochSec, doneEstimateEpochSec,
-                observedAtEpochSec, false);
-    }
-
-    PatchPrediction(Crop crop, CropState state, int stage, int stages,
-            long earliestDoneEpochSec, long doneEstimateEpochSec, long observedAtEpochSec,
-            boolean fellable) {
-        this(crop, state, stage, stages, earliestDoneEpochSec, doneEstimateEpochSec,
-                observedAtEpochSec, fellable, 0L);
-    }
-
-    private PatchPrediction(Crop crop, CropState state, int stage, int stages,
-            long earliestDoneEpochSec, long doneEstimateEpochSec, long observedAtEpochSec,
-            boolean fellable, long plantedAtEpochSec) {
+            long earliestDoneEpochSec, long doneEstimateEpochSec, long observedAtEpochSec, boolean fellable, long plantedAtEpochSec) {
         this.plantedAtEpochSec = plantedAtEpochSec;
         this.crop = crop;
         this.state = state;
@@ -92,21 +77,6 @@ public final class PatchPrediction {
         this.doneEstimateEpochSec = doneEstimateEpochSec;
         this.observedAtEpochSec = observedAtEpochSec;
         this.fellable = fellable;
-    }
-
-    /**
-     * The same patch with a tree still rooted in it, for a hand-built patch. Predictions
-     * from {@link FarmingTracker} carry the flag already.
-     */
-    public PatchPrediction withTreeStanding() {
-        return new PatchPrediction(crop, state, stage, stages, earliestDoneEpochSec,
-                doneEstimateEpochSec, observedAtEpochSec, true, plantedAtEpochSec);
-    }
-
-    /** The same patch, planted at this second as the tracker saw it happen. */
-    public PatchPrediction withPlantedAt(long epochSec) {
-        return new PatchPrediction(crop, state, stage, stages, earliestDoneEpochSec,
-                doneEstimateEpochSec, observedAtEpochSec, fellable, epochSec);
     }
 
     /**
@@ -184,8 +154,7 @@ public final class PatchPrediction {
      * (herbs, chopped trees) or because its produce has fully restocked.
      */
     public PatchPrediction.Readiness readinessAt(long nowEpochSec) {
-        if (state == CropState.HARVESTABLE
-                && (doneEstimateEpochSec <= 0 || stage >= stages - 1)) {
+        if (state == CropState.HARVESTABLE && (doneEstimateEpochSec <= 0 || stage >= stages - 1)) {
             return Readiness.READY;
         }
         if (state != CropState.HARVESTABLE && state != CropState.GROWING) {

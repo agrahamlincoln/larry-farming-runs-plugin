@@ -1,14 +1,8 @@
 package com.larryfarming.farming.engine;
 
-import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.FarmingWorldMap;
-import com.larryfarming.engine.farming.PatchType;
+import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.catalogue.FarmingCatalogue;
-import com.larryfarming.farming.model.FarmingPreferences;
-import com.larryfarming.farming.model.FarmingRun;
-import com.larryfarming.farming.model.RunId;
-import com.larryfarming.farming.model.RunStop;
-import java.util.List;
+import com.larryfarming.farming.model.*;
 
 /**
  * Which stops the player has switched off, and which runs that empties out entirely.
@@ -23,43 +17,6 @@ import java.util.List;
 public final class PlantingGate {
 
     private PlantingGate() {
-    }
-
-    /**
-     * Whether the player has switched this patch off, so its timer is hidden: its whole
-     * family is unticked, every crop the stop may grow is, or its site is dropped from the
-     * runs.
-     *
-     * <p>A Farming Guild patch is never hidden: a contract can land in it, and a contract
-     * answers to Guildmaster Jane rather than to these settings.
-     */
-    public static boolean hidesPatch(FarmingWorldMap.PatchDef patch, FarmingPreferences prefs) {
-        if (FarmingCatalogue.isContractPatch(patch)) {
-            return false;
-        }
-        if (prefs.isFamilyOff(patch.getType())) {
-            return true;
-        }
-        String site = FarmingCatalogue.siteKey(patch);
-        if (site != null && !prefs.visits(site)) {
-            return true;
-        }
-        // An allotment feeding a bin keeps its timer while that bin is worked, whatever the
-        // crop switches say: Catherby north feeds its bin once its snape grass is off.
-        String binSite = FarmingCatalogue.binSiteFedBy(patch);
-        if (binSite != null && prefs.worksCompostBins() && prefs.visits(binSite)) {
-            return false;
-        }
-        List<Crop> named = FarmingCatalogue.namedCropPatches().get(patch);
-        if (named == null) {
-            return false;
-        }
-        for (Crop crop : named) {
-            if (prefs.allows(crop)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     /**
@@ -79,35 +36,7 @@ public final class PlantingGate {
         if (dropsSite(stop, prefs)) {
             return true;
         }
-        // A bin has its own switch, since it grows nothing. Every bin belongs to the
-        // ultracompost run, which the whole-run check above already covers; this line guards
-        // a bin added to a run that grows something.
-        if (worksNoBins(stop, prefs)) {
-            return true;
-        }
-        if (stop.feedsAbin() && grownForItsOwnCrop(stop, prefs)) {
-            return true;
-        }
         return stop.isFixedCrop() && FixedCrops.ticked(stop, prefs).isEmpty();
-    }
-
-    /**
-     * Whether another stop grows a switched-on crop in this feeding allotment's patch, so
-     * the allotment is not the bin's. Catherby north is the snape grass stop's while snape
-     * grass, or the watermelon ticked in its place, is on.
-     */
-    static boolean grownForItsOwnCrop(RunStop stop, FarmingPreferences prefs) {
-        FarmingWorldMap.PatchDef def = stop.primaryPatch().resolve();
-        List<Crop> named = def == null ? null : FarmingCatalogue.namedCropPatches().get(def);
-        if (named == null) {
-            return false;
-        }
-        for (Crop crop : named) {
-            if (prefs.allows(crop)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /** Whether the player has dropped this stop's site from their runs. */
@@ -127,50 +56,20 @@ public final class PlantingGate {
         return prefs.dropsEverySiteOf(FarmingCatalogue.siteKeys(run.getId()));
     }
 
-    private static boolean worksNoBins(RunStop stop, FarmingPreferences prefs) {
-        return !prefs.worksCompostBins() && worksAbin(stop);
-    }
-
-    /**
-     * Whether this stop is a compost bin, judged by its declared actions so a new bin needs
-     * no listing here, or an allotment that fills one.
-     */
-    static boolean worksAbin(RunStop stop) {
-        if (stop.feedsAbin()) {
-            return true;
-        }
-        return stop.getActions() != null
-                && (stop.getActions().contains(RunStop.StopAction.FILL_COMPOST_BIN)
-                        || stop.getActions().contains(RunStop.StopAction.EMPTY_COMPOST_BIN));
-    }
-
     /**
      * Whether the player has switched this whole run off.
      *
      * <p>A run is defined by the crop it exists to grow, so switching that crop off ends
      * the run. The herb run's woven-in extras (snape grass, potato cactus and the like) are
      * secondaries of that run and go with it.
-     *
-     * <p>The compost bins run has no defining crop and must not vanish for failing a test
-     * about seeds. Its own switch governs it instead.
      */
     static boolean silencesWholeRun(FarmingRun run, FarmingPreferences prefs) {
         if (run.getId() == RunId.CONTRACT) {
             return false;
         }
-        // A run of nothing but bins ends when bins are switched off. Derived from the stops
-        // rather than the run id.
-        boolean binsOnly = everyStopWorksAbin(run);
-        if (!prefs.worksCompostBins() && binsOnly) {
-            return true;
-        }
         // Every site dropped: the woven-in extras are no reason to go on their own.
         if (dropsEverySite(run, prefs)) {
             return true;
-        }
-        // Its allotments grow the bins' fill, not a crop the run exists for.
-        if (binsOnly) {
-            return false;
         }
         // A run naming its own seeds is defined by them — every tree of the family unticked,
         // or the single crop of a one-crop run switched off.
@@ -209,20 +108,5 @@ public final class PlantingGate {
             }
         }
         return null;
-    }
-
-    /**
-     * Whether a run has stops and every one is a compost bin or an allotment that fills one.
-     */
-    static boolean everyStopWorksAbin(FarmingRun run) {
-        if (run.getStops().isEmpty()) {
-            return false;
-        }
-        for (RunStop stop : run.getStops()) {
-            if (!worksAbin(stop)) {
-                return false;
-            }
-        }
-        return true;
     }
 }

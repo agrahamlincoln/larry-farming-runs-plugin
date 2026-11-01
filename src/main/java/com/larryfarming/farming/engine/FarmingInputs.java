@@ -2,18 +2,13 @@ package com.larryfarming.farming.engine;
 
 import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.engine.farming.PatchPrediction;
-import com.larryfarming.farming.detection.CapabilityResolver;
-import com.larryfarming.farming.detection.HouseSight;
-import com.larryfarming.farming.detection.TravelTaken;
-import com.larryfarming.farming.model.FarmingPreferences;
-import com.larryfarming.farming.model.PatchRef;
-import com.larryfarming.farming.model.Spellbook;
+import com.larryfarming.farming.detection.*;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingRunStatus;
 import java.util.Set;
 import java.util.function.Function;
-import lombok.AccessLevel;
-import lombok.Builder;
+import lombok.*;
 
 /**
  * Everything a farm run is planned against beyond the player's own state: the book the
@@ -27,160 +22,35 @@ import lombok.Builder;
  * <p>Every field is optional. {@link #none()} plans for the open spellbook, assumes
  * nothing has been declared, and treats every patch and the house as unseen.
  *
- * <p>Copies go through a builder that names each field, never through a positional
- * constructor. Several fields share a type, so a transposed argument would still compile.
+ * <p>Copies go through a builder or a generated {@code with}, each of which names its field,
+ * and both pass through the constructor's null normalisations. Several fields share a type,
+ * so a positional call could transpose two of them and still compile.
  */
+@Getter
+@With
 public final class FarmingInputs {
 
     private static final FarmingInputs NONE = builder().build();
 
+    /** The book to plan teleports for, or null to follow the one the player is on. */
+    @With(AccessLevel.NONE)
     private final Spellbook previewBook;
+    @Getter(AccessLevel.NONE)
+    @With(AccessLevel.NONE)
     private final Function<PatchRef, PatchPrediction> patches;
+    /** Today's spent teleport allowances, or null when nothing has been counted. */
+    @With(AccessLevel.NONE)
     private final DailyTeleportLedger ledger;
+    /**
+     * The second this advice is being built for, or zero when the caller did not say.
+     *
+     * <p>The farming layer takes the current second as an argument everywhere rather than
+     * reading a clock.
+     *
+     * <p>Zero means "no clock was given", and readers must survive it. A finish time
+     * compared against zero reads as not ready yet, which is the safe direction.
+     */
     private final long nowEpochSec;
-    private final Crop contractCrop;
-    private final FarmingRunStatus contractRun;
-    private final FarmingPreferences preferences;
-    private final HouseSight house;
-    private final CompostStock compostStock;
-    private final boolean offeredBanksHidden;
-    private final Set<Integer> packedThisTrip;
-    private final TravelTaken travelTaken;
-
-    // On the constructor rather than the class, so every builder path goes through the
-    // null normalisations below.
-    @Builder(toBuilder = true, access = AccessLevel.PRIVATE)
-    private FarmingInputs(Spellbook previewBook,
-            Function<PatchRef, PatchPrediction> patches,
-            DailyTeleportLedger ledger, long nowEpochSec,
-            Crop contractCrop, FarmingRunStatus contractRun,
-            FarmingPreferences preferences, HouseSight house, CompostStock compostStock,
-            boolean offeredBanksHidden, Set<Integer> packedThisTrip, TravelTaken travelTaken) {
-        this.packedThisTrip = packedThisTrip != null ? Set.copyOf(packedThisTrip) : Set.of();
-        this.travelTaken = travelTaken != null ? travelTaken : TravelTaken.NONE;
-        this.previewBook = previewBook;
-        this.patches = patches;
-        this.ledger = ledger;
-        this.nowEpochSec = nowEpochSec;
-        this.contractCrop = contractCrop;
-        this.contractRun = contractRun;
-        // A caller with no preferences wants the default crops, not "plant nothing".
-        this.preferences = preferences != null ? preferences
-                : FarmingPreferences.defaults();
-        this.house = house != null ? house : HouseSight.unseen();
-        this.compostStock = compostStock != null ? compostStock : CompostStock.UNREAD;
-        this.offeredBanksHidden = offeredBanksHidden;
-    }
-
-    /** Nothing chosen, nothing seen. */
-    public static FarmingInputs none() {
-        return NONE;
-    }
-
-    public static FarmingInputs of(Spellbook previewBook,
-            Function<PatchRef, PatchPrediction> patches) {
-        return builder()
-                .previewBook(previewBook)
-                .patches(patches)
-                .build();
-    }
-
-    /**
-     * @param ledger      how much of today's rationed teleports is already spent, or null
-     *                    to plan as though every allowance were untouched
-     * @param nowEpochSec which day the ledger's counts should be read against
-     */
-    public static FarmingInputs of(Spellbook previewBook,
-            Function<PatchRef, PatchPrediction> patches,
-            DailyTeleportLedger ledger,
-            long nowEpochSec) {
-        return builder()
-                .previewBook(previewBook)
-                .patches(patches)
-                .ledger(ledger)
-                .nowEpochSec(nowEpochSec)
-                .build();
-    }
-
-    public FarmingInputs withPreviewBook(Spellbook book) {
-        return toBuilder().previewBook(book).build();
-    }
-
-    /**
-     * A route resolver for this book over these inputs: today's ledger, the clock, the
-     * patches and the house as last seen, the player's travel switches, and what they
-     * declare their house holds. Building one is the expensive half of scoring a run, so
-     * callers share it where they can.
-     */
-    public CapabilityResolver resolverOn(Spellbook book) {
-        return new CapabilityResolver(book, ledger, nowEpochSec, this::patchAt, house)
-                .switchingOff(preferences.travelOff())
-                .declaringHouse(preferences.houseDeclared())
-                .travelling(travelTaken);
-    }
-
-    /** The teleport the player has spent on the way to the next stop; see {@code TravelWatch}. */
-    public FarmingInputs withTravelTaken(TravelTaken taken) {
-        return toBuilder().travelTaken(taken).build();
-    }
-
-    public TravelTaken getTravelTaken() {
-        return travelTaken;
-    }
-
-    /** @see #getCompostStock */
-    public FarmingInputs withCompostStock(CompostStock stock) {
-        return toBuilder().compostStock(stock).build();
-    }
-
-    /**
-     * The ultracompost the player holds and whether Larry is working the bins for more.
-     * Never null: unread, upkeep is on and nothing is counted.
-     */
-    public CompostStock getCompostStock() {
-        return compostStock;
-    }
-
-    /** @see #hidesOfferedBanks */
-    public FarmingInputs withOfferedBanksHidden(boolean hidden) {
-        return toBuilder().offeredBanksHidden(hidden).build();
-    }
-
-    /**
-     * Whether the panel leaves out the banks the route only passes. Their rows are not
-     * drawn, so nothing may be fetched at them. Defaults to false: every bank is shown.
-     */
-    public boolean hidesOfferedBanks() {
-        return offeredBanksHidden;
-    }
-
-    /** @see #getPackedThisTrip */
-    public FarmingInputs withPackedThisTrip(Set<Integer> packed) {
-        return toBuilder().packedThisTrip(packed).build();
-    }
-
-    /**
-     * The item ids Larry asked for that have been seen in the bag since the trip was
-     * packed, so a bank can say which of them to put back. Never null; empty when nothing
-     * has been seen.
-     */
-    public Set<Integer> getPackedThisTrip() {
-        return packedThisTrip;
-    }
-
-    /** @see #getHouse */
-    public FarmingInputs withHouse(HouseSight house) {
-        return toBuilder().house(house).build();
-    }
-
-    /**
-     * What the player's own house was last seen to hold. Never null: a house never seen
-     * reads as {@link HouseSight#unseen()}, whose every piece of furniture is absent.
-     */
-    public HouseSight getHouse() {
-        return house;
-    }
-
     /**
      * The crop the current contract asks for, decoded from varbit 7963, or null when no
      * contract is taken or its value is not one the plugin knows.
@@ -188,10 +58,7 @@ public final class FarmingInputs {
      * <p>Without it the scheduler cannot identify the contract's patch and falls back to reading the whole
      * guild, which reports the contract ready whenever <em>anything</em> in the guild is.
      */
-    public FarmingInputs withContractCrop(Crop crop) {
-        return toBuilder().contractCrop(crop).build();
-    }
-
+    private final Crop contractCrop;
     /**
      * The runs list's own verdict on the contract, or null before it has been reached.
      *
@@ -203,8 +70,85 @@ public final class FarmingInputs {
      * <p>Set after {@link RunScheduler#schedule} and before the trip is planned: the verdict
      * does not exist until the runs are scheduled, and the planning has to see it.
      */
-    public FarmingInputs withContractRun(FarmingRunStatus status) {
-        return toBuilder().contractRun(status).build();
+    private final FarmingRunStatus contractRun;
+    /**
+     * Which crops the player is willing to have suggested. Never null: an absent value
+     * reads as the default crop choices.
+     */
+    private final FarmingPreferences preferences;
+    /**
+     * What the player's own house was last seen to hold. Never null: a house never seen
+     * reads as {@link HouseSight#unseen()}, whose every piece of furniture is absent.
+     */
+    private final HouseSight house;
+    /** @see #hidesOfferedBanks */
+    @Getter(AccessLevel.NONE)
+    private final boolean offeredBanksHidden;
+    /**
+     * The item ids Larry asked for that have been seen in the bag since the trip was
+     * packed, so a bank can say which of them to put back. Never null; empty when nothing
+     * has been seen.
+     */
+    private final Set<Integer> packedThisTrip;
+    /** The teleport the player has spent on the way to the next stop; see {@code TravelWatch}. */
+    private final TravelTaken travelTaken;
+
+    // On the constructor rather than the class, so every builder path goes through the
+    // null normalisations below.
+    @Builder(access = AccessLevel.PRIVATE)
+    private FarmingInputs(Spellbook previewBook, Function<PatchRef, PatchPrediction> patches, DailyTeleportLedger ledger, long nowEpochSec,
+            Crop contractCrop, FarmingRunStatus contractRun,
+            FarmingPreferences preferences, HouseSight house, boolean offeredBanksHidden, Set<Integer> packedThisTrip, TravelTaken travelTaken) {
+        this.packedThisTrip = packedThisTrip != null ? Set.copyOf(packedThisTrip) : Set.of();
+        this.travelTaken = travelTaken != null ? travelTaken : TravelTaken.NONE;
+        this.previewBook = previewBook;
+        this.patches = patches;
+        this.ledger = ledger;
+        this.nowEpochSec = nowEpochSec;
+        this.contractCrop = contractCrop;
+        this.contractRun = contractRun;
+        // A caller with no preferences wants the default crops, not "plant nothing".
+        this.preferences = preferences != null ? preferences : FarmingPreferences.defaults();
+        this.house = house != null ? house : HouseSight.unseen();
+        this.offeredBanksHidden = offeredBanksHidden;
+    }
+
+    /** Nothing chosen, nothing seen. */
+    public static FarmingInputs none() {
+        return NONE;
+    }
+
+    public static FarmingInputs of(Spellbook previewBook, Function<PatchRef, PatchPrediction> patches) {
+        return of(previewBook, patches, null, 0);
+    }
+
+    /**
+     * @param ledger      how much of today's rationed teleports is already spent, or null
+     *                    to plan as though every allowance were untouched
+     * @param nowEpochSec which day the ledger's counts should be read against
+     */
+    public static FarmingInputs of(Spellbook previewBook, Function<PatchRef, PatchPrediction> patches, DailyTeleportLedger ledger,
+            long nowEpochSec) {
+        return builder().previewBook(previewBook).patches(patches).ledger(ledger).nowEpochSec(nowEpochSec).build();
+    }
+
+    /**
+     * A route resolver for this book over these inputs: today's ledger, the clock, the
+     * patches and the house as last seen, the player's travel switches, and what they
+     * declare their house holds. Building one is the expensive half of scoring a run, so
+     * callers share it where they can.
+     */
+    public CapabilityResolver resolverOn(Spellbook book) {
+        return new CapabilityResolver(book, ledger, nowEpochSec, this::patchAt, house).switchingOff(preferences.travelOff())
+                .declaringHouse(preferences.houseDeclared()).travelling(travelTaken);
+    }
+
+    /**
+     * Whether the panel leaves out the banks the route only passes. Their rows are not
+     * drawn, so nothing may be fetched at them. Defaults to false: every bank is shown.
+     */
+    public boolean hidesOfferedBanks() {
+        return offeredBanksHidden;
     }
 
     /**
@@ -216,8 +160,7 @@ public final class FarmingInputs {
      * be ready, so only PENDING is a reason not to go.
      */
     public boolean contractIsStillGrowing() {
-        return contractRun != null
-                && RunStatus.PENDING.name().equals(contractRun.getStatus());
+        return contractRun != null && RunStatus.PENDING.name().equals(contractRun.getStatus());
     }
 
     /** The contract's one-line instruction — "done — hand it in to Jane" — or "". */
@@ -240,16 +183,6 @@ public final class FarmingInputs {
         return contractRun == null ? 0L : contractRun.getReadyAtEpochSec();
     }
 
-    /** @see #withContractRun */
-    public FarmingRunStatus getContractRun() {
-        return contractRun;
-    }
-
-    /** @see #getPreferences */
-    public FarmingInputs withPreferences(FarmingPreferences preferences) {
-        return toBuilder().preferences(preferences).build();
-    }
-
     /**
      * These inputs with the sites this account is seen unable to reach marked on the
      * preferences, so a run whose every reachable site is dropped switches off. Each entry
@@ -257,33 +190,9 @@ public final class FarmingInputs {
      * opens up holds its run open again. Read only while some site is dropped.
      */
     FarmingInputs seeing(PlayerState state) {
-        Set<String> shut = preferences.sitesOff().isEmpty()
-                ? Set.of() : RunSettings.shutSites(state, this::patchAt);
+        Set<String> shut = preferences.sitesOff().isEmpty() ? Set.of() : RunSettings.shutSites(state, this::patchAt);
         FarmingPreferences marked = preferences.withSitesShut(shut);
         return marked == preferences ? this : withPreferences(marked);
-    }
-
-    /** @see #getNowEpochSec */
-    public FarmingInputs withNowEpochSec(long nowEpochSec) {
-        return toBuilder().nowEpochSec(nowEpochSec).build();
-    }
-
-    /**
-     * Which crops the player is willing to have suggested. Never null: an absent value
-     * reads as the default crop choices.
-     */
-    public FarmingPreferences getPreferences() {
-        return preferences;
-    }
-
-    /** @see #withContractCrop */
-    public Crop getContractCrop() {
-        return contractCrop;
-    }
-
-    /** The book to plan teleports for, or null to follow the one the player is on. */
-    public Spellbook getPreviewBook() {
-        return previewBook;
     }
 
     /**
@@ -296,28 +205,5 @@ public final class FarmingInputs {
      */
     public PatchPrediction patchAt(PatchRef patch) {
         return patches != null && patch != null ? patches.apply(patch) : null;
-    }
-
-    /**
-     * Today's spent teleport allowances, or null when nothing has been counted.
-     *
-     * <p>Passed in rather than read inside the resolver, so a planner can be built without
-     * one.
-     */
-    public DailyTeleportLedger getLedger() {
-        return ledger;
-    }
-
-    /**
-     * The second this advice is being built for, or zero when the caller did not say.
-     *
-     * <p>The farming layer takes the current second as an argument everywhere rather than
-     * reading a clock.
-     *
-     * <p>Zero means "no clock was given", and readers must survive it. A finish time
-     * compared against zero reads as not ready yet, which is the safe direction.
-     */
-    public long getNowEpochSec() {
-        return nowEpochSec;
     }
 }

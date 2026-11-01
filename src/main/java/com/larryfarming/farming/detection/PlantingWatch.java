@@ -4,9 +4,7 @@ import com.larryfarming.engine.ItemCounts;
 import com.larryfarming.farming.catalogue.CropData;
 import com.larryfarming.model.ItemStack;
 import com.larryfarming.model.PlayerState;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Notices a seed going into the ground before the patch says so, and holds the plan until

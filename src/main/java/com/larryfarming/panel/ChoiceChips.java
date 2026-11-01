@@ -1,11 +1,7 @@
 package com.larryfarming.panel;
 
 import com.larryfarming.snapshot.FarmingSettingPick;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -27,8 +23,7 @@ class ChoiceChips extends JPanel
 {
 	private static final int CHIP_HEIGHT = 20;
 	private static final int GAP = 2;
-	private static final Border ON_BORDER =
-		BorderFactory.createLineBorder(ColorScheme.PROGRESS_COMPLETE_COLOR);
+	private static final Border ON_BORDER = BorderFactory.createLineBorder(ColorScheme.PROGRESS_COMPLETE_COLOR);
 
 	private final BiConsumer<String, String> send;
 	private final List<SmallButton> chips = new ArrayList<>();

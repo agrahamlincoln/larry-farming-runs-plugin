@@ -2,17 +2,12 @@ package com.larryfarming.farming.engine;
 
 import com.larryfarming.engine.ItemCounts;
 import com.larryfarming.farming.catalogue.Loadouts;
-import com.larryfarming.farming.detection.RingEnergyCharges;
 import com.larryfarming.farming.model.GearPick;
 import com.larryfarming.farming.model.LoadoutSlot;
-import com.larryfarming.model.EquipmentSlot;
-import com.larryfarming.model.ItemStack;
-import com.larryfarming.model.PlayerState;
+import com.larryfarming.model.*;
 import com.larryfarming.snapshot.FarmingCarryItem;
 import com.larryfarming.snapshot.FarmingUpgrade;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Works out what the player should be wearing or carrying, and what they have instead.
@@ -37,53 +32,30 @@ public final class LoadoutPlanner {
      * Item names that start with a proper noun keep their capital mid-sentence ("your
      * Explorer's ring 2"). Every other name is lower-cased there ("your magic secateurs").
      */
-    private static final Set<String> PROPER_FIRST_WORDS =
-            Set.of("Farming", "Ardougne", "Explorer's", "Xeric's", "Farmer's");
+    private static final Set<String> PROPER_FIRST_WORDS = Set.of("Farming", "Ardougne", "Explorer's", "Xeric's", "Farmer's");
 
     /**
      * Every slot worth filling, in catalogue order.
+     *
+     * <p>The ring slot earns its place only while the route takes the Explorer's ring's
+     * Falador farm teleport. Otherwise the slot is left out, so the ring earns no tip and no
+     * nag.
      *
      * @param staffWielded whether the run needs a fairy-ring staff in hand, which then
      *     holds the weapon slot (see {@link Loadouts#forRun})
-     */
-    public static List<SlotAdvice> plan(PlayerState state, boolean staffWielded) {
-        return plan(state, staffWielded, false);
-    }
-
-    /**
-     * Every slot worth filling, in catalogue order.
-     *
-     * <p>The ring slot earns its place only while the Explorer's ring helps this run: an
-     * energy restore left today, or a Falador farm teleport the route takes. Otherwise the
-     * slot is left out, so a spent ring earns no tip and no nag. Unread charges count as
-     * left, since hiding a charged ring costs more than showing a spent one.
-     *
-     * @param staffWielded whether the run needs a fairy-ring staff in hand
      * @param ringTeleports whether the route teleports to the Falador farm by the ring,
      *     which the planner only allows while the ring has a teleport left today
-     */
-    public static List<SlotAdvice> plan(PlayerState state, boolean staffWielded,
-            boolean ringTeleports) {
-        return plan(state, staffWielded, ringTeleports, false);
-    }
-
-    /**
-     * The same slots, with the log basket asked for in the cape slot.
-     *
      * @param basketWorn whether the trip cuts logs with the player's own basket and no route
      *     needs a cape's teleport (see {@code CarryPlanner.basketPlace})
      */
-    public static List<SlotAdvice> plan(PlayerState state, boolean staffWielded,
-            boolean ringTeleports, boolean basketWorn) {
+    public static List<SlotAdvice> plan(PlayerState state, boolean staffWielded, boolean ringTeleports, boolean basketWorn) {
         List<LoadoutSlot> slots = Loadouts.forRun(staffWielded, basketWorn);
         List<SlotAdvice> advice = new ArrayList<>(slots.size());
-        RingEnergyCharges.Charges ring = RingEnergyCharges.of(state);
         for (LoadoutSlot slot : slots) {
             if (slot.getSlot() == EquipmentSlot.RING) {
-                if (!ringHelps(ring, ringTeleports)) {
-                    continue;
+                if (ringTeleports) {
+                    advice.add(withRingNote(planSlot(slot, state)));
                 }
-                advice.add(withRingNote(planSlot(slot, state), ring, ringTeleports));
                 continue;
             }
             advice.add(planSlot(slot, state));
@@ -91,33 +63,14 @@ public final class LoadoutPlanner {
         return advice;
     }
 
-    private static boolean ringHelps(RingEnergyCharges.Charges ring, boolean ringTeleports) {
-        return ring == null || ring.getRestoresLeft() > 0 || ringTeleports;
-    }
-
-    /**
-     * The ring slot's sentences, with what the ring does for this run added: "It has 2
-     * energy restores left today." and "Teleport to the Falador farm with it."
-     */
-    private static SlotAdvice withRingNote(SlotAdvice advice, RingEnergyCharges.Charges ring,
-            boolean ringTeleports) {
+    /** The ring slot's sentences, with "Teleport to the Falador farm with it." added. */
+    private static SlotAdvice withRingNote(SlotAdvice advice) {
         if (advice.getVerdict() == SlotAdvice.Verdict.NOTHING_YET) {
             return advice;
         }
-        StringBuilder note = new StringBuilder();
-        if (ring != null && ring.getRestoresLeft() > 0) {
-            int left = ring.getRestoresLeft();
-            note.append(" It has ").append(left)
-                    .append(left == 1 ? " energy restore" : " energy restores")
-                    .append(" left today.");
-        }
-        if (ringTeleports) {
-            note.append(" Teleport to the Falador farm with it.");
-        }
-        // The slot's purpose names both uses. A run not teleporting by it names the one left.
-        String purpose = ringTeleports ? advice.getPurpose() : "Run energy restores";
+        String note = " Teleport to the Falador farm with it.";
         String tip = advice.getTip().isEmpty() ? "" : advice.getTip() + note;
-        return new SlotAdvice(advice.getSlot(), purpose, advice.isNiceToHave(),
+        return new SlotAdvice(advice.getSlot(), advice.getPurpose(), advice.isNiceToHave(),
                 advice.getGroup(), advice.isMustWear(), tip, advice.getTiers(),
                 advice.getVerdict(), advice.getBest(), advice.getBecause() + note,
                 advice.isConfident(), advice.getGoal(), advice.getGoalSentence());
@@ -162,20 +115,16 @@ public final class LoadoutPlanner {
         if (best < 0) {
             // Nothing found means "no" only once the bank has been seen.
             if (!confident) {
-                return advice(slot, tiers, SlotAdvice.Verdict.NOTHING_YET, null, "",
-                        "Open your bank to check this slot.", false);
+                return advice(slot, tiers, SlotAdvice.Verdict.NOTHING_YET, null, "", "Open your bank to check this slot.", false);
             }
-            return advice(slot, tiers, SlotAdvice.Verdict.NOTHING_YET, null, "",
-                    slot.getGoalSentence(), true);
+            return advice(slot, tiers, SlotAdvice.Verdict.NOTHING_YET, null, "", slot.getGoalSentence(), true);
         }
         // The form held, so a lunar staff is named and drawn as one.
         GearPick pick = tiers.get(best).getPick();
         if (best == onHandAt) {
             boolean wearing = tiers.get(best).getStanding() == SlotAdvice.Standing.WORN;
-            return advice(slot, tiers, SlotAdvice.Verdict.SET, pick, "",
-                    (wearing ? "You are wearing " : "You carry ")
-                            + inSentence(pick.getDisplayName()) + ".",
-                    confident);
+            return advice(slot, tiers, SlotAdvice.Verdict.SET, pick, "", (wearing ? "You are wearing " : "You carry ")
+                            + inSentence(pick.getDisplayName()) + ".", confident);
         }
         String tip = String.format(slot.getTip(), inSentence(pick.getDisplayName()));
         return advice(slot, tiers, SlotAdvice.Verdict.SWAP, pick, tip, tip, confident);
@@ -183,16 +132,13 @@ public final class LoadoutPlanner {
 
     /** Where an item must be for the run: worn, or for most items carried will do. */
     private static boolean servesTheRun(LoadoutSlot slot, SlotAdvice.Standing standing) {
-        return standing == SlotAdvice.Standing.WORN
-                || (!slot.isMustWear() && standing == SlotAdvice.Standing.CARRIED);
+        return standing == SlotAdvice.Standing.WORN || (!slot.isMustWear() && standing == SlotAdvice.Standing.CARRIED);
     }
 
     private static SlotAdvice advice(LoadoutSlot slot, List<SlotAdvice.Tier> tiers,
-            SlotAdvice.Verdict verdict, GearPick best, String tip, String because,
-            boolean confident) {
+            SlotAdvice.Verdict verdict, GearPick best, String tip, String because, boolean confident) {
         return new SlotAdvice(slot.getSlot(), slot.getPurpose(), slot.isNiceToHave(),
-                slot.getGroup(), slot.isMustWear(), tip, tiers, verdict, best, because,
-                confident, slot.getGoal(), slot.getGoalSentence());
+                slot.getGroup(), slot.isMustWear(), tip, tiers, verdict, best, because, confident, slot.getGoal(), slot.getGoalSentence());
     }
 
     /** An item name for mid-sentence, as the game writes it there. */
@@ -211,9 +157,7 @@ public final class LoadoutPlanner {
         for (FarmingCarryItem item : items) {
             names.add(inSentence(item.getName()));
         }
-        return names.size() == 1 ? names.get(0)
-                : String.join(", ", names.subList(0, names.size() - 1)) + " " + conjunction
-                        + " " + names.get(names.size() - 1);
+        return LookOnce.joined(names, conjunction);
     }
 
     /** The first of this pick's items in the inventory, or 0 when none is. */
@@ -258,16 +202,13 @@ public final class LoadoutPlanner {
         return rows;
     }
 
-    private static void addEquips(List<SlotAdvice> plan, List<FarmingUpgrade> rows,
-            boolean niceToHave, List<String> groupsDone) {
+    private static void addEquips(List<SlotAdvice> plan, List<FarmingUpgrade> rows, boolean niceToHave, List<String> groupsDone) {
         for (SlotAdvice slot : plan) {
-            if (slot.getVerdict() != SlotAdvice.Verdict.SWAP
-                    || slot.isNiceToHave() != niceToHave) {
+            if (slot.getVerdict() != SlotAdvice.Verdict.SWAP || slot.isNiceToHave() != niceToHave) {
                 continue;
             }
             if (slot.getGroup() == null) {
-                rows.add(new FarmingUpgrade(FarmingUpgrade.Kind.EQUIP,
-                        slot.getBest().getIconItemId(), slot.getBest().getDisplayName(),
+                rows.add(new FarmingUpgrade(FarmingUpgrade.Kind.EQUIP, slot.getBest().getIconItemId(), slot.getBest().getDisplayName(),
                         slot.getTip()));
             } else if (!groupsDone.contains(slot.getGroup())) {
                 // One row for the outfit, drawn as the first piece to put on.
@@ -278,16 +219,14 @@ public final class LoadoutPlanner {
         }
     }
 
-    private static void addGoals(List<SlotAdvice> plan, List<FarmingUpgrade> rows,
-            List<String> groupsDone) {
+    private static void addGoals(List<SlotAdvice> plan, List<FarmingUpgrade> rows, List<String> groupsDone) {
         for (SlotAdvice slot : plan) {
             if (slot.getVerdict() != SlotAdvice.Verdict.NOTHING_YET) {
                 continue;
             }
             if (slot.getGroup() == null) {
                 GearPick goal = slot.getGoal();
-                rows.add(new FarmingUpgrade(FarmingUpgrade.Kind.GOAL,
-                        goal.getIconItemId(), goal.getDisplayName(), slot.getGoalSentence()));
+                rows.add(new FarmingUpgrade(FarmingUpgrade.Kind.GOAL, goal.getIconItemId(), goal.getDisplayName(), slot.getGoalSentence()));
             } else if (!groupsDone.contains(slot.getGroup())) {
                 groupsDone.add(slot.getGroup());
                 rows.add(groupRow(plan, slot.getGroup()));
@@ -314,18 +253,7 @@ public final class LoadoutPlanner {
                 have++;
             }
         }
-        String progress = group + ": you have " + have + " of " + total
-                + " pieces. The set gives 2.5% more Farming experience.";
+        String progress = group + ": you have " + have + " of " + total + " pieces. The set gives 2.5% more Farming experience.";
         return new FarmingUpgrade(FarmingUpgrade.Kind.GOAL, icon, group, progress);
-    }
-
-    /** The plan's advice for one slot, or null when the run has none for it. */
-    public static SlotAdvice at(List<SlotAdvice> plan, EquipmentSlot slot) {
-        for (SlotAdvice advice : plan) {
-            if (advice.getSlot() == slot) {
-                return advice;
-            }
-        }
-        return null;
     }
 }

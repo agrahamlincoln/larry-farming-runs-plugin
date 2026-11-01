@@ -1,11 +1,7 @@
 package com.larryfarming.farming.catalogue;
 
 import com.larryfarming.farming.model.PatchRef;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import lombok.Value;
 
 /**
@@ -79,16 +75,10 @@ public final class PatchAttributes {
     private static Map<PatchRef, Entry> table() {
         Map<PatchRef, Entry> entries = new LinkedHashMap<>();
         for (Site site : Site.values()) {
-            if (site.attributes() != null
-                    && entries.put(site.patch(), site.attributes()) != null) {
+            if (site.attributes() != null && entries.put(site.patch(), site.attributes()) != null) {
                 throw new IllegalStateException(site + ": a second site ranks its patch");
             }
         }
         return Collections.unmodifiableMap(entries);
-    }
-
-    /** Every patch this table ranks. */
-    public static List<PatchRef> ranked() {
-        return new ArrayList<>(BY_PATCH.keySet());
     }
 }

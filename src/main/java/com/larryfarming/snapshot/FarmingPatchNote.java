@@ -1,6 +1,5 @@
 package com.larryfarming.snapshot;
 
-import com.google.gson.annotations.SerializedName;
 import lombok.Value;
 
 /**
@@ -16,14 +15,14 @@ import lombok.Value;
 public class FarmingPatchNote {
 
     /** Which patch, without the place the row already names: "Flower", "North allotment". */
-    @SerializedName("patchName") String patchName;
+    String patchName;
 
     /** What kind of skip this is, for the short label and the colour. */
-    @SerializedName("reason") FarmingSkipReason reason;
+    FarmingSkipReason reason;
 
     /** The full clause, for the hover. */
-    @SerializedName("because") String because;
+    String because;
 
     /** When whatever is growing here finishes, or 0 when nothing is. */
-    @SerializedName("readyAtEpochSec") long readyAtEpochSec;
+    long readyAtEpochSec;
 }

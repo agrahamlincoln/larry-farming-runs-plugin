@@ -1,33 +1,12 @@
 package com.larryfarming.farming.catalogue;
 
-import static com.larryfarming.farming.model.Rune.AIR;
-import static com.larryfarming.farming.model.Rune.ASTRAL;
-import static com.larryfarming.farming.model.Rune.BLOOD;
-import static com.larryfarming.farming.model.Rune.COSMIC;
-import static com.larryfarming.farming.model.Rune.EARTH;
-import static com.larryfarming.farming.model.Rune.FIRE;
-import static com.larryfarming.farming.model.Rune.LAW;
-import static com.larryfarming.farming.model.Rune.NATURE;
-import static com.larryfarming.farming.model.Rune.SOUL;
-import static com.larryfarming.farming.model.Rune.WATER;
-
-import com.larryfarming.farming.model.Capability;
-import com.larryfarming.farming.model.Destination;
-import com.larryfarming.farming.model.Rune;
-import com.larryfarming.farming.model.Spellbook;
-import com.larryfarming.farming.model.TeleportMeans;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import com.larryfarming.data.Tables;
+import com.larryfarming.farming.model.*;
+import java.util.*;
 
 /**
  * Every way the runs know of reaching each place: the spell, and the tablet that lands in
- * the same spot.
- *
- * <p>Each spell's icon number is a RuneLite sprite ID ({@code SpriteID.Magicon},
- * {@code Magicon2}, {@code LunarMagicOn}, {@code MagicNecroOn}), written as a literal
- * because those constants hide behind indexed names like {@code _22}.
+ * the same spot, read from the teleports table.
  *
  * <p>Levels and rune costs come from the OSRS wiki spellbook pages
  * (<a href="https://oldschool.runescape.wiki/w/Standard_spellbook">standard</a>,
@@ -45,15 +24,16 @@ public final class Teleports {
     private Teleports() {
     }
 
-    private static final Map<Destination, List<TeleportMeans>> MEANS = build();
-    private static final Map<Capability, Map<Rune, Integer>> SPELL_COSTS = spellCosts();
+    private static final Table TABLE = new Table("/com/larryfarming/teleports.tsv");
+
+    private static final Map<Destination, List<TeleportMeans>> MEANS = TABLE.means;
+    private static final Map<Capability, Map<Rune, Integer>> SPELL_COSTS = TABLE.costs;
 
     /**
      * Spellbook Swap: Lunar, 96 Magic, Dream Mentor. It opens another book the player has
      * unlocked for one cast within two minutes, then returns them to Lunar.
      */
-    public static final TeleportMeans SPELLBOOK_SWAP = TeleportMeans.spell("Spellbook Swap",
-            Spellbook.LUNAR, 96, "Dream Mentor", 582, ASTRAL, 3, COSMIC, 2, LAW, 1);
+    public static final TeleportMeans SPELLBOOK_SWAP = TABLE.swap;
 
     private static final Map<Destination, TeleportMeans> BY_SWAP = bySwap();
 
@@ -95,115 +75,87 @@ public final class Teleports {
         return cost != null ? cost : Collections.emptyMap();
     }
 
-    private static Map<Capability, Map<Rune, Integer>> spellCosts() {
-        Map<Capability, Map<Rune, Integer>> costs = new EnumMap<>(Capability.class);
-        costs.put(Capability.RESPAWN_TELEPORT, runes(LAW, 1, SOUL, 1));
-        costs.put(Capability.RESURRECT_CROP,
-                runes(EARTH, 25, BLOOD, 8, NATURE, 12, SOUL, 8));
-        costs.put(Capability.FERTILE_SOIL, runes(EARTH, 15, ASTRAL, 3, NATURE, 2));
-        costs.put(Capability.HUMIDIFY, runes(WATER, 3, ASTRAL, 1, FIRE, 1));
-        return Collections.unmodifiableMap(costs);
-    }
+    /** The teleports table, read once. */
+    private static final class Table {
 
-    private static Map<Rune, Integer> runes(Object... pairs) {
-        Map<Rune, Integer> cost = new EnumMap<>(Rune.class);
-        for (int i = 0; i < pairs.length; i += 2) {
-            cost.put((Rune) pairs[i], (Integer) pairs[i + 1]);
+        final Map<Destination, List<TeleportMeans>> means;
+        final Map<Capability, Map<Rune, Integer>> costs;
+        final TeleportMeans swap;
+
+        Table(String resource) {
+            Map<Destination, List<TeleportMeans>> byPlace = new EnumMap<>(Destination.class);
+            Map<Capability, Map<Rune, Integer>> byCapability = new EnumMap<>(Capability.class);
+            TeleportMeans swapRow = null;
+            for (Tables.Row row : Tables.read(resource)) {
+                switch (row.text(0)) {
+                    case "spell":
+                    case "swap":
+                        TeleportMeans spell = TeleportMeans.spell(row.requireWidth(9).text(2),
+                                row.constant(Spellbook.class, 3), row.integer(4), nullable(row, 5), row.integer(6), runes(row, 8));
+                        if (row.text(0).equals("swap")) {
+                            if (swapRow != null) {
+                                throw row.error("a second swap row");
+                            }
+                            swapRow = spell;
+                        } else {
+                            byPlace.computeIfAbsent(row.constant(Destination.class, 1), place -> new ArrayList<>()).add(spell);
+                        }
+                        break;
+                    case "tablet":
+                        byPlace.computeIfAbsent(row.requireWidth(6).constant(Destination.class, 1),
+                                place -> new ArrayList<>()).add(TeleportMeans.tablet(row.text(2), row.integer(3), nullable(row, 5)));
+                        break;
+                    case "same":
+                        List<TeleportMeans> shared = byPlace.get(row.requireWidth(3).constant(Destination.class, 2));
+                        if (shared == null) {
+                            throw row.error("no means above this line to share");
+                        }
+                        byPlace.put(row.constant(Destination.class, 1), shared);
+                        break;
+                    case "runes":
+                        Object[] pairs = runes(row.requireWidth(3), 2);
+                        Map<Rune, Integer> cost = new EnumMap<>(Rune.class);
+                        for (int i = 0; i < pairs.length; i += 2) {
+                            cost.put((Rune) pairs[i], (Integer) pairs[i + 1]);
+                        }
+                        byCapability.put(row.constant(Capability.class, 1), Collections.unmodifiableMap(cost));
+                        break;
+                    default:
+                        throw row.error("no kind " + row.text(0));
+                }
+            }
+            if (swapRow == null) {
+                throw new IllegalStateException(resource + ": no swap row");
+            }
+            // Places that share means share one list, as the table says.
+            Map<List<TeleportMeans>, List<TeleportMeans>> frozen = new IdentityHashMap<>();
+            byPlace.replaceAll((place, list) -> frozen.computeIfAbsent(list, List::copyOf));
+            means = Collections.unmodifiableMap(byPlace);
+            costs = Collections.unmodifiableMap(byCapability);
+            swap = swapRow;
         }
-        return Collections.unmodifiableMap(cost);
-    }
 
-    private static Map<Destination, List<TeleportMeans>> build() {
-        Map<Destination, List<TeleportMeans>> means = new EnumMap<>(Destination.class);
+        private static String nullable(Tables.Row row, int column) {
+            String text = row.text(column);
+            return text.isEmpty() ? null : text;
+        }
 
-        means.put(Destination.CATHERBY, List.of(
-                TeleportMeans.spell("Catherby Teleport", Spellbook.LUNAR, 87,
-                        "Lunar Diplomacy", 556, WATER, 10, ASTRAL, 3, LAW, 3),
-                TeleportMeans.tablet("Catherby teleport tablet", 24961)));
-
-        means.put(Destination.CAMELOT, List.of(
-                TeleportMeans.spell("Camelot Teleport", Spellbook.STANDARD, 45, null, 37,
-                        AIR, 5, LAW, 1),
-                TeleportMeans.tablet("Camelot teleport tablet", 8010)));
-
-        List<TeleportMeans> varrock = List.of(
-                TeleportMeans.spell("Varrock Teleport", Spellbook.STANDARD, 25, null, 27,
-                        AIR, 3, FIRE, 1, LAW, 1),
-                TeleportMeans.tablet("Varrock teleport tablet", 8007));
-        means.put(Destination.VARROCK, varrock);
-        // The medium Varrock diary adds the Grand Exchange to the same spell and tablet: the
-        // spell's destination is switched by right-click, and the tablet gains a Grand
-        // Exchange option. The diary gate sits on the rungs, since neither means names it.
-        means.put(Destination.GRAND_EXCHANGE, varrock);
-
-        means.put(Destination.LUMBRIDGE, List.of(
-                TeleportMeans.spell("Lumbridge Teleport", Spellbook.STANDARD, 31, null, 30,
-                        AIR, 3, EARTH, 1, LAW, 1),
-                TeleportMeans.tablet("Lumbridge teleport tablet", 8008)));
-
-        // The Falador chains are all jewellery; this is the fallback for a player holding
-        // none of it.
-        means.put(Destination.FALADOR, List.of(
-                TeleportMeans.spell("Falador Teleport", Spellbook.STANDARD, 37, null, 33,
-                        AIR, 3, WATER, 1, LAW, 1),
-                TeleportMeans.tablet("Falador teleport tablet", 8009)));
-
-        // The fallback for an account with no diary cloak. Plague
-        // City gates the spell, the tablet and the house portal alike.
-        means.put(Destination.ARDOUGNE, List.of(
-                TeleportMeans.spell("Ardougne Teleport", Spellbook.STANDARD, 51,
-                        "Plague City", 54, WATER, 2, LAW, 2),
-                TeleportMeans.tablet("Ardougne teleport tablet", 8011, "Plague City")));
-
-        means.put(Destination.HOUSE, List.of(
-                TeleportMeans.spell("Teleport to House", Spellbook.STANDARD, 40, null, 355,
-                        AIR, 1, EARTH, 1, LAW, 1),
-                TeleportMeans.tablet("Teleport to house tablet", 8013)));
-
-        means.put(Destination.FISHING_GUILD, List.of(
-                TeleportMeans.spell("Fishing Guild Teleport", Spellbook.LUNAR, 85,
-                        "Lunar Diplomacy", 555, WATER, 10, ASTRAL, 3, LAW, 3),
-                TeleportMeans.tablet("Fishing Guild teleport tablet", 24959)));
-
-        // Arceuus arrivals. Each tablet here is made at the Arceuus lectern and works on any
-        // book, but breaks only once the spell's quest is finished. Fenkenstrain's tablet
-        // lands where the spell does (3548,3529).
-        means.put(Destination.FENKENSTRAINS_CASTLE, List.of(
-                TeleportMeans.spell("Fenkenstrain's Castle Teleport", Spellbook.ARCEUUS, 48,
-                        "Priest in Peril", 1259, EARTH, 1, LAW, 1, SOUL, 1),
-                TeleportMeans.tablet("Fenkenstrain's castle teleport", 19621,
-                        "Priest in Peril")));
-
-        // The tablet lets non-Arceuus players reach fairy ring CKS this way (see
-        // Networks.onTheFairyRingNetwork()).
-        means.put(Destination.SALVE_GRAVEYARD, List.of(
-                TeleportMeans.spell("Salve Graveyard Teleport", Spellbook.ARCEUUS, 40,
-                        "Priest in Peril", 1254, LAW, 1, SOUL, 2),
-                TeleportMeans.tablet("Salve graveyard teleport", 19619, "Priest in Peril")));
-
-        // Both land at the manor's front doors. Neither asks for a quest.
-        means.put(Destination.DRAYNOR_MANOR, List.of(
-                TeleportMeans.spell("Draynor Manor Teleport", Spellbook.ARCEUUS, 17, null,
-                        1253, LAW, 1, EARTH, 1, WATER, 1),
-                TeleportMeans.tablet("Draynor manor teleport", 19615)));
-
-        // The only direct way to the island: every other route ends in Brother Tranquility's
-        // boat from Mos Le'Harmless. Both need The Great Brain Robbery finished. The spell
-        // lands at 3797,2866 and the tablet one tile north.
-        means.put(Destination.HARMONY_ISLAND, List.of(
-                TeleportMeans.spell("Harmony Island Teleport", Spellbook.ARCEUUS, 65,
-                        "The Great Brain Robbery", 1261, LAW, 1, SOUL, 1, NATURE, 1),
-                TeleportMeans.tablet("Harmony island teleport", 19625,
-                        "The Great Brain Robbery")));
-
-        means.put(Destination.ARCEUUS_LIBRARY, List.of(
-                TeleportMeans.spell("Arceuus Library Teleport", Spellbook.ARCEUUS, 6, null,
-                        1252, EARTH, 2, LAW, 1)));
-
-        means.put(Destination.CIVITAS_ILLA_FORTIS, List.of(
-                TeleportMeans.spell("Civitas illa Fortis Teleport", Spellbook.STANDARD, 54,
-                        "Twilight's Promise", 367, EARTH, 1, FIRE, 1, LAW, 2)));
-
-        return Collections.unmodifiableMap(means);
+        /** The cell's rune-count pairs, as {@link TeleportMeans#spell} takes them. */
+        private static Object[] runes(Tables.Row row, int column) {
+            String[] words = row.text(column).split(" ");
+            if (words.length % 2 != 0) {
+                throw row.error("runes come in rune-count pairs: " + row.text(column));
+            }
+            Object[] pairs = new Object[words.length];
+            for (int i = 0; i < words.length; i += 2) {
+                try {
+                    pairs[i] = Rune.valueOf(words[i]);
+                    pairs[i + 1] = Integer.parseInt(words[i + 1]);
+                } catch (IllegalArgumentException e) {
+                    throw row.error("not a rune and a count: " + words[i] + " " + words[i + 1]);
+                }
+            }
+            return pairs;
+        }
     }
 }

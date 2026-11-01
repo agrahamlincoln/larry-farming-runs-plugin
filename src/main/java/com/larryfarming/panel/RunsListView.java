@@ -1,40 +1,16 @@
 package com.larryfarming.panel;
 
-import com.larryfarming.snapshot.FarmingAdvice;
-import com.larryfarming.snapshot.FarmingRunSettings;
-import com.larryfarming.snapshot.FarmingRunStatus;
-import com.larryfarming.snapshot.FarmingSettingChoice;
-import com.larryfarming.snapshot.FarmingSettingPick;
-import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
+import com.larryfarming.snapshot.*;
+import java.awt.*;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.function.BiConsumer;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
-import javax.swing.JCheckBox;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 
 /**
- * The farming tab's RUNS section: one row per run with its status, and under each row the
+ * The side panel's RUNS section: one row per run with its status, and under each row the
  * settings that decide what the run plants.
  *
  * <p>Clicking a row opens or shuts its settings. A run one setting switches carries that
@@ -49,8 +25,7 @@ class RunsListView extends JPanel
 	/** The status line of a run not due yet: quieter than the name, never grey. */
 	private static final Color COLOR_QUIET = PanelColors.META;
 	/** A run switched off: the light text faded, as an unticked square fades its sprite. */
-	static final Color COLOR_OFF = new Color(
-		ColorScheme.LIGHT_GRAY_COLOR.getRed(), ColorScheme.LIGHT_GRAY_COLOR.getGreen(),
+	static final Color COLOR_OFF = new Color(ColorScheme.LIGHT_GRAY_COLOR.getRed(), ColorScheme.LIGHT_GRAY_COLOR.getGreen(),
 		ColorScheme.LIGHT_GRAY_COLOR.getBlue(), 90);
 	/** An opened run and its settings share this, so they read as one block. */
 	private static final Color COLOR_OPEN = ColorScheme.DARKER_GRAY_COLOR;
@@ -60,10 +35,9 @@ class RunsListView extends JPanel
 
 	private static final String STATUS_DUE = "DUE";
 	private static final String STATUS_LOCKED = "LOCKED";
-	private static final String STATUS_NO_ROUTE = "NO_ROUTE";
 
-	private final JLabel heading;
 	private final JPanel container;
+	private final BiConsumer<String, String> send;
 
 	/**
 	 * The runs whose settings are open, by run id. Kept across rebuilds, so a re-plan after a
@@ -78,25 +52,17 @@ class RunsListView extends JPanel
 	 */
 	private final Map<String, JLabel> runDetails = new HashMap<>();
 
-	private BiConsumer<String, String> settingCallback;
-
-	RunsListView(JLabel heading, JPanel container)
+	/** @param send receives each setting changed here as its config key and new value */
+	RunsListView(JLabel heading, JPanel container, BiConsumer<String, String> send)
 	{
-		this.heading = heading;
 		this.container = container;
-		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		setOpaque(false);
-		setAlignmentX(LEFT_ALIGNMENT);
+		this.send = send;
+		PanelText.stack(this);
 		add(heading);
 		add(container);
 	}
 
-	void setSettingCallback(BiConsumer<String, String> callback)
-	{
-		this.settingCallback = callback;
-	}
-
-	/** Empties the list, for a tab with no advice. */
+	/** Empties the list, for a panel with no advice. */
 	void clear()
 	{
 		runDetails.clear();
@@ -113,7 +79,7 @@ class RunsListView extends JPanel
 		runDetails.clear();
 		container.removeAll();
 		Map<String, FarmingRunSettings> settingsFor = settingsByRun(advice);
-		List<FarmingRunStatus> off = listOf(advice.getSwitchedOff());
+		List<FarmingRunStatus> off = PanelText.listOf(advice.getSwitchedOff());
 		boolean divider = false;
 		for (FarmingRunStatus run : rowsOf(advice.getRuns(), off, advice.getRunOrder()))
 		{
@@ -123,22 +89,20 @@ class RunsListView extends JPanel
 			}
 			FarmingRunSettings settings = settingsFor.get(run.getRunId());
 			// Built whether open or shut, then shown and hidden in place by a click on the row.
-			JPanel opened = settings != null
-				&& settings.getShape() != FarmingRunSettings.Shape.SWITCH
+			JPanel opened = settings != null && settings.getShape() != FarmingRunSettings.Shape.SWITCH
 				? buildRunSettings(settings, icons) : null;
 			if (opened != null)
 			{
 				opened.setVisible(openRuns.contains(run.getRunId()));
 			}
-			container.add(FarmingPanel.sized(buildRunRow(run, advice, icons, settings,
-				off.contains(run), opened), width));
+			container.add(FarmingPanel.sized(buildRunRow(run, advice, icons, settings, off.contains(run), opened), width));
 			if (opened != null)
 			{
 				container.add(opened);
 			}
 			divider = true;
 		}
-		setVisible(!listOf(advice.getRuns()).isEmpty() || !off.isEmpty());
+		setVisible(!PanelText.listOf(advice.getRuns()).isEmpty() || !off.isEmpty());
 	}
 
 	/** Copies each run row's detail text from the newest advice onto the existing label. */
@@ -159,32 +123,33 @@ class RunsListView extends JPanel
 	}
 
 	/**
-	 * The list's structural inputs, for the tab's guard. A scheduled run gives its id and
+	 * The list's structural inputs, for the panel's guard. A scheduled run gives its id and
 	 * status only: its detail text is a worded countdown, updated in place through
 	 * {@link #runDetails}.
 	 * Which runs are open is not here either: a click shows and hides a block in place, and
 	 * a rebuild reopens it from {@link #openRuns}.
 	 */
-	static void addSignature(List<String> signature, FarmingAdvice advice)
+	static void addSignature(List<Object> signature, FarmingAdvice advice)
 	{
-		for (FarmingRunStatus run : listOf(advice.getRuns()))
+		List<List<String>> runs = new ArrayList<>();
+		for (FarmingRunStatus run : PanelText.listOf(advice.getRuns()))
 		{
-			signature.add("r:" + run.getRunId() + "|" + run.getStatus());
+			runs.add(Arrays.asList(run.getRunId(), run.getStatus()));
 		}
+		signature.add(runs);
 		// Trip membership decides each row's colour and weight.
-		signature.add("t:" + advice.getTripRuns());
-		signature.add("ro:" + advice.getRunOrder());
+		signature.add(advice.getTripRuns());
+		signature.add(advice.getRunOrder());
 		// A setting the player changes moves the re-planned advice here, which rebuilds the
 		// blocks with the confirmed state. An off row's detail is fixed text, not a
 		// countdown, and showDetails never reaches it, so it goes in whole.
-		for (FarmingRunStatus run : listOf(advice.getSwitchedOff()))
+		List<List<String>> off = new ArrayList<>();
+		for (FarmingRunStatus run : PanelText.listOf(advice.getSwitchedOff()))
 		{
-			signature.add("o:" + run.getRunId() + "|" + run.getDetail());
+			off.add(Arrays.asList(run.getRunId(), run.getDetail()));
 		}
-		for (FarmingRunSettings settings : listOf(advice.getRunSettings()))
-		{
-			signature.add("s:" + settings);
-		}
+		signature.add(off);
+		signature.add(PanelText.listOf(advice.getRunSettings()));
 	}
 
 	/**
@@ -201,8 +166,9 @@ class RunsListView extends JPanel
 		// Membership of the trip: a trip covers several families.
 		boolean onTrip = !switchedOff && coversRun(advice, run.getRunId());
 		boolean due = !switchedOff && STATUS_DUE.equals(run.getStatus());
-		// Grey means not possible. A run merely not due yet keeps its colours.
-		boolean impossible = !switchedOff && notPossible(run.getStatus());
+		// Grey means not possible: locked behind an unlock, or no route to any stop. A run
+		// merely not due yet keeps its colours.
+		boolean impossible = !switchedOff && STATUS_LOCKED.equals(run.getStatus());
 
 		JPanel row = new JPanel(new GridBagLayout());
 		// Opaque only while open, so the row and its settings read as one block.
@@ -233,14 +199,9 @@ class RunsListView extends JPanel
 			}
 		}
 
-		JPanel text = new JPanel();
-		text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
-		text.setOpaque(false);
-
+		JPanel text = PanelText.stack();
 		JLabel name = new JLabel(run.getRunName());
-		name.setFont(onTrip || due
-			? FontManager.getRunescapeBoldFont()
-			: FontManager.getRunescapeSmallFont());
+		name.setFont(onTrip || due ? FontManager.getRunescapeBoldFont() : FontManager.getRunescapeSmallFont());
 		name.setForeground(switchedOff ? COLOR_OFF : runColour(run.getStatus(), onTrip));
 		name.setAlignmentX(LEFT_ALIGNMENT);
 		text.add(name);
@@ -250,18 +211,13 @@ class RunsListView extends JPanel
 		// quieter status line, but grey only when the run is not possible.
 		JLabel detail = new JLabel();
 		detail.setFont(FontManager.getRunescapeSmallFont());
-		detail.setForeground(switchedOff ? COLOR_OFF
-			: due ? COLOR_ROUTE
-			: impossible ? COLOR_SKIPPED : COLOR_QUIET);
+		detail.setForeground(switchedOff ? COLOR_OFF : due ? COLOR_ROUTE : impossible ? COLOR_SKIPPED : COLOR_QUIET);
 		detail.setAlignmentX(LEFT_ALIGNMENT);
 		text.add(detail);
 		runDetails.put(run.getRunId(), detail);
 		showRunDetail(detail, run.getDetail());
 
-		gbc.gridx = 1;
-		gbc.weightx = 1.0;
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		row.add(text, gbc);
+		PanelText.addFill(row, gbc, 1, text);
 
 		JComponent accessory = accessory(settings, row, name, detail, icon, opened);
 		if (accessory != null)
@@ -278,7 +234,7 @@ class RunsListView extends JPanel
 	/** Hidden rather than blank, so an empty detail takes no room. */
 	private static void showRunDetail(JLabel detail, String text)
 	{
-		boolean anything = text != null && !text.isBlank();
+		boolean anything = PanelText.hasText(text);
 		detail.setVisible(anything);
 		detail.setText(anything ? text : "");
 	}
@@ -289,8 +245,7 @@ class RunsListView extends JPanel
 	 * left click on the whole row does what the control does: it flips the box, or it opens
 	 * and shuts the block.
 	 */
-	private JComponent accessory(FarmingRunSettings settings, JPanel row, JLabel name,
-		JLabel detail, JLabel icon, JPanel opened)
+	private JComponent accessory(FarmingRunSettings settings, JPanel row, JLabel name, JLabel detail, JLabel icon, JPanel opened)
 	{
 		if (settings == null)
 		{
@@ -302,18 +257,7 @@ class RunsListView extends JPanel
 			JCheckBox box = runSwitch(only, settings.getRunId(), name, detail, icon);
 			// A click anywhere on the row flips the box, as a click on a family row opens
 			// it. The box itself takes its own clicks, so they never reach the row.
-			row.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-			row.addMouseListener(new MouseAdapter()
-			{
-				@Override
-				public void mouseClicked(MouseEvent e)
-				{
-					if (SwingUtilities.isLeftMouseButton(e))
-					{
-						box.doClick(0);
-					}
-				}
-			});
+			PanelText.onLeftClick(row, () -> box.doClick(0));
 			return box;
 		}
 		if (opened == null)
@@ -325,31 +269,22 @@ class RunsListView extends JPanel
 		chevron.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 2));
 		showChevron(chevron, opened.isVisible());
 		String runId = settings.getRunId();
-		row.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-		row.addMouseListener(new MouseAdapter()
+		PanelText.onLeftClick(row, () ->
 		{
-			@Override
-			public void mouseClicked(MouseEvent e)
+			boolean open = !opened.isVisible();
+			if (open)
 			{
-				if (!SwingUtilities.isLeftMouseButton(e))
-				{
-					return;
-				}
-				boolean open = !opened.isVisible();
-				if (open)
-				{
-					openRuns.add(runId);
-				}
-				else
-				{
-					openRuns.remove(runId);
-				}
-				opened.setVisible(open);
-				row.setOpaque(open);
-				showChevron(chevron, open);
-				container.revalidate();
-				container.repaint();
+				openRuns.add(runId);
 			}
+			else
+			{
+				openRuns.remove(runId);
+			}
+			opened.setVisible(open);
+			row.setOpaque(open);
+			showChevron(chevron, open);
+			container.revalidate();
+			container.repaint();
 		});
 		return chevron;
 	}
@@ -363,8 +298,7 @@ class RunsListView extends JPanel
 	/**
 	 * The checkbox on a run one setting switches. Dims the row at once, before the re-plan.
 	 */
-	private JCheckBox runSwitch(FarmingSettingChoice only, String runId, JLabel name,
-		JLabel detail, JLabel icon)
+	private JCheckBox runSwitch(FarmingSettingChoice only, String runId, JLabel name, JLabel detail, JLabel icon)
 	{
 		Icon builtIcon = icon != null ? icon.getIcon() : null;
 		JCheckBox box = FarmingPanel.checkbox(null);
@@ -390,8 +324,7 @@ class RunsListView extends JPanel
 				detail.setForeground(builtDetailColour);
 				if (icon != null)
 				{
-					icon.setIcon(builtIcon instanceof DimmedIcon
-						? ((DimmedIcon) builtIcon).getIcon() : builtIcon);
+					icon.setIcon(builtIcon instanceof DimmedIcon ? ((DimmedIcon) builtIcon).getIcon() : builtIcon);
 				}
 				// Back in the in-place updates, so the next refresh brings the countdown up
 				// to date.
@@ -414,7 +347,7 @@ class RunsListView extends JPanel
 			}
 			revalidate();
 			repaint();
-			send(only.getKey(), String.valueOf(on));
+			send.accept(only.getKey(), String.valueOf(on));
 		});
 		return box;
 	}
@@ -454,35 +387,34 @@ class RunsListView extends JPanel
 		{
 			block.add(SiteList.caption(settings.getChoicesCaption(), 0));
 		}
-		block.add(SettingGrid.toggles(listOf(settings.getChoices()), icons, this::send));
+		block.add(SettingGrid.toggles(PanelText.listOf(settings.getChoices()), icons, send));
 
-		List<FarmingSettingChoice> sites = listOf(settings.getSites());
+		List<FarmingSettingChoice> sites = PanelText.listOf(settings.getSites());
 		if (!sites.isEmpty())
 		{
 			block.add(SiteList.caption("Patches", 6));
-			block.add(new SiteList(sites, this::send));
+			block.add(new SiteList(sites, send));
 		}
 
-		List<FarmingSettingChoice> extras = listOf(settings.getExtras());
+		List<FarmingSettingChoice> extras = PanelText.listOf(settings.getExtras());
 		if (!extras.isEmpty())
 		{
 			block.add(SiteList.caption("Also plant on this run", 6));
-			block.add(SettingGrid.toggles(extras, icons, this::send));
+			block.add(SettingGrid.toggles(extras, icons, send));
 		}
-		for (FarmingSettingChoice choice : listOf(settings.getSwitches()))
+		for (FarmingSettingChoice choice : PanelText.listOf(settings.getSwitches()))
 		{
 			JCheckBox box = FarmingPanel.checkbox(choice.getLabel());
 			box.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
 			box.setSelected(choice.isOn());
 			box.setToolTipText(choice.getTip());
-			box.addActionListener(e ->
-				send(choice.getKey(), String.valueOf(box.isSelected())));
+			box.addActionListener(e -> send.accept(choice.getKey(), String.valueOf(box.isSelected())));
 			block.add(box);
 		}
-		List<FarmingSettingPick> picks = listOf(settings.getPicks());
+		List<FarmingSettingPick> picks = PanelText.listOf(settings.getPicks());
 		for (int i = 0; i < picks.size(); i++)
 		{
-			JPanel row = SettingRow.of(picks.get(i), this::send);
+			JPanel row = SettingRow.of(picks.get(i), send);
 			if (i == 0)
 			{
 				// Set apart from the grids above, as the extras' caption is.
@@ -491,14 +423,6 @@ class RunsListView extends JPanel
 			block.add(row);
 		}
 		return block;
-	}
-
-	private void send(String key, String value)
-	{
-		if (settingCallback != null && key != null)
-		{
-			settingCallback.accept(key, value);
-		}
 	}
 
 	/**
@@ -516,16 +440,7 @@ class RunsListView extends JPanel
 			return COLOR_DUE;
 		}
 		// Grey only for a run that cannot be done. Waiting, unseen or growing is not that.
-		return notPossible(status) ? COLOR_SKIPPED : COLOR_ROUTE;
-	}
-
-	/**
-	 * Whether the run cannot be done today: locked behind a level or unlock, or with no
-	 * route to any of its stops. Both draw grey with a greyscale icon.
-	 */
-	static boolean notPossible(String status)
-	{
-		return STATUS_LOCKED.equals(status) || STATUS_NO_ROUTE.equals(status);
+		return STATUS_LOCKED.equals(status) ? COLOR_SKIPPED : COLOR_ROUTE;
 	}
 
 	/**
@@ -543,7 +458,7 @@ class RunsListView extends JPanel
 	private static Map<String, FarmingRunSettings> settingsByRun(FarmingAdvice advice)
 	{
 		Map<String, FarmingRunSettings> byRun = new HashMap<>();
-		for (FarmingRunSettings settings : listOf(advice.getRunSettings()))
+		for (FarmingRunSettings settings : PanelText.listOf(advice.getRunSettings()))
 		{
 			byRun.put(settings.getRunId(), settings);
 		}
@@ -555,12 +470,11 @@ class RunsListView extends JPanel
 	 * a run comes due or is switched. A run the order does not name goes last, in the order
 	 * it came.
 	 */
-	static List<FarmingRunStatus> rowsOf(List<FarmingRunStatus> runs,
-		List<FarmingRunStatus> off, List<String> order)
+	static List<FarmingRunStatus> rowsOf(List<FarmingRunStatus> runs, List<FarmingRunStatus> off, List<String> order)
 	{
-		List<FarmingRunStatus> rows = new ArrayList<>(listOf(runs));
+		List<FarmingRunStatus> rows = new ArrayList<>(PanelText.listOf(runs));
 		rows.addAll(off);
-		List<String> fixed = listOf(order);
+		List<String> fixed = PanelText.listOf(order);
 		rows.sort(Comparator.comparingInt(run ->
 		{
 			// An immutable list's indexOf(null) throws.
@@ -568,10 +482,5 @@ class RunsListView extends JPanel
 			return at < 0 ? Integer.MAX_VALUE : at;
 		}));
 		return rows;
-	}
-
-	private static <T> List<T> listOf(List<T> list)
-	{
-		return list != null ? list : List.of();
 	}
 }

@@ -1,6 +1,5 @@
 package com.larryfarming.snapshot;
 
-import com.google.gson.annotations.SerializedName;
 import lombok.Value;
 
 /**
@@ -13,22 +12,22 @@ import lombok.Value;
 public class FarmingRunStatus {
 
     /** The activity, as {@code RunId.name()}, so a click can ask for this run back. */
-    @SerializedName("runId") String runId;
+    String runId;
 
     /** Named for a player: "Hardwood run". */
-    @SerializedName("runName") String runName;
+    String runName;
 
     /**
-     * {@code RunStatus.name()}: DUE, PENDING, LOCKED, NO_ROUTE or UNSEEN. A run the player
+     * {@code RunStatus.name()}: DUE, PENDING, LOCKED or UNSEEN. A run the player
      * has switched off reads OFF ({@code RunSettings.STATUS_OFF}).
      */
-    @SerializedName("status") String status;
+    String status;
 
     /**
-     * The one line that goes beside the name: "3 patches ready", "in 2d 4h",
-     * "needs 65 Farming", "not seen these patches yet". Worded here, not in the panel.
+     * The one line that goes beside the name: "3 ready", "ready in 2d 4h",
+     * "needs 65 Farming", "not checked yet". Worded here, not in the panel.
      */
-    @SerializedName("detail") String detail;
+    String detail;
 
     /**
      * When the first patch finishes growing, or 0 when there is nothing to count down
@@ -37,19 +36,19 @@ public class FarmingRunStatus {
      * <p>A raw second rather than a formatted string so the panel can tick it down in
      * place without a structural rebuild of the row.
      */
-    @SerializedName("readyAtEpochSec") long readyAtEpochSec;
+    long readyAtEpochSec;
 
     /** How many patches want attention. */
-    @SerializedName("actionableCount") int actionableCount;
+    int actionableCount;
 
     /** The run's characteristic item, for the row icon and the infobox. */
-    @SerializedName("iconItemId") int iconItemId;
+    int iconItemId;
 
     /**
      * True when this verdict rests on predictions rather than on patches seen recently.
      * Prediction is the normal case: a patch only reports while the player stands beside it.
      */
-    @SerializedName("predicted") boolean predicted;
+    boolean predicted;
 
     /**
      * True when the player is out on this run right now and one of its woven-in extras is
@@ -62,7 +61,7 @@ public class FarmingRunStatus {
      * stop. Requiring "right now" keeps a run with a leftover extra from reading as an
      * unfinished trip for days.
      */
-    @SerializedName("tripUnfinished") boolean tripUnfinished;
+    boolean tripUnfinished;
 
     /**
      * True when the detail names work in the contract's own patch ("harvest your
@@ -74,5 +73,5 @@ public class FarmingRunStatus {
      *
      * <p>Set where the verdict is composed, not inferred from the wording.
      */
-    @SerializedName("aboutThePatch") boolean aboutThePatch;
+    boolean aboutThePatch;
 }

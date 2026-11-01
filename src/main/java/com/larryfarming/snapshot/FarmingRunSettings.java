@@ -1,12 +1,11 @@
 package com.larryfarming.snapshot;
 
-import com.google.gson.annotations.SerializedName;
 import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 
 /**
- * The settings behind one run, as the farming tab draws them under the run's row.
+ * The settings behind one run, as the side panel draws them under the run's row.
  *
  * <p>Derived from the run's own structure: the family its rotation fills, the seeds it
  * names, the crops its stops grow. A new run gets controls without the panel learning its
@@ -25,34 +24,34 @@ public class FarmingRunSettings {
     }
 
     /** The run these belong to, as {@code RunId.name()}. */
-    @SerializedName("runId") String runId;
+    String runId;
 
-    @SerializedName("shape") Shape shape;
+    Shape shape;
 
     /** The crops to tick, in the order drawn. Empty for {@link Shape#SWITCH}. */
-    @SerializedName("choices") List<FarmingSettingChoice> choices;
+    List<FarmingSettingChoice> choices;
 
     /** The caption over a grid of several crops, "Herbs to plant"; null over one crop. */
-    @SerializedName("choicesCaption") String choicesCaption;
+    String choicesCaption;
 
     /**
      * The sites the run visits, each a checkbox, in the registry's fixed order. A site the
      * account cannot reach yet is locked. Null or empty for a run with no site switches.
      */
-    @SerializedName("sites") List<FarmingSettingChoice> sites;
+    List<FarmingSettingChoice> sites;
 
     /** Crops the run plants in passing, each with its own tick. */
-    @SerializedName("extras") List<FarmingSettingChoice> extras;
+    List<FarmingSettingChoice> extras;
 
-    /** Checkboxes under the grid, such as compost bins or picking fruit. */
-    @SerializedName("switches") List<FarmingSettingChoice> switches;
+    /** Checkboxes under the grid, such as the level wait or picking fruit. */
+    List<FarmingSettingChoice> switches;
 
     /**
      * Settings of several values at the bottom of the block, each beside its label: the
      * herb run's favourite herb and where its best seeds go. Null or empty for most runs.
      */
-    @SerializedName("picks") List<FarmingSettingPick> picks;
+    List<FarmingSettingPick> picks;
 
     /** The row's checkbox, for {@link Shape#SWITCH}; null otherwise. */
-    @SerializedName("runSwitch") FarmingSettingChoice runSwitch;
+    FarmingSettingChoice runSwitch;
 }

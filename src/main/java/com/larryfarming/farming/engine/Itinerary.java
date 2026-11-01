@@ -1,24 +1,11 @@
 package com.larryfarming.farming.engine;
 
-import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.FarmingWorldMap;
-import com.larryfarming.engine.farming.PatchType;
+import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.catalogue.Arrivals;
 import com.larryfarming.farming.catalogue.Seats;
-import com.larryfarming.farming.model.Arrival;
-import com.larryfarming.farming.model.Destination;
-import com.larryfarming.farming.model.PatchRef;
-import com.larryfarming.farming.model.RunId;
-import com.larryfarming.farming.model.Spellbook;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 import lombok.Value;
 
 /**
@@ -53,8 +40,7 @@ public final class Itinerary {
 
         public Planned(RunId run, List<StopPlan> plans, List<List<Crop>> cropFor) {
             if (plans.size() != cropFor.size()) {
-                throw new IllegalArgumentException(run + " planned " + plans.size()
-                        + " stops but named crops for " + cropFor.size());
+                throw new IllegalArgumentException(run + " planned " + plans.size() + " stops but named crops for " + cropFor.size());
             }
             this.run = run;
             this.plans = List.copyOf(plans);
@@ -85,16 +71,11 @@ public final class Itinerary {
          */
         List<List<Integer>> visits;
 
-        private Trip(List<StopPlan> plans, List<List<Crop>> cropFor, List<RunId> runFor,
-                List<List<Integer>> visits) {
+        private Trip(List<StopPlan> plans, List<List<Crop>> cropFor, List<RunId> runFor, List<List<Integer>> visits) {
             this.plans = List.copyOf(plans);
             this.cropFor = List.copyOf(cropFor);
             this.runFor = List.copyOf(runFor);
             this.visits = List.copyOf(visits);
-        }
-
-        public boolean isEmpty() {
-            return plans.isEmpty();
         }
 
         /**
@@ -118,10 +99,8 @@ public final class Itinerary {
             // Same stops in the same order, not merely the same count.
             for (int index = 0; index < plans.size(); index++) {
                 if (plans.get(index).getStop() != this.plans.get(index).getStop()) {
-                    throw new IllegalArgumentException("re-routing moved "
-                            + this.plans.get(index).getStop().primaryPatch().getLabel()
-                            + " to where " + plans.get(index).getStop().primaryPatch()
-                                    .getLabel() + " now sits");
+                    throw new IllegalArgumentException("re-routing moved " + this.plans.get(index).getStop().primaryPatch().getLabel()
+                            + " to where " + plans.get(index).getStop().primaryPatch().getLabel() + " now sits");
                 }
             }
             return new Trip(plans, cropFor, runFor, visits);
@@ -133,10 +112,8 @@ public final class Itinerary {
          * would lose or duplicate a stop's row.
          */
         Trip revisited(List<List<Integer>> visits) {
-            if (visits.size() != this.visits.size()
-                    || !new HashSet<>(visits).equals(new HashSet<>(this.visits))) {
-                throw new IllegalArgumentException("re-ordering changed the trip's visits "
-                        + this.visits + " into " + visits);
+            if (visits.size() != this.visits.size() || !new HashSet<>(visits).equals(new HashSet<>(this.visits))) {
+                throw new IllegalArgumentException("re-ordering changed the trip's visits " + this.visits + " into " + visits);
             }
             return new Trip(plans, cropFor, runFor, visits);
         }
@@ -154,17 +131,6 @@ public final class Itinerary {
      *     stops, trees and herbs alike
      */
     public static Trip merge(List<Planned> planned, PlayerState state, Spellbook book) {
-        return merge(planned, state, book, Arrivals.seats());
-    }
-
-    /**
-     * {@link #merge(List, PlayerState, Spellbook)} on these seats rather than the catalogue's.
-     *
-     * <p>The seed deal ({@link CropAssigner#walkPositions}) still reads the catalogue's
-     * seats. A trip merged on other seats walks in their order, but its seeds are dealt on the
-     * catalogue's seats.
-     */
-    static Trip merge(List<Planned> planned, PlayerState state, Spellbook book, Seats seats) {
         List<StopPlan> plans = new ArrayList<>();
         List<List<Crop>> cropFor = new ArrayList<>();
         List<RunId> runFor = new ArrayList<>();
@@ -173,7 +139,10 @@ public final class Itinerary {
         for (Planned run : planned) {
             for (int i = 0; i < run.getPlans().size(); i++) {
                 StopPlan plan = run.getPlans().get(i);
-                if (worksAPatchAlreadyTaken(plan, alreadyWorked)) {
+                // Some earlier run already claimed a patch this stop works. The run passed
+                // first (the scheduler's higher-ranked run) keeps it: arbitrary but stable.
+                // Tested against the whole patch list, so a multi-patch stop is dropped whole.
+                if (!Collections.disjoint(plan.getStop().getPatches(), alreadyWorked)) {
                     continue;
                 }
                 alreadyWorked.addAll(plan.getStop().getPatches());
@@ -183,26 +152,18 @@ public final class Itinerary {
             }
         }
 
-        List<List<Integer>> visits = groupByArrival(inSeatOrder(plans, book, seats), plans);
+        List<List<Integer>> visits = groupByArrival(inSeatOrder(plans, book), plans);
         return new Trip(plans, cropFor, runFor, bestHomesFirst(visits, plans, state));
     }
 
     /**
-     * Whether some earlier run already claimed a patch this stop works.
-     *
-     * <p>The run passed first (the scheduler's higher-ranked run) keeps the patch. The
-     * choice is arbitrary but stable.
-     *
-     * <p>Tested against the stop's whole patch list, so a multi-patch stop is dropped whole
-     * rather than split.
+     * One run walked on its own, in the catalogue's order rather than the seats', with its
+     * best homes re-dealt first as a merged trip's are.
      */
-    private static boolean worksAPatchAlreadyTaken(StopPlan plan, Set<PatchRef> taken) {
-        for (PatchRef patch : plan.getStop().getPatches()) {
-            if (taken.contains(patch)) {
-                return true;
-            }
-        }
-        return false;
+    static Trip alone(Planned run, PlayerState state) {
+        List<List<Integer>> visits = TripOrder.groupByArrival(run.getPlans());
+        return new Trip(run.getPlans(), run.getCropFor(), Collections.nCopies(run.getPlans().size(), run.getRun()),
+                bestHomesFirst(visits, run.getPlans(), state));
     }
 
     /**
@@ -214,14 +175,13 @@ public final class Itinerary {
      * <p>Every {@link Arrival} constant has a seat on every book in {@link Seats}, which
      * refuses to build otherwise.
      */
-    private static List<Integer> inSeatOrder(List<StopPlan> plans, Spellbook book,
-            Seats seats) {
+    private static List<Integer> inSeatOrder(List<StopPlan> plans, Spellbook book) {
+        Seats seats = Arrivals.seats();
         List<Integer> order = new ArrayList<>(plans.size());
         for (int i = 0; i < plans.size(); i++) {
             order.add(i);
         }
-        order.sort(Comparator.comparingInt(
-                index -> seats.seat(book, plans.get(index).getStop().getArrival())));
+        order.sort(Comparator.comparingInt(index -> seats.seat(book, plans.get(index).getStop().getArrival())));
         return order;
     }
 
@@ -231,8 +191,7 @@ public final class Itinerary {
      * <p>Grouping consecutive stops suffices: an arrival has a single circuit position, so
      * the sort has already put its stops together.
      */
-    private static List<List<Integer>> groupByArrival(List<Integer> order,
-            List<StopPlan> plans) {
+    private static List<List<Integer>> groupByArrival(List<Integer> order, List<StopPlan> plans) {
         List<List<Integer>> visits = new ArrayList<>();
         List<Integer> current = null;
         Arrival at = null;
@@ -280,15 +239,12 @@ public final class Itinerary {
      * walk is paid once. The order follows {@link PatchPriority#scoreOf}, so it changes with
      * a diary or a quest, not with what is in the ground.
      *
-     * <p>A moved stop can be reached before a rung that leans on it. On a trip,
-     * {@code replanAcrossTheCircuit} handles that. A run walked alone has no such pass; it is
-     * safe only because the rungs that lean on a patch belong to tree stops, which are never
-     * seats, and which move as riders only on a merged trip: a run walked alone with seats is
-     * the herb run, whose riders are herb stops.
+     * <p>A moved stop can be reached before a rung that leans on it.
+     * {@code replanAcrossTheCircuit} handles that, on a trip and on a run walked alone.
      *
-     * <p>Package-private because two paths reach it: {@link #merge} for a trip, and
-     * {@code FarmingAdviceBuilder.adviseOn} for a single run in catalogue order. Both must
-     * re-deal, or a seed box would plant the seeds in walking order on one of them.
+     * <p>Two paths reach it: {@link #merge} for a trip, and {@link #alone} for a single run
+     * in catalogue order. Both must re-deal, or a seed box would plant the seeds in walking
+     * order on one of them.
      *
      * @param visits stops grouped by arrival <b>in the order the caller walks them</b>,
      *     which is what the ranking's ties fall back to and therefore what the allocation
@@ -296,8 +252,7 @@ public final class Itinerary {
      *     untouched — or returned as the very same list when there is nothing to reorder,
      *     so a caller that intends to keep hold of it should copy
      */
-    static List<List<Integer>> bestHomesFirst(List<List<Integer>> visits,
-            List<StopPlan> plans, PlayerState state) {
+    static List<List<Integer>> bestHomesFirst(List<List<Integer>> visits, List<StopPlan> plans, PlayerState state) {
         int[] rank = new int[visits.size()];
         List<Integer> seats = new ArrayList<>();
         for (int visit = 0; visit < visits.size(); visit++) {
@@ -313,9 +268,9 @@ public final class Itinerary {
 
         List<Integer> byRank = new ArrayList<>(seats);
         // Stable, so equal ranks keep the caller's walking order and an account that has
-        // earned nothing walks the identity permutation. Do not break ties on the seats: a
-        // run walked alone follows the catalogue's order, not the circuit, and the allocation
-        // must share the caller's walk.
+        // earned nothing walks the identity permutation. Ties stay unbroken by seat: a run
+        // walked alone follows the catalogue's order, not the circuit, and the allocation
+        // shares the caller's walk.
         byRank.sort(Comparator.comparingInt((Integer visit) -> rank[visit]).reversed());
 
         int[] walk = new int[visits.size()];
@@ -334,8 +289,7 @@ public final class Itinerary {
      * its seat. Moving the seat without it would cast the same teleport twice, nine stops
      * apart.
      */
-    private static Map<Integer, Integer> ridersOf(List<Integer> seats,
-            List<List<Integer>> visits, List<StopPlan> plans) {
+    private static Map<Integer, Integer> ridersOf(List<Integer> seats, List<List<Integer>> visits, List<StopPlan> plans) {
         Set<Integer> isSeat = new HashSet<>(seats);
         Map<Integer, Integer> riders = new HashMap<>();
         for (int seat : seats) {
@@ -344,8 +298,7 @@ public final class Itinerary {
                 continue;
             }
             for (int neighbour : new int[] {seat - 1, seat + 1}) {
-                if (neighbour >= 0 && neighbour < visits.size() && !isSeat.contains(neighbour)
-                        && !riders.containsKey(neighbour)
+                if (neighbour >= 0 && neighbour < visits.size() && !isSeat.contains(neighbour) && !riders.containsKey(neighbour)
                         && landing == landingOf(visits.get(neighbour), plans)) {
                     riders.put(neighbour, seat);
                 }
@@ -358,8 +311,7 @@ public final class Itinerary {
     private static Destination landingOf(List<Integer> visit, List<StopPlan> plans) {
         for (int index : visit) {
             StopPlan plan = plans.get(index);
-            if (plan.isVisit() && plan.getRoute() != null
-                    && plan.getRoute().getDestination() != null) {
+            if (plan.isVisit() && plan.getRoute() != null && plan.getRoute().getDestination() != null) {
                 return plan.getRoute().getDestination();
             }
         }
@@ -370,8 +322,7 @@ public final class Itinerary {
      * The walk with every rider taken out of its own place and put back beside its seat, on
      * the side of it the circuit had it.
      */
-    private static List<List<Integer>> withRidersBesideTheirSeats(int[] walk,
-            List<List<Integer>> visits, Map<Integer, Integer> riders) {
+    private static List<List<Integer>> withRidersBesideTheirSeats(int[] walk, List<List<Integer>> visits, Map<Integer, Integer> riders) {
         List<List<Integer>> placed = new ArrayList<>(visits.size());
         for (int visit : walk) {
             if (riders.containsKey(visit)) {
@@ -412,9 +363,7 @@ public final class Itinerary {
         int best = UNRANKED;
         for (int index : visit) {
             StopPlan plan = plans.get(index);
-            if (plan.getStop().isFixedCrop()
-                    || !plan.getStop().isPlanting()
-                    || !isHerbPatch(plan.getStop().primaryPatch())) {
+            if (plan.getStop().isFixedCrop() || !plan.getStop().isPlanting() || !isHerbPatch(plan.getStop().primaryPatch())) {
                 continue;
             }
             for (PatchRef patch : plan.getStop().getPatches()) {

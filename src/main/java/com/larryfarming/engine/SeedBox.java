@@ -30,14 +30,11 @@ public final class SeedBox {
      * <p>Named through {@code ItemID} because nearby ids are traps: {@code ItemID.SEEDBOX} is
      * a <em>seed pack</em>, and the box has a bank placeholder id too.
      */
-    public static final Set<Integer> BOX_ITEM_IDS =
-            Set.of(ItemID.SEED_BOX, ItemID.SEED_BOX_OPEN);
+    public static final Set<Integer> BOX_ITEM_IDS = Set.of(ItemID.SEED_BOX, ItemID.SEED_BOX_OPEN);
 
     /** True when a seed box is in the inventory, or defensively worn. */
     public static boolean carried(PlayerState state) {
-        return state != null
-                && (holdsBox(state.getInventory())
-                        || holdsBoxEquipment(state));
+        return state != null && (holdsBox(state.getInventory()) || holdsBoxEquipment(state));
     }
 
     /**
@@ -48,9 +45,7 @@ public final class SeedBox {
      * slot, never a seed. {@link #trustedOf} answers how many of one seed count as carried.
      */
     public static boolean contentsCarried(PlayerState state) {
-        return carried(state)
-                && (state.getSeedBoxVerifiedAt() != null
-                        || state.getSeedBoxWatchedAt() != null);
+        return carried(state) && (state.getSeedBoxVerifiedAt() != null || state.getSeedBoxWatchedAt() != null);
     }
 
     /**
@@ -74,9 +69,7 @@ public final class SeedBox {
         if (state.getSeedBoxVerifiedAt() != null) {
             return tallied;
         }
-        return itemId > 0
-                ? Math.min(tallied, state.getSeedBoxWatchedNet().getOrDefault(itemId, 0))
-                : 0;
+        return itemId > 0 ? Math.min(tallied, state.getSeedBoxWatchedNet().getOrDefault(itemId, 0)) : 0;
     }
 
     /**
@@ -88,9 +81,7 @@ public final class SeedBox {
      */
     public static int tallied(PlayerState state, int itemId) {
         // The name-matching path underneath dereferences the null name when the id is 0.
-        return state == null || itemId == 0
-                ? 0
-                : ItemCounts.countItemInStorage(state.getSeedBox(), itemId, null);
+        return state == null || itemId == 0 ? 0 : ItemCounts.countItemInStorage(state.getSeedBox(), itemId, null);
     }
 
     /** True when a seed box is sitting in the bank. */

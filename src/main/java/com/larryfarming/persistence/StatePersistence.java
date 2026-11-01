@@ -1,12 +1,6 @@
 package com.larryfarming.persistence;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonSerializer;
+import com.google.gson.*;
 import com.larryfarming.LarryConfig;
 import com.larryfarming.engine.farming.FarmingTracker;
 import com.larryfarming.engine.farming.FarmingWorldMap;
@@ -15,9 +9,7 @@ import com.larryfarming.model.PlayerState;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 /**
  * What the plugin saves per RS profile about the account: its {@link PlayerState}, the last
@@ -63,14 +55,9 @@ public class StatePersistence {
      * later and wins.
      */
     static Gson buildGson(Gson base) {
-        return base.newBuilder()
-                .registerTypeAdapter(Instant.class,
-                        (JsonSerializer<Instant>) (src, type, ctx) ->
-                                new JsonPrimitive(src.getEpochSecond()))
-                .registerTypeAdapter(Instant.class,
-                        (JsonDeserializer<Instant>) (json, type, ctx) ->
-                                Instant.ofEpochSecond(json.getAsLong()))
-                .create();
+        return base.newBuilder().registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (src, type, ctx) ->
+                                new JsonPrimitive(src.getEpochSecond())).registerTypeAdapter(Instant.class,
+                        (JsonDeserializer<Instant>) (json, type, ctx) -> Instant.ofEpochSecond(json.getAsLong())).create();
     }
 
     /** The current RS profile's saved player state, or null when it has none or it is unreadable. */
@@ -165,8 +152,7 @@ public class StatePersistence {
             return;
         }
         for (FarmingTracker.PersistedEntry e : entries) {
-            store.setRSProfileConfiguration(CONFIG_GROUP,
-                    KEY_FARMING_PREFIX + e.getConfigKey(),
+            store.setRSProfileConfiguration(CONFIG_GROUP, KEY_FARMING_PREFIX + e.getConfigKey(),
                     e.getVarbitValue() + ":" + e.getObservedAtEpochSec());
         }
     }
@@ -175,8 +161,7 @@ public class StatePersistence {
     public Collection<FarmingTracker.PersistedEntry> loadFarmingPatches() {
         List<FarmingTracker.PersistedEntry> out = new ArrayList<>();
         for (FarmingWorldMap.PatchDef patch : FarmingWorldMap.allPatches()) {
-            String stored = store.getRSProfileConfiguration(CONFIG_GROUP,
-                    KEY_FARMING_PREFIX + patch.configKey());
+            String stored = store.getRSProfileConfiguration(CONFIG_GROUP, KEY_FARMING_PREFIX + patch.configKey());
             if (stored == null || stored.isEmpty()) {
                 continue;
             }
@@ -220,8 +205,7 @@ public class StatePersistence {
             return null;
         }
         try {
-            return new int[]{Integer.parseInt(parts[0]), Integer.parseInt(parts[1]),
-                    Integer.parseInt(parts[2])};
+            return new int[]{Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), Integer.parseInt(parts[2])};
         } catch (NumberFormatException ex) {
             return null;
         }

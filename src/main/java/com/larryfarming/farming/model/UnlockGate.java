@@ -43,25 +43,8 @@ public class UnlockGate {
     String diaryArea;
     String diaryTier;
 
-    /** Available to everyone from the start. */
-    public static UnlockGate none() {
-        return UnlockGate.builder().build();
-    }
-
     public static UnlockGate skill(Skill skill, int level) {
         return UnlockGate.builder().skill(skill).level(level).build();
-    }
-
-    public static UnlockGate boostableSkill(Skill skill, int level, int boostedFromLevel) {
-        return UnlockGate.builder()
-                .skill(skill)
-                .level(level)
-                .boostedFromLevel(boostedFromLevel)
-                .build();
-    }
-
-    public static UnlockGate diary(String area, String tier) {
-        return UnlockGate.builder().diaryArea(area).diaryTier(tier).build();
     }
 
     public boolean isBoostable() {

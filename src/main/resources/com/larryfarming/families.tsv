@@ -1,0 +1,42 @@
+# What a run family holds beside its sites: the gate, the respawn town and the seeds. The
+# herb family is written once per spellbook; every other family once, for any book.
+#
+# run	spellbook	gate skill	level	boosted from	recommended from	respawn town	seed patch type
+#
+# A family with a seed patch type and no gate skill unlocks at the Farming level its
+# cheapest crop plants from. The respawn town is the one the run prefers, if any.
+
+# Camelot is a short run from Catherby, which this run reaches no other cheap way.
+HERB	ARCEUUS	-	0	0	0	Camelot	-
+# 96 Magic for the spellbook's teleports, or 92 with a magic potion. Only the true level
+# gates; the boost is advice.
+HERB	LUNAR	MAGIC	96	92	0	-	-
+
+# The four tree runs. Each tree category keeps its own travel chain rather than one ordered
+# route, so the runs stay apart and the scheduler combines whichever fall due together. A
+# "high level" tree run is not a fifth run: after the Falador elite diary that patch is
+# disease-free and takes the magic saplings, while everywhere else plants yew.
+#
+# The best Farming experience in the game.
+HARDWOOD	ANY	-	0	0	0	-	HARDWOOD_TREE
+CALQUAT	ANY	-	0	0	0	-	CALQUAT
+# Falador respawn lands beside its tree patch, so this run prefers a different town than
+# the herb run.
+REGULAR_TREE	ANY	-	0	0	0	Falador	TREE
+FRUIT_TREE	ANY	-	0	0	0	-	FRUIT_TREE
+
+# The runs that are not a circuit of patches: hespori and seaweed, and the contract loop.
+#
+# Hespori is worth doing whenever it comes up: anima seeds, the bottomless bucket, and
+# decent XP.
+HESPORI	ANY	FARMING	65	0	0	-	-
+# One plant at a time, whose effect reaches every patch. The true level is 76; a garden pie
+# boosts from 73.
+ANIMA	ANY	FARMING	76	73	0	-	-
+# Spores plant at 23 Farming. 76 is a recommendation, not a gate: the run waits for an
+# Attas anima plant, which needs 76. 73 is the garden-pie boost floor.
+SEAWEED	ANY	FARMING	23	73	76	-	-
+# The contract loop. One stop, because everything happens inside the guild: claim from
+# Guildmaster Jane, work whichever preplanted patch was asked for, replant. The true level
+# is 65, boostable from 62 with a garden pie.
+CONTRACT	ANY	FARMING	65	62	0	-	-

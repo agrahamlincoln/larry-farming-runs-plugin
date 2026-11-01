@@ -1,7 +1,7 @@
 package com.larryfarming.snapshot;
 
-import com.google.gson.annotations.SerializedName;
 import lombok.Value;
+import lombok.With;
 
 /**
  * One thing to have in the bag before setting off.
@@ -53,20 +53,21 @@ public class FarmingCarryItem {
         MISSING
     }
 
-    @SerializedName("kind") Kind kind;
+    Kind kind;
 
-    @SerializedName("itemId") int itemId;
+    int itemId;
 
-    @SerializedName("name") String name;
+    String name;
 
     /** How many, or 0 when the count is not the point (one spade is one spade). */
-    @SerializedName("quantity") int quantity;
+    @With
+    int quantity;
 
     /** Where this item is, in the degrees that change what the player does next. */
-    @SerializedName("availability") Availability availability;
+    Availability availability;
 
     /** The short tag drawn over a seed ("TOA", "SNA"), or empty for anything else. */
-    @SerializedName("tag") String tag;
+    String tag;
 
     /**
      * A short caveat about this line (a cheaper fare on a condition, say), or empty.
@@ -74,7 +75,8 @@ public class FarmingCarryItem {
      * <p>Kept out of {@link #name} because the name feeds the hover and the still-to-get
      * line, while the panel draws the note under the grid.
      */
-    @SerializedName("note") String note;
+    @With
+    String note;
 
     /**
      * How many of this are on the player right now, counting every form that would do.
@@ -93,12 +95,8 @@ public class FarmingCarryItem {
      * a shortfall against a simulated future bag, while this still reports the real bag.
      * The two describe different moments and must not be subtracted from one another.
      */
-    @SerializedName("carriedCount") int carriedCount;
-
-    /** True when nothing stands between the player and setting off with this. */
-    public boolean isCarried() {
-        return availability == Availability.CARRIED;
-    }
+    @With
+    int carriedCount;
 
     /** True when the player owns it at all, wherever it happens to be. */
     public boolean isOwned() {

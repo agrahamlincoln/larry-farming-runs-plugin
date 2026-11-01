@@ -1,9 +1,6 @@
 package com.larryfarming.farming.detection;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.function.IntUnaryOperator;
 import net.runelite.api.gameval.VarbitID;
 

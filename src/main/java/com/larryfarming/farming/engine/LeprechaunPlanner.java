@@ -6,12 +6,8 @@ import com.larryfarming.farming.detection.BottomlessBucket;
 import com.larryfarming.farming.model.Arrival;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingCarryItem;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import net.runelite.api.gameval.ItemID;
 
 /**
  * Which farming tools to leave with the tool leprechaun, and where: at the last arrival that
@@ -28,25 +24,18 @@ final class LeprechaunPlanner {
     }
 
     /** Farming places the wiki lists no tool leprechaun at. */
-    private static final Set<Arrival> NO_LEPRECHAUN =
-            EnumSet.of(Arrival.ORTUS_FARM, Arrival.GREAT_CONCH);
-
-    private static final int SEED_DIBBER = 5343;
-    private static final int COMPOST = 6032;
-    private static final int SUPERCOMPOST = 6034;
-    private static final int ULTRACOMPOST = 21483;
+    private static final Set<Arrival> NO_LEPRECHAUN = EnumSet.of(Arrival.ORTUS_FARM, Arrival.GREAT_CONCH);
 
     /**
      * Used only to plant, so free once the last planting is done: the dibber and loose
-     * compost. Not the bottomless bucket, which a compost bin after the last planting may
-     * still empty into.
+     * compost. Not the bottomless bucket, which is left after its last use like any tool.
      */
-    private static final Set<Integer> PLANTING_ONLY =
-            Set.of(SEED_DIBBER, COMPOST, SUPERCOMPOST, ULTRACOMPOST);
+    private static final Set<Integer> PLANTING_ONLY = Set.of(ItemID.DIBBER, ItemID.BUCKET_COMPOST,
+            ItemID.BUCKET_SUPERCOMPOST, ItemID.BUCKET_ULTRACOMPOST);
 
     /** The two bottomless buckets: the leprechaun holds one, so a second is not taken. */
-    private static final Set<Integer> BOTTOMLESS_BUCKETS =
-            Set.of(BottomlessBucket.EMPTY_ITEM_ID, BottomlessBucket.FILLED_ITEM_ID);
+    private static final Set<Integer> BOTTOMLESS_BUCKETS = Set.of(
+            ItemID.BOTTOMLESS_COMPOST_BUCKET, ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED);
 
     /**
      * What to leave at each arrival, keyed by its index in {@code made}.
@@ -57,8 +46,7 @@ final class LeprechaunPlanner {
      *     now can still be left
      */
     static Map<Integer, List<FarmingCarryItem>> leaveAt(List<List<Integer>> made,
-            List<StopPlan> plans, List<List<Crop>> cropFor, List<FarmingCarryItem> carry,
-            boolean underway, PlayerState state) {
+            List<StopPlan> plans, List<List<Crop>> cropFor, List<FarmingCarryItem> carry, boolean underway, PlayerState state) {
         Map<Integer, List<FarmingCarryItem>> leave = new HashMap<>();
         for (FarmingCarryItem line : carry) {
             if (!ItemCounts.leprechaunStores(line.getItemId()) || !broughtAlong(line, underway)) {
@@ -86,8 +74,7 @@ final class LeprechaunPlanner {
      * The last arrival that uses the tool: any visit for the spade and the like, a planting
      * for the dibber and the composts. -1 when none does.
      */
-    private static int lastUse(List<List<Integer>> made, List<StopPlan> plans,
-            List<List<Crop>> cropFor, boolean plantingOnly) {
+    private static int lastUse(List<List<Integer>> made, List<StopPlan> plans, List<List<Crop>> cropFor, boolean plantingOnly) {
         for (int arrival = made.size() - 1; arrival >= 0; arrival--) {
             for (int index : made.get(arrival)) {
                 if (!plans.get(index).isVisit()) {

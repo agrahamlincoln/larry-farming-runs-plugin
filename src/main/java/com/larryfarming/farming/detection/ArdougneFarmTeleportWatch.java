@@ -117,7 +117,6 @@ public final class ArdougneFarmTeleportWatch {
     }
 
     private static boolean atLanding(int x, int y) {
-        return Math.abs(x - LANDING_X) <= LANDING_RADIUS
-                && Math.abs(y - LANDING_Y) <= LANDING_RADIUS;
+        return Math.abs(x - LANDING_X) <= LANDING_RADIUS && Math.abs(y - LANDING_Y) <= LANDING_RADIUS;
     }
 }

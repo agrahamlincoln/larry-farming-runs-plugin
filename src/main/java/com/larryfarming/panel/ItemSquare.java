@@ -1,7 +1,7 @@
 package com.larryfarming.panel;
 
-import java.awt.Color;
-import java.awt.Graphics;
+import com.larryfarming.snapshot.FarmingCarryItem;
+import java.awt.*;
 import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 import net.runelite.client.ui.FontManager;
@@ -44,15 +44,31 @@ class ItemSquare extends JPanel
 		setFont(FontManager.getRunescapeSmallFont());
 	}
 
+	/**
+	 * The square for a packing or bank line, at full size and without a border.
+	 *
+	 * @param owned whether to draw the sprite in colour rather than greyscale
+	 */
+	static ItemSquare of(FarmingCarryItem item, IconProvider icons, boolean owned)
+	{
+		ImageIcon sprite = icons != null && item.getItemId() > 0 ? icons.getInventoryIcon(item.getItemId(), item.getQuantity(), owned)
+			: null;
+		// The game draws the count into the sprite for stacks of two or more. Only a single
+		// item needs one drawn here.
+		ItemSquare cell = new ItemSquare(sprite, item.getQuantity() == 1 ? "1" : null, item.getTag());
+		Dimension size = new Dimension(SIZE, SIZE);
+		cell.setPreferredSize(size);
+		cell.setMinimumSize(size);
+		return cell;
+	}
+
 	@Override
 	protected void paintComponent(Graphics g)
 	{
 		super.paintComponent(g);
 		if (sprite != null)
 		{
-			sprite.paintIcon(this, g,
-				(getWidth() - sprite.getIconWidth()) / 2,
-				(getHeight() - sprite.getIconHeight()) / 2);
+			sprite.paintIcon(this, g, (getWidth() - sprite.getIconWidth()) / 2, (getHeight() - sprite.getIconHeight()) / 2);
 		}
 		if (count != null)
 		{

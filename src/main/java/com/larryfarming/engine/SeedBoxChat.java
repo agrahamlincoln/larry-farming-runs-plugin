@@ -28,17 +28,13 @@ public final class SeedBoxChat
 	 *
 	 * <p>Digits are bounded to nine so a malformed line cannot overflow the parse.
 	 */
-	private static final Pattern SEED_BOX_STORED =
-		Pattern.compile("^Stored (\\d{1,9}) x (.+?) in your seed box\\.?$",
+	private static final Pattern SEED_BOX_STORED = Pattern.compile("^Stored (\\d{1,9}) x (.+?) in your seed box\\.?$",
 			Pattern.CASE_INSENSITIVE);
-	private static final Pattern SEED_BOX_EMPTIED =
-		Pattern.compile("^Emptied (\\d{1,9}) x (.+?) to your inventory\\.?$",
+	private static final Pattern SEED_BOX_EMPTIED = Pattern.compile("^Emptied (\\d{1,9}) x (.+?) to your inventory\\.?$",
 			Pattern.CASE_INSENSITIVE);
-	private static final Pattern SEED_BOX_TAKEN_ONE =
-		Pattern.compile("^An? (.+?) was taken from your seed box\\.?$",
+	private static final Pattern SEED_BOX_TAKEN_ONE = Pattern.compile("^An? (.+?) was taken from your seed box\\.?$",
 			Pattern.CASE_INSENSITIVE);
-	private static final Pattern SEED_BOX_TAKEN_MANY =
-		Pattern.compile("^(\\d{1,9}) (.+?) were taken from your seed box\\.?$",
+	private static final Pattern SEED_BOX_TAKEN_MANY = Pattern.compile("^(\\d{1,9}) (.+?) were taken from your seed box\\.?$",
 			Pattern.CASE_INSENSITIVE);
 
 	/**
@@ -54,8 +50,7 @@ public final class SeedBoxChat
 	 * <p>The pattern accepts both "the" and "your"; nothing else in the game says "seed box
 	 * is empty".
 	 */
-	private static final Pattern SEED_BOX_EMPTY =
-		Pattern.compile("^(?:the|your) seed box is empty\\.?$", Pattern.CASE_INSENSITIVE);
+	private static final Pattern SEED_BOX_EMPTY = Pattern.compile("^(?:the|your) seed box is empty\\.?$", Pattern.CASE_INSENSITIVE);
 
 	/**
 	 * The box answering Check with something in it: a header, then one line per seed.
@@ -70,8 +65,7 @@ public final class SeedBoxChat
 	 * <p>Each line arrives as its own message, so reading the listing needs state across
 	 * messages. {@code SeedBoxListing} holds that state.
 	 */
-	private static final Pattern SEED_BOX_CONTENTS_HEADER =
-		Pattern.compile("^(?:the|your) seed box contains:?$", Pattern.CASE_INSENSITIVE);
+	private static final Pattern SEED_BOX_CONTENTS_HEADER = Pattern.compile("^(?:the|your) seed box contains:?$", Pattern.CASE_INSENSITIVE);
 
 	/**
 	 * One line of a listing: a count, the separator, and the seed's name.
@@ -79,8 +73,7 @@ public final class SeedBoxChat
 	 * <p>Only valid in the lines following a header. The game prints "1 x Harralander seed."
 	 * in many places unrelated to a seed box. See {@link #parseSeedBoxContentsEntry}.
 	 */
-	private static final Pattern SEED_BOX_CONTENTS_ENTRY =
-		Pattern.compile("^(\\d{1,9}) x (.+?)\\.?$", Pattern.CASE_INSENSITIVE);
+	private static final Pattern SEED_BOX_CONTENTS_ENTRY = Pattern.compile("^(\\d{1,9}) x (.+?)\\.?$", Pattern.CASE_INSENSITIVE);
 
 	private SeedBoxChat()
 	{
@@ -206,15 +199,12 @@ public final class SeedBoxChat
 			return Optional.empty();
 		}
 		Matcher entry = SEED_BOX_CONTENTS_ENTRY.matcher(message);
-		return entry.matches()
-			? moveOf(entry.group(2), Integer.parseInt(entry.group(1)))
-			: Optional.empty();
+		return entry.matches() ? moveOf(entry.group(2), Integer.parseInt(entry.group(1))) : Optional.empty();
 	}
 
 	/** Empty for a zero quantity, which is not a change. */
 	private static Optional<SeedBoxMove> moveOf(String itemName, int quantity)
 	{
-		return quantity == 0 ? Optional.empty()
-			: Optional.of(new SeedBoxMove(itemName, quantity));
+		return quantity == 0 ? Optional.empty() : Optional.of(new SeedBoxMove(itemName, quantity));
 	}
 }

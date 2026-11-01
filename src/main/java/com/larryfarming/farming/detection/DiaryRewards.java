@@ -1,9 +1,7 @@
 package com.larryfarming.farming.detection;
 
 import com.larryfarming.farming.model.Capability;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * How to tell, from game flags alone, which tier of a diary reward item a player has
@@ -39,22 +37,15 @@ public final class DiaryRewards {
     private static Map<Capability, Integer> grantedBy() {
         Map<Capability, Integer> granted = new EnumMap<>(Capability.class);
         // Lumbridge & Draynor: medium, hard, elite give Explorer's ring 2, 3 and 4.
-        granted.put(Capability.EXPLORERS_RING_2,
-                DiaryTiers.varbitFor("Lumbridge", DiaryTiers.MEDIUM));
-        granted.put(Capability.EXPLORERS_RING_3,
-                DiaryTiers.varbitFor("Lumbridge", DiaryTiers.HARD));
-        granted.put(Capability.EXPLORERS_RING_4,
-                DiaryTiers.varbitFor("Lumbridge", DiaryTiers.ELITE));
+        granted.put(Capability.EXPLORERS_RING_2, DiaryTiers.varbitFor("Lumbridge", DiaryTiers.MEDIUM));
+        granted.put(Capability.EXPLORERS_RING_3, DiaryTiers.varbitFor("Lumbridge", DiaryTiers.HARD));
+        granted.put(Capability.EXPLORERS_RING_4, DiaryTiers.varbitFor("Lumbridge", DiaryTiers.ELITE));
         // Ardougne: easy gives cloak 1, then the same three tiers give 2, 3 and 4. Cloak 1
         // matters because its Monastery teleport lands beside a fairy ring.
-        granted.put(Capability.ARDOUGNE_CLOAK_1,
-                DiaryTiers.varbitFor("Ardougne", DiaryTiers.EASY));
-        granted.put(Capability.ARDOUGNE_CLOAK_2,
-                DiaryTiers.varbitFor("Ardougne", DiaryTiers.MEDIUM));
-        granted.put(Capability.ARDOUGNE_CLOAK_3,
-                DiaryTiers.varbitFor("Ardougne", DiaryTiers.HARD));
-        granted.put(Capability.ARDOUGNE_CLOAK_4,
-                DiaryTiers.varbitFor("Ardougne", DiaryTiers.ELITE));
+        granted.put(Capability.ARDOUGNE_CLOAK_1, DiaryTiers.varbitFor("Ardougne", DiaryTiers.EASY));
+        granted.put(Capability.ARDOUGNE_CLOAK_2, DiaryTiers.varbitFor("Ardougne", DiaryTiers.MEDIUM));
+        granted.put(Capability.ARDOUGNE_CLOAK_3, DiaryTiers.varbitFor("Ardougne", DiaryTiers.HARD));
+        granted.put(Capability.ARDOUGNE_CLOAK_4, DiaryTiers.varbitFor("Ardougne", DiaryTiers.ELITE));
         return Collections.unmodifiableMap(granted);
     }
 
@@ -65,8 +56,7 @@ public final class DiaryRewards {
     }
 
     /** The best tier of this family the player has earned, or null if none. */
-    public static Capability bestEarnedTier(Capability.TierFamily family,
-            Map<Integer, Integer> varbits) {
+    public static Capability bestEarnedTier(Capability.TierFamily family, Map<Integer, Integer> varbits) {
         if (family == Capability.TierFamily.NONE || varbits == null) {
             return null;
         }
@@ -85,11 +75,6 @@ public final class DiaryRewards {
             }
         }
         return best;
-    }
-
-    /** The diary completion varbit that grants this tier, or 0 if it is not a diary item. */
-    public static int grantedByVarbit(Capability capability) {
-        return GRANTED_BY.getOrDefault(capability, 0);
     }
 
     /**

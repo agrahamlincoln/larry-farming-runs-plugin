@@ -22,7 +22,7 @@ public enum FarmingSkipReason {
     /**
      * A fairy ring would reach it, but the player has no way to stand at a ring: every item
      * approach is switched off or not owned. Apart from {@link #NO_ROUTE} because a switch
-     * on the Farming tab fixes it.
+     * in the side panel fixes it.
      */
     NO_FAIRY_RING_ROUTE("no way to a fairy ring"),
 

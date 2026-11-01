@@ -1,20 +1,11 @@
 package com.larryfarming.panel;
 
 import com.larryfarming.snapshot.FarmingUpgrade;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextArea;
+import javax.swing.*;
 import net.runelite.client.ui.ColorScheme;
-import net.runelite.client.ui.FontManager;
 
 /**
  * One kind of farm-run gear advice as a boxed list: the gear to put on before setting off
@@ -105,20 +96,8 @@ class GearList extends JPanel
 		}
 
 		// The engine words the whole sentence, so the row adds nothing to it.
-		JTextArea area = PanelText.textArea(upgrade.getDetail(),
-			equip ? COLOR_EQUIP : PanelColors.HEADER,
-			FontManager.getRunescapeSmallFont());
-		gbc.gridx = col;
-		gbc.weightx = 1.0;
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		row.add(area, gbc);
-
-		if (width > 0)
-		{
-			row.setSize(width, row.getPreferredSize().height);
-			row.doLayout();
-		}
-		return row;
+		PanelText.addFill(row, gbc, col, PanelText.small(upgrade.getDetail(), equip ? COLOR_EQUIP : PanelColors.HEADER));
+		return FarmingPanel.sized(row, width);
 	}
 
 	@Override

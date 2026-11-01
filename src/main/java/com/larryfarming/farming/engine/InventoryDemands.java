@@ -1,27 +1,15 @@
 package com.larryfarming.farming.engine;
 
-import com.larryfarming.engine.ItemCounts;
-import com.larryfarming.engine.RunePouch;
-import com.larryfarming.engine.SeedBox;
-import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.PatchPrediction;
-import com.larryfarming.engine.farming.PatchType;
+import com.larryfarming.engine.*;
+import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.catalogue.CropData;
 import com.larryfarming.farming.detection.CapabilityResolver;
 import com.larryfarming.farming.detection.CapabilityState;
-import com.larryfarming.farming.model.Arrival;
-import com.larryfarming.farming.model.Bank;
-import com.larryfarming.farming.model.Capability;
-import com.larryfarming.farming.model.PatchRef;
-import com.larryfarming.farming.model.RunStop;
-import com.larryfarming.farming.model.TravelOption;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingCarryItem;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import net.runelite.api.gameval.ItemID;
 
 /**
  * Reads a planned trip and a player, and says what each arrival wants out of the bag.
@@ -40,7 +28,8 @@ final class InventoryDemands {
     }
 
     /** Both bucket ids, since the resolver treats either as owning one. */
-    private static final int[] BOTTOMLESS_COMPOST_BUCKET_IDS = {22994, 22997};
+    private static final List<Integer> BOTTOMLESS_COMPOST_BUCKET_IDS = List.of(
+            ItemID.BOTTOMLESS_COMPOST_BUCKET, ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED);
 
     /**
      * What one arrival wants, for every visit the trip is actually making.
@@ -63,14 +52,14 @@ final class InventoryDemands {
      * @param resolver decides the travel items, as it does for the packing list
      */
     static List<InventorySim.Demand> forTrip(List<List<Integer>> visits, List<StopPlan> plans,
-            List<List<Crop>> cropFor, FarmingInputs inputs, PlayerState state,
-            CapabilityResolver resolver) {
+            List<List<Crop>> cropFor, FarmingInputs inputs, PlayerState state, CapabilityResolver resolver) {
         List<InventorySim.Demand> demands = new ArrayList<>(visits.size());
-        boolean pouched = state != null && ownsRunePouch(state);
+        boolean pouched = state != null && ownsAny(state, RunePouch.POUCH_ITEM_IDS);
         for (List<Integer> visit : visits) {
-            List<StopPlan> here = stopsOf(visit, plans);
+            List<StopPlan> here = new ArrayList<>(visit.size());
             List<List<Crop>> plantedHere = new ArrayList<>(visit.size());
             for (int index : visit) {
+                here.add(plans.get(index));
                 plantedHere.add(cropFor.get(index));
             }
             // The packing list's own lines, so the bag charges what it is told to carry.
@@ -80,8 +69,7 @@ final class InventoryDemands {
             Set<Integer> travel = new HashSet<>();
             Set<Integer> spent = new HashSet<>();
             // With no player read there is nothing to price a route's items against.
-            List<FarmingCarryItem> travelLines = state == null
-                    ? List.of() : CarryPlanner.travelFor(here, state, resolver);
+            List<FarmingCarryItem> travelLines = state == null ? List.of() : CarryPlanner.travelFor(here, state, resolver);
             for (FarmingCarryItem line : travelLines) {
                 if (!CarryPlanner.takesAbagSlot(line, pouched)) {
                     continue;
@@ -93,7 +81,6 @@ final class InventoryDemands {
             }
             Arrival at = null;
             Set<Crop> seeds = EnumSet.noneOf(Crop.class);
-            Set<Crop> seedsMayStay = EnumSet.noneOf(Crop.class);
             Set<Crop> produce = EnumSet.noneOf(Crop.class);
             Set<PatchType> protections = EnumSet.noneOf(PatchType.class);
             int saplings = 0;
@@ -110,21 +97,14 @@ final class InventoryDemands {
                 RunStop stop = plan.getStop();
                 at = stop.getArrival();
                 saplings += sort(cropFor.get(index), seeds);
-                // An allotment picked into its bin is replanted only if the harvest empties
-                // it, so its seeds may come home again.
-                if (CompostUpkeep.holdsReadyFill(stop, inputs)) {
-                    sort(cropFor.get(index), seedsMayStay);
-                }
                 collectProduce(stop, inputs, produce);
-                collectProtection(stop, cropFor.get(index), state, protections);
+                collectProtection(stop, cropFor.get(index).size(), state, protections);
                 // The cheapest bank the player passes while here. A visit works every patch
                 // at its arrival, so a bank on the way to any one of them serves the visit.
                 // Unmeasured rungs are skipped, which can only overstate the cost.
                 // Compared on effective cost, so an upstairs bank pays for its staircase.
                 TravelOption route = plan.getRoute();
-                if (route != null && route.hasBankFigure()
-                        && (bankTiles == TravelOption.UNMEASURED
-                                || effectiveCost(route)
+                if (route != null && route.hasBankFigure() && (bankTiles == TravelOption.UNMEASURED || effectiveCost(route)
                                         < effectiveCost(bankTiles, bankUpstairs))) {
                     bankTiles = route.getBankDetour();
                     bankUpstairs = route.isBankUpstairs();
@@ -136,22 +116,10 @@ final class InventoryDemands {
             if (at == null) {
                 at = plans.get(visit.get(0)).getStop().getArrival();
             }
-            // Bin fill is measured over this visit's own stops, because a bin is filled where
-            // it stands. Only the guild's big bin takes any.
             demands.add(new InventorySim.Demand(at, seeds, saplings, produce, protections,
-                    bankTiles, bankUpstairs, bank,
-                    BinNeeds.over(here, inputs, state).getFillItems(),
-                    seedsMayStay, tools, travel, spent));
+                    bankTiles, bankUpstairs, bank, tools, travel, spent));
         }
         return demands;
-    }
-
-    private static List<StopPlan> stopsOf(List<Integer> visit, List<StopPlan> plans) {
-        List<StopPlan> here = new ArrayList<>(visit.size());
-        for (int index : visit) {
-            here.add(plans.get(index));
-        }
-        return here;
     }
 
     /**
@@ -195,17 +163,12 @@ final class InventoryDemands {
      * log basket (a fixture) or on the floor, and never take a produce slot.
      */
     private static void collectProduce(RunStop stop, FarmingInputs inputs, Set<Crop> produce) {
-        // A feeding allotment's harvest goes into its bin, not the bag.
-        if (stop.feedsAbin()) {
-            return;
-        }
         for (PatchRef ref : stop.getPatches()) {
             PatchPrediction seen = inputs.patchAt(ref);
             PatchWork.Act act = PatchWork.at(seen, stop, inputs.getNowEpochSec());
             // A check where the stop also picks fills the plant at once: a bush, cactus or
             // fruit tree bears its full load the moment it is checked.
-            boolean picked = act == PatchWork.Act.HARVEST
-                    || (act == PatchWork.Act.CHECK
+            boolean picked = act == PatchWork.Act.HARVEST || (act == PatchWork.Act.CHECK
                             && stop.getActions().contains(RunStop.StopAction.HARVEST));
             if (!picked) {
                 continue;
@@ -225,10 +188,9 @@ final class InventoryDemands {
      * <p>Only where something is planted and the player owns a fee for it (see
      * {@link Protection}), since the payment is not worth gathering for the trip.
      *
-     * @param planting what goes in each of the stop's patches planted this visit
+     * @param planting how many of the stop's patches are planted this visit
      */
-    private static void collectProtection(RunStop stop, List<Crop> planting, PlayerState state,
-            Set<PatchType> protections) {
+    private static void collectProtection(RunStop stop, int planting, PlayerState state, Set<PatchType> protections) {
         if (Protection.paymentAt(stop, planting, state) == null) {
             return;
         }
@@ -262,48 +224,32 @@ final class InventoryDemands {
      * <p>The axe and the travel items are not fixtures. {@link #forTrip} puts them on the
      * arrivals that use them, so each is charged only from the leg that first needs it.
      */
-    static Set<InventorySim.Fixture> fixturesFor(PlayerState state,
-            CapabilityResolver resolver, List<StopPlan> plans, FarmingInputs inputs,
+    static Set<InventorySim.Fixture> fixturesFor(PlayerState state, CapabilityResolver resolver, List<StopPlan> plans, FarmingInputs inputs,
             boolean basketInTheBag) {
         Set<InventorySim.Fixture> carried = EnumSet.of(InventorySim.Fixture.SPADE);
         // Barbarian Training allows bare-handed planting. Anything short of a definite HAVE
         // carries the dibber: an unknown costs a slot here, never a skipped patch.
-        if (resolver.resolve(Capability.BARE_HAND_PLANTING, state).getState()
-                != CapabilityState.HAVE) {
+        if (resolver.resolve(Capability.BARE_HAND_PLANTING, state).getState() != CapabilityState.HAVE) {
             carried.add(InventorySim.Fixture.SEED_DIBBER);
         }
         if (basketInTheBag) {
             carried.add(InventorySim.Fixture.LOG_BASKET);
         }
         // CarryPlanner.packsCompost decides the bucket for the packing list too.
-        boolean fertile = FertileSoil.inUse(
-                (inputs != null ? inputs : FarmingInputs.none()).getPreferences(), state,
-                resolver.getBook());
-        if (ownsAny(state, BOTTOMLESS_COMPOST_BUCKET_IDS)
-                && CarryPlanner.packsCompost(plans, fertile)) {
+        boolean fertile = FertileSoil.inUse((inputs != null ? inputs : FarmingInputs.none()).getPreferences(), state, resolver.getBook());
+        if (ownsAny(state, BOTTOMLESS_COMPOST_BUCKET_IDS) && CarryPlanner.packsCompost(plans, fertile)) {
             carried.add(InventorySim.Fixture.BOTTOMLESS_BUCKET);
         }
-        if (ownsRunePouch(state)) {
+        if (ownsAny(state, RunePouch.POUCH_ITEM_IDS)) {
             carried.add(InventorySim.Fixture.RUNE_POUCH);
         }
-        for (int box : SeedBox.BOX_ITEM_IDS) {
-            if (ItemCounts.countOwned(state, box, null) > 0) {
-                carried.add(InventorySim.Fixture.SEED_BOX);
-                break;
-            }
+        if (ownsAny(state, SeedBox.BOX_ITEM_IDS)) {
+            carried.add(InventorySim.Fixture.SEED_BOX);
         }
-        // The energy potion, ash and compost potion are errands, not owned savings. Each is
-        // charged on the same condition CarryPlanner uses to list it.
-        if (EnergyTopUp.worthCarrying(state)) {
-            carried.add(InventorySim.Fixture.ENERGY_POTION);
-        }
-        BinNeeds bins = BinNeeds.over(plans, inputs, state);
-        // One stack serves the bins and Fertile Soil alike.
-        if (bins.getAsh() > 0 || fertile && FertileSoil.treatsAny(plans)) {
+        // The ash is an errand, not an owned saving. It is charged on the same condition
+        // CarryPlanner uses to list it.
+        if (fertile && FertileSoil.treatsAny(plans)) {
             carried.add(InventorySim.Fixture.VOLCANIC_ASH);
-        }
-        if (bins.getDoses() > 0) {
-            carried.add(InventorySim.Fixture.COMPOST_POTION);
         }
         // No underwater breathing gear on purpose: it only works worn, so it costs
         // equipment slots, not inventory. See CarryPlanner.addDivingGear.
@@ -320,21 +266,7 @@ final class InventoryDemands {
      */
     static final boolean POTS_ARE_KEPT = true;
 
-    private static boolean ownsRunePouch(PlayerState state) {
-        for (int pouch : RunePouch.POUCH_ITEM_IDS) {
-            if (ItemCounts.countOwned(state, pouch, null) > 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean ownsAny(PlayerState state, int... itemIds) {
-        for (int itemId : itemIds) {
-            if (ItemCounts.countOwned(state, itemId, null) > 0) {
-                return true;
-            }
-        }
-        return false;
+    private static boolean ownsAny(PlayerState state, Collection<Integer> itemIds) {
+        return itemIds.stream().anyMatch(id -> ItemCounts.countOwned(state, id, null) > 0);
     }
 }

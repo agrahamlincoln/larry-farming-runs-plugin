@@ -1,9 +1,7 @@
 package com.larryfarming.farming.engine;
 
 import com.larryfarming.farming.model.Capability;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Counts how many of a day's rationed teleports the player has spent, so that a route

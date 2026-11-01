@@ -2,16 +2,9 @@ package com.larryfarming.farming.engine;
 
 import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.engine.farming.PatchType;
-import com.larryfarming.farming.model.Arrival;
-import com.larryfarming.farming.model.Bank;
-import com.larryfarming.farming.model.TravelOption;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import com.larryfarming.farming.model.*;
+import java.util.*;
+import lombok.*;
 
 /**
  * How full the bag gets as the trip is walked, and therefore where it has to break at a
@@ -99,23 +92,10 @@ public final class InventorySim {
          */
         SEED_BOX,
         /**
-         * A potion to restore run energy, carried only while the bar is low. Unlike the
-         * other fixtures it saves nothing; it is here so the packing list and the
-         * simulation agree.
+         * Volcanic ash for Fertile Soil cast to give ultracompost. Ash stacks, so one slot
+         * covers any amount.
          */
-        ENERGY_POTION,
-        /**
-         * Volcanic ash to lift a finished supercompost bin to ultracompost. Ash stacks, so
-         * one slot covers any amount. Carried only when a bin on this trip needs it.
-         */
-        VOLCANIC_ASH,
-        /**
-         * A vial of compost potion to lift a bin of plain compost to supercompost.
-         *
-         * <p>One vial (four doses, one per bin) is assumed to cover the trip. A fifth
-         * upgradeable bin on one circuit is not charged a second vial.
-         */
-        COMPOST_POTION
+        VOLCANIC_ASH
     }
 
     /**
@@ -124,72 +104,47 @@ public final class InventorySim {
      * <p>Sets rather than counts, because each costs one slot per <em>kind</em>: seeds
      * stack, noted produce stacks, and a farmer takes a noted payment.
      */
+    @Getter
     public static final class Demand {
 
         private final Arrival at;
+        /** Distinct seed types planted here. One slot each however many patches take one. */
         private final Set<Crop> seeds;
+        /** Saplings carried in. One slot each, since saplings do not stack. */
         private final int saplings;
+        /** Distinct kinds of thing picked here. One slot each, once noted. */
         private final Set<Crop> produce;
+        /**
+         * Patch types paid for here. One slot per kind of payment, since a farmer takes a
+         * noted one. Never herbs or flowers, which no farmer will protect.
+         */
         private final Set<PatchType> protections;
+        @Getter(AccessLevel.NONE)
         private final int bankTiles;
+        @Getter(AccessLevel.NONE)
         private final boolean bankUpstairs;
+        @Getter(AccessLevel.NONE)
         private final Bank bank;
-        private final int fillItems;
-        private final Set<Crop> seedsMayStay;
+        /**
+         * Items used here, by item id. One slot each, from the bank of the leg that first
+         * needs one to the end of the trip, since nothing is deposited.
+         */
         private final Set<Integer> tools;
+        /**
+         * Items that bring the player here, by item id. Charged like {@link #getTools()},
+         * but from the arrival before: the way to a bank has to be in the bag before the
+         * bank is reached.
+         */
         private final Set<Integer> travel;
+        /** Those of {@link #getTravel()} used up on the way here. */
         private final Set<Integer> spentOnTheWay;
 
-        /** An arrival with no bank figure, graded by the {@link Arrival}'s constant. */
-        public Demand(Arrival at, Set<Crop> seeds, int saplings, Set<Crop> produce,
-                Set<PatchType> protections) {
-            this(at, seeds, saplings, produce, protections, TravelOption.UNMEASURED, false,
-                    null);
-        }
-
         /**
-         * A walked figure with no named bank. {@code RunStop.Builder.banks} always supplies
-         * both, so the catalogue never builds one.
-         */
-        public Demand(Arrival at, Set<Crop> seeds, int saplings, Set<Crop> produce,
-                Set<PatchType> protections, int bankTiles, boolean bankUpstairs) {
-            this(at, seeds, saplings, produce, protections, bankTiles, bankUpstairs, null);
-        }
-
-        /**
-         * @param bankTiles    extra tiles the cheapest bank stop here costs on the route the
-         *                     player is actually taking, or {@link TravelOption#UNMEASURED}
-         * @param bankUpstairs whether reaching that bank changes floor
-         * @param bank         which bank those tiles were walked to, or null when unmeasured
-         */
-        public Demand(Arrival at, Set<Crop> seeds, int saplings, Set<Crop> produce,
-                Set<PatchType> protections, int bankTiles, boolean bankUpstairs, Bank bank) {
-            this(at, seeds, saplings, produce, protections, bankTiles, bankUpstairs, bank, 0);
-        }
-
-        /**
-         * @param fillItems produce carried in for a compost bin standing here, one slot each
-         */
-        public Demand(Arrival at, Set<Crop> seeds, int saplings, Set<Crop> produce,
-                Set<PatchType> protections, int bankTiles, boolean bankUpstairs, Bank bank,
-                int fillItems) {
-            this(at, seeds, saplings, produce, protections, bankTiles, bankUpstairs, bank,
-                    fillItems, null);
-        }
-
-        /**
-         * @param seedsMayStay seed kinds packed here for a patch that may not need them, which
-         *                     then stay in the bag for the rest of the leg
-         */
-        public Demand(Arrival at, Set<Crop> seeds, int saplings, Set<Crop> produce,
-                Set<PatchType> protections, int bankTiles, boolean bankUpstairs, Bank bank,
-                int fillItems, Set<Crop> seedsMayStay) {
-            this(at, seeds, saplings, produce, protections, bankTiles, bankUpstairs, bank,
-                    fillItems, seedsMayStay, null, null, null);
-        }
-
-        /**
-         * @param tools         items used here, such as the axe, by item id
+         * @param bankTiles     extra tiles the cheapest bank stop here costs on the route the
+         *                      player is actually taking, or {@link TravelOption#UNMEASURED}
+         * @param bankUpstairs  whether reaching that bank changes floor
+         * @param bank          which bank those tiles were walked to, or null when unmeasured
+         * @param tools        items used here, such as the axe, by item id
          * @param travel        items that bring the player here, such as the ectophial or a
          *                      stack of tablets, by item id
          * @param spentOnTheWay those of {@code travel} used up getting here, such as a
@@ -198,19 +153,13 @@ public final class InventorySim {
          */
         public Demand(Arrival at, Set<Crop> seeds, int saplings, Set<Crop> produce,
                 Set<PatchType> protections, int bankTiles, boolean bankUpstairs, Bank bank,
-                int fillItems, Set<Crop> seedsMayStay, Set<Integer> tools,
-                Set<Integer> travel, Set<Integer> spentOnTheWay) {
+                Set<Integer> tools, Set<Integer> travel, Set<Integer> spentOnTheWay) {
             this.tools = copyOf(tools);
             this.travel = copyOf(travel);
             this.spentOnTheWay = copyOf(spentOnTheWay);
             if (!this.travel.containsAll(this.spentOnTheWay)) {
                 throw new IllegalArgumentException("only a travel item is spent on the way");
             }
-            this.seedsMayStay = copyOf(seedsMayStay);
-            if (fillItems < 0) {
-                throw new IllegalArgumentException("fill items cannot be negative");
-            }
-            this.fillItems = fillItems;
             if (at == null) {
                 throw new IllegalArgumentException("a demand belongs to an arrival");
             }
@@ -236,75 +185,6 @@ public final class InventorySim {
             return set == null ? Collections.emptySet() : Set.copyOf(set);
         }
 
-        public Arrival getAt() {
-            return at;
-        }
-
-        /** Distinct seed types planted here. One slot each however many patches take one. */
-        public Set<Crop> getSeeds() {
-            return seeds;
-        }
-
-        /**
-         * Seed kinds packed here for a patch whose harvest may not empty it, such as an
-         * allotment picked into a compost bin until the bin is full. Spent only if the patch
-         * empties, so the slot is held for the rest of the leg.
-         */
-        public Set<Crop> getSeedsMayStay() {
-            return seedsMayStay;
-        }
-
-        /**
-         * Items used here, by item id. One slot each, from the bank of the leg that first
-         * needs one to the end of the trip, since nothing is deposited.
-         */
-        public Set<Integer> getTools() {
-            return tools;
-        }
-
-        /**
-         * Items that bring the player here, by item id. Charged like {@link #getTools()},
-         * but from the arrival before: the way to a bank has to be in the bag before the
-         * bank is reached.
-         */
-        public Set<Integer> getTravel() {
-            return travel;
-        }
-
-        /** Those of {@link #getTravel()} used up on the way here. */
-        public Set<Integer> getSpentOnTheWay() {
-            return spentOnTheWay;
-        }
-
-        /** Saplings carried in. One slot each, since saplings do not stack. */
-        public int getSaplings() {
-            return saplings;
-        }
-
-        /** Distinct kinds of thing picked here. One slot each, once noted. */
-        public Set<Crop> getProduce() {
-            return produce;
-        }
-
-        /**
-         * Produce carried in to fill the compost bin here, one slot <em>per item</em>.
-         *
-         * <p>Un-noted produce never stacks, and these come out of a bank, so the
-         * leprechaun's noting does not help. The simulation frees these slots at the bin,
-         * so a bin soon after a bank costs least.
-         */
-        public int getFillItems() {
-            return fillItems;
-        }
-
-        /**
-         * Patch types paid for here. One slot per kind of payment, since a farmer takes a
-         * noted one. Never herbs or flowers, which no farmer will protect.
-         */
-        public Set<PatchType> getProtections() {
-            return protections;
-        }
-
         /**
          * What a bank costs here, on the route this player is taking rather than on average.
          *
@@ -312,9 +192,7 @@ public final class InventorySim {
          * an unmeasured rung.
          */
         public Arrival.BankProximity getBank() {
-            return bankTiles == TravelOption.UNMEASURED
-                    ? at.getBank()
-                    : Arrival.BankProximity.of(bankTiles, bankUpstairs);
+            return bankTiles == TravelOption.UNMEASURED ? at.getBank() : Arrival.BankProximity.of(bankTiles, bankUpstairs);
         }
 
         /**
@@ -337,9 +215,7 @@ public final class InventorySim {
          * breaks can work in grades.
          */
         public int bankCostInTiles() {
-            return bankTiles == TravelOption.UNMEASURED
-                    ? TravelOption.UNMEASURED
-                    : bankTiles + (bankUpstairs
+            return bankTiles == TravelOption.UNMEASURED ? TravelOption.UNMEASURED : bankTiles + (bankUpstairs
                             ? Arrival.BankProximity.FLOOR_CHANGE_TILES : 0);
         }
 
@@ -361,98 +237,93 @@ public final class InventorySim {
      * <p>Shown as an offer so the player can overrule the plan: they know how much they are
      * about to pick, and the sim only knows a flat reserve.
      */
+    @Getter
+    @AllArgsConstructor(access = AccessLevel.PACKAGE)
     public static final class Opportunity {
 
+        /** Index of the arrival, into the list handed to {@link #plan}. */
         private final int index;
         private final Arrival at;
-        private final Arrival.BankProximity cost;
-        private final Bank bank;
-
-        /** A bank with no figure, which therefore has no name to give either. */
-        Opportunity(int index, Arrival at, Arrival.BankProximity cost) {
-            this(index, at, cost, null);
-        }
-
-        Opportunity(int index, Arrival at, Arrival.BankProximity cost, Bank bank) {
-            this.index = index;
-            this.at = at;
-            this.cost = cost;
-            this.bank = bank;
-        }
-
-        /** Index of the arrival, into the list handed to {@link #plan}. */
-        public int getIndex() {
-            return index;
-        }
-
-        public Arrival getAt() {
-            return at;
-        }
-
         /**
          * What the detour costs on the rung this player took, or null when it has no figure
          * (see {@link Demand#isBankMeasured()}).
          */
-        public Arrival.BankProximity getCost() {
-            return cost;
-        }
-
+        private final Arrival.BankProximity cost;
         /**
          * Which bank this is, or null when the rung that reaches it has no figure.
          *
          * <p>Not {@code getBank()}: {@link Demand#getBank()} returns a grade, not a place.
          */
-        public Bank getBankPlace() {
-            return bank;
-        }
+        private final Bank bankPlace;
     }
 
     /**
      * One unbroken leg of the trip: what the player sets out from a bank carrying, and how
      * far they get before they need another.
      */
+    @Getter
     public static final class Leg {
 
+        /** Index of the first demand on this leg, into the list handed to {@link #plan}. */
         private final int from;
+        /** Index of the last demand on this leg, inclusive. */
         private final int to;
+        /**
+         * Where the player banks before setting out, or null when nobody banks them onto
+         * this leg.
+         *
+         * <p>Null on the first leg because the trip starts at a bank. Null on a later leg
+         * means the previous leg ran out of room with no bank in reach, and
+         * {@link #getOverflow()} says why.
+         */
         private final Arrival bankAt;
+        /**
+         * What that bank costs to reach on the route the player is taking, or null when
+         * nobody banks them onto this leg.
+         *
+         * <p>Stored rather than looked up from {@link #getBankAt()}: the same place can be a
+         * free stop off one rung and a long detour off another.
+         */
         private final Arrival.BankProximity bankCost;
+        /**
+         * Which bank that is, or null when the rung this player took to it has no figure.
+         *
+         * <p>Null whenever {@link #getBankCost()} is null: both come off an unmeasured rung.
+         */
         private final Bank bankPlace;
+        /**
+         * Whether the trip stopped here sooner than the bag made it.
+         *
+         * <p>True when the split was moved back to reach a cheaper bank than the last one
+         * the bag would have allowed. The player is told so that an early bank stop does not
+         * look like a mistake.
+         */
         private final boolean bankBroughtForward;
+        /** The fullest the bag gets on this leg, which is what had to fit. */
         private final int peakSlots;
+        /**
+         * Why this leg does not fit, or null when it does.
+         *
+         * <p>{@code getBankAt() == null && getFrom() > 0} implies this is non-null.
+         * {@link Plan#getOverflows()} holds the same sentences as a whole-trip list.
+         */
         private final String overflow;
+        /**
+         * Whether the shortfall only eats into the room kept for the harvest, with every
+         * item still fitting. False when nothing overflows.
+         */
         private final boolean harvestRoomOnly;
+        /**
+         * Banks on this leg the trip is not stopping at, in the order they are passed.
+         *
+         * <p>Empty rather than null when there are none. Excludes the arrival this leg
+         * starts from, which is where {@link #getBankAt()} already sends them.
+         */
         private final List<Opportunity> passableBanks;
 
-        // Legs are built through plan(); the shorter forms below fill in defaults.
-        Leg(int from, int to, Arrival bankAt, int peakSlots, String overflow) {
-            this(from, to, bankAt, null, false, peakSlots, overflow,
-                    Collections.emptyList());
-        }
-
-        Leg(int from, int to, Arrival bankAt, Arrival.BankProximity bankCost,
-                boolean bankBroughtForward, int peakSlots, String overflow) {
-            this(from, to, bankAt, bankCost, bankBroughtForward, peakSlots, overflow,
-                    Collections.emptyList());
-        }
-
-        Leg(int from, int to, Arrival bankAt, Arrival.BankProximity bankCost,
-                boolean bankBroughtForward, int peakSlots, String overflow,
-                List<Opportunity> passableBanks) {
-            this(from, to, bankAt, bankCost, null, bankBroughtForward, peakSlots, overflow,
-                    passableBanks);
-        }
-
+        // Legs are built through plan().
         Leg(int from, int to, Arrival bankAt, Arrival.BankProximity bankCost, Bank bankPlace,
-                boolean bankBroughtForward, int peakSlots, String overflow,
-                List<Opportunity> passableBanks) {
-            this(from, to, bankAt, bankCost, bankPlace, bankBroughtForward, peakSlots, overflow,
-                    false, passableBanks);
-        }
-
-        Leg(int from, int to, Arrival bankAt, Arrival.BankProximity bankCost, Bank bankPlace,
-                boolean bankBroughtForward, int peakSlots, String overflow,
-                boolean harvestRoomOnly, List<Opportunity> passableBanks) {
+                boolean bankBroughtForward, int peakSlots, String overflow, boolean harvestRoomOnly, List<Opportunity> passableBanks) {
             this.from = from;
             this.to = to;
             this.bankAt = bankAt;
@@ -464,92 +335,6 @@ public final class InventorySim {
             this.harvestRoomOnly = overflow != null && harvestRoomOnly;
             this.passableBanks = List.copyOf(passableBanks);
         }
-
-        /**
-         * Banks on this leg the trip is not stopping at, in the order they are passed.
-         *
-         * <p>Empty rather than null when there are none. Excludes the arrival this leg
-         * starts from, which is where {@link #getBankAt()} already sends them.
-         */
-        public List<Opportunity> getPassableBanks() {
-            return passableBanks;
-        }
-
-        /** Index of the first demand on this leg, into the list handed to {@link #plan}. */
-        public int getFrom() {
-            return from;
-        }
-
-        /** Index of the last demand on this leg, inclusive. */
-        public int getTo() {
-            return to;
-        }
-
-        /**
-         * Where the player banks before setting out, or null when nobody banks them onto
-         * this leg.
-         *
-         * <p>Null on the first leg because the trip starts at a bank. Null on a later leg
-         * means the previous leg ran out of room with no bank in reach, and
-         * {@link #getOverflow()} says why.
-         */
-        public Arrival getBankAt() {
-            return bankAt;
-        }
-
-        /**
-         * What that bank costs to reach on the route the player is taking, or null when
-         * nobody banks them onto this leg.
-         *
-         * <p>Stored rather than looked up from {@link #getBankAt()}: the same place can be a
-         * free stop off one rung and a long detour off another.
-         */
-        public Arrival.BankProximity getBankCost() {
-            return bankCost;
-        }
-
-        /**
-         * Which bank that is, or null when the rung this player took to it has no figure.
-         *
-         * <p>Null whenever {@link #getBankCost()} is null: both come off an unmeasured rung.
-         */
-        public Bank getBankPlace() {
-            return bankPlace;
-        }
-
-        /**
-         * Whether the trip stopped here sooner than the bag made it.
-         *
-         * <p>True when the split was moved back to reach a cheaper bank than the last one
-         * the bag would have allowed. The player is told so that an early bank stop does not
-         * look like a mistake.
-         */
-        public boolean isBankBroughtForward() {
-            return bankBroughtForward;
-        }
-
-        /** The fullest the bag gets on this leg, which is what had to fit. */
-        public int getPeakSlots() {
-            return peakSlots;
-        }
-
-        /**
-         * Why this leg does not fit, or null when it does.
-         *
-         * <p>{@code getBankAt() == null && getFrom() > 0} implies this is non-null.
-         * {@link Plan#getOverflows()} holds the same sentences as a whole-trip list.
-         */
-        public String getOverflow() {
-            return overflow;
-        }
-
-        /**
-         * Whether the shortfall only eats into the room kept for the harvest, with every
-         * item still fitting. False when nothing overflows.
-         */
-        public boolean isHarvestRoomOnly() {
-            return harvestRoomOnly;
-        }
     }
 
     /**
@@ -558,23 +343,16 @@ public final class InventorySim {
      * <p>An overflowing leg with no bank in reach is reported, not silently split, so the
      * player can shed something or plan a second trip.
      */
+    @Getter
     public static final class Plan {
 
         private final List<Leg> legs;
+        /** One sentence per leg that does not fit, naming where it fills and why. */
         private final List<String> overflows;
 
         Plan(List<Leg> legs, List<String> overflows) {
             this.legs = List.copyOf(legs);
             this.overflows = List.copyOf(overflows);
-        }
-
-        public List<Leg> getLegs() {
-            return legs;
-        }
-
-        /** One sentence per leg that does not fit, naming where it fills and why. */
-        public List<String> getOverflows() {
-            return overflows;
         }
 
         public boolean fits() {
@@ -598,8 +376,7 @@ public final class InventorySim {
         int carried = fixtures == null ? 0 : fixtures.size();
         // The seed box is charged only on a trip that plants seeds, the same condition
         // CarryPlanner uses to list it.
-        boolean seedsBoxed = fixtures != null && fixtures.contains(Fixture.SEED_BOX)
-                && plantsSeeds(stops);
+        boolean seedsBoxed = fixtures != null && fixtures.contains(Fixture.SEED_BOX) && plantsSeeds(stops);
         if (fixtures != null && fixtures.contains(Fixture.SEED_BOX) && !seedsBoxed) {
             carried--;
         }
@@ -618,8 +395,7 @@ public final class InventorySim {
         boolean harvestRoomOnly = false;
         while (from < stops.size()) {
             int to = furthestThatFits(stops, from, carried, potsAreKept, seedsBoxed);
-            if (to < from
-                    && peakOver(stops, from, from, carried, potsAreKept, seedsBoxed) <= SLOTS) {
+            if (to < from && peakOver(stops, from, from, carried, potsAreKept, seedsBoxed) <= SLOTS) {
                 // Tight, not impossible: one arrival over WORKING_SLOTS but within SLOTS.
                 // Taken as a leg of one rather than reported. Every path below still
                 // advances `from`, so the loop still terminates.
@@ -633,13 +409,11 @@ public final class InventorySim {
                 // Without this branch the loop builds legs for the same arrival forever.
                 Demand alone = stops.get(from);
                 int wanted = peakOver(stops, from, from, carried, potsAreKept, seedsBoxed);
-                String said = alone.getAt().getDisplayName() + " alone needs " + wanted
-                        + " inventory slots.";
+                String said = alone.getAt().getDisplayName() + " alone needs " + wanted + " inventory slots.";
                 overflows.add(said);
                 // An earlier shortfall and this one can both apply; report both.
                 legs.add(new Leg(from, from, bankAt, bankCost, bankPlace, broughtForward,
-                        wanted, unbanked == null ? said : unbanked + " " + said,
-                        passableBanksIn(stops, from, from)));
+                        wanted, unbanked == null ? said : unbanked + " " + said, false, passableBanksIn(stops, from, from)));
                 from++;
                 bankAt = null;
                 bankCost = null;
@@ -649,28 +423,22 @@ public final class InventorySim {
                 harvestRoomOnly = false;
                 continue;
             }
-            if (to + 1 >= stops.size()) {
-                legs.add(new Leg(from, to, bankAt, bankCost, bankPlace, broughtForward,
-                        peakOver(stops, from, to, carried, potsAreKept, seedsBoxed), unbanked,
-                        harvestRoomOnly, passableBanksIn(stops, from, to)));
-                break;
-            }
-            int cut = latestBankIn(stops, from + 1, to + 1);
+            boolean last = to + 1 >= stops.size();
+            int cut = last ? -1 : latestBankIn(stops, from + 1, to + 1);
             if (cut < 0) {
-                // The next arrival does not fit and no bank is in reach. Name both ends.
                 legs.add(new Leg(from, to, bankAt, bankCost, bankPlace, broughtForward,
                         peakOver(stops, from, to, carried, potsAreKept, seedsBoxed), unbanked,
                         harvestRoomOnly, passableBanksIn(stops, from, to)));
+                if (last) {
+                    break;
+                }
+                // The next arrival does not fit and no bank is in reach. Name both ends.
                 // Exceeding SLOTS is a real shortfall. Eating into the harvest reserve only
                 // means picking less, and must not be reported as a full bag.
-                boolean beyondTheBag = peakOver(stops, from, to + 1, carried, potsAreKept,
-                        seedsBoxed) > SLOTS;
+                boolean beyondTheBag = peakOver(stops, from, to + 1, carried, potsAreKept, seedsBoxed) > SLOTS;
                 String full = stops.get(to + 1).getAt().getDisplayName();
-                unbanked = (beyondTheBag
-                        ? "Your inventory fills at "
-                        : "Your inventory has no room left for the harvest at ")
-                        + full + ". No bank lies between "
-                        + stops.get(from).getAt().getDisplayName() + " and " + full + ".";
+                unbanked = (beyondTheBag ? "Your inventory fills at " : "Your inventory has no room left for the harvest at ")
+                        + full + ". No bank lies between " + stops.get(from).getAt().getDisplayName() + " and " + full + ".";
                 harvestRoomOnly = !beyondTheBag;
                 overflows.add(unbanked);
                 from = to + 1;
@@ -706,8 +474,7 @@ public final class InventorySim {
      * <p>Returns {@code from - 1} when the first arrival alone exceeds
      * {@link #WORKING_SLOTS}.
      */
-    private static int furthestThatFits(List<Demand> stops, int from, int carried,
-            boolean potsAreKept, boolean seedsBoxed) {
+    private static int furthestThatFits(List<Demand> stops, int from, int carried, boolean potsAreKept, boolean seedsBoxed) {
         int to = from - 1;
         for (int end = from; end < stops.size(); end++) {
             if (peakOver(stops, from, end, carried, potsAreKept, seedsBoxed) > WORKING_SLOTS) {
@@ -725,37 +492,31 @@ public final class InventorySim {
      * it is picked. Within one arrival the harvest comes first, because a patch must be
      * emptied before it takes a seed.
      */
-    private static int peakOver(List<Demand> stops, int from, int to, int carried,
-            boolean potsAreKept, boolean seedsBoxed) {
+    private static int peakOver(List<Demand> stops, int from, int to, int carried, boolean potsAreKept, boolean seedsBoxed) {
         // Withdrawn before setting out: one slot per kind, for the whole leg's worth.
         Set<Crop> seedsLeft = EnumSet.noneOf(Crop.class);
         Set<PatchType> paymentsLeft = EnumSet.noneOf(PatchType.class);
         int saplingsLeft = 0;
-        int fillLeft = 0;
         for (int i = from; i <= to; i++) {
             seedsLeft.addAll(stops.get(i).getSeeds());
             paymentsLeft.addAll(stops.get(i).getProtections());
             saplingsLeft += stops.get(i).getSaplings();
-            fillLeft += stops.get(i).getFillItems();
         }
 
         Items items = Items.over(stops, to);
         Set<Crop> picked = EnumSet.noneOf(Crop.class);
-        Set<Crop> mayStay = EnumSet.noneOf(Crop.class);
         int pots = 0;
         // Setting off: from the trip's starting bank on the opening leg, otherwise from the
         // bank at the leg's first arrival, reached already.
-        int peak = carried + items.heldAt(from == 0 ? -1 : from)
-                + seedSlots(seedsLeft.size(), seedsBoxed)
-                + paymentsLeft.size() + saplingsLeft + fillLeft;
+        int peak = carried + items.heldAt(from == 0 ? -1 : from) + seedSlots(seedsLeft.size(), seedsBoxed)
+                + paymentsLeft.size() + saplingsLeft;
         for (int i = from; i <= to; i++) {
             Demand stop = stops.get(i);
             // Peak read after picking and before spending: the fullest moment at an arrival
             // is the harvest in hand with this stop's seed, payment and sapling still held.
             picked.addAll(stop.getProduce());
-            peak = Math.max(peak, carried + items.heldAt(i)
-                    + seedSlots(seedsLeft.size(), seedsBoxed)
-                    + paymentsLeft.size() + saplingsLeft + fillLeft + pots + picked.size());
+            peak = Math.max(peak, carried + items.heldAt(i) + seedSlots(seedsLeft.size(), seedsBoxed)
+                    + paymentsLeft.size() + saplingsLeft + pots + picked.size());
 
             // Spent on the way out. A planted sapling leaves its empty pot unless the pot is
             // destroyed. Nothing below raises the total, so the peak is not re-read.
@@ -764,12 +525,7 @@ public final class InventorySim {
                 pots += stop.getSaplings();
             }
             seedsLeft.removeAll(stop.getSeeds());
-            // Seeds a patch may not take stay held until the leg ends.
-            mayStay.addAll(stop.getSeedsMayStay());
-            seedsLeft.addAll(mayStay);
             paymentsLeft.removeAll(stop.getProtections());
-            // Fill items go into the bin here and free their slots for the rest of the leg.
-            fillLeft -= stop.getFillItems();
         }
         return peak;
     }
@@ -888,8 +644,7 @@ public final class InventorySim {
             if (!offeredHere(stop)) {
                 continue;
             }
-            passed.add(new Opportunity(i, stop.getAt(),
-                    stop.isBankMeasured() ? stop.getBank() : null, stop.getBankPlace()));
+            passed.add(new Opportunity(i, stop.getAt(), stop.isBankMeasured() ? stop.getBank() : null, stop.getBankPlace()));
         }
         return passed;
     }
@@ -907,9 +662,7 @@ public final class InventorySim {
      */
     private static boolean offeredHere(Demand stop) {
         int walked = stop.bankCostInTiles();
-        return walked == TravelOption.UNMEASURED
-                ? stop.getBank().onTheWay()
-                : walked <= OFFERED_WITHIN_TILES;
+        return walked == TravelOption.UNMEASURED ? stop.getBank().onTheWay() : walked <= OFFERED_WITHIN_TILES;
     }
 
     /**
@@ -923,8 +676,7 @@ public final class InventorySim {
      * Grades exist for measured and unmeasured rungs alike, so both compare on equal terms.
      * Ties keep the later arrival.
      */
-    private static int orAcheaperBankNoLater(List<Demand> stops, int from, int cut,
-            int carried, boolean potsAreKept, boolean seedsBoxed) {
+    private static int orAcheaperBankNoLater(List<Demand> stops, int from, int cut, int carried, boolean potsAreKept, boolean seedsBoxed) {
         Arrival.BankProximity best = stops.get(cut).getBank();
         if (best == Arrival.BankProximity.AT_ARRIVAL) {
             return cut;
@@ -933,8 +685,7 @@ public final class InventorySim {
         int chosen = cut;
         for (int i = cut - 1; i > from; i--) {
             Arrival.BankProximity here = stops.get(i).getBank();
-            if (here.compareTo(best) < 0
-                    && legsFrom(stops, i, carried, potsAreKept, seedsBoxed) <= allowed) {
+            if (here.compareTo(best) < 0 && legsFrom(stops, i, carried, potsAreKept, seedsBoxed) <= allowed) {
                 best = here;
                 chosen = i;
             }
@@ -949,8 +700,7 @@ public final class InventorySim {
      * latest-bank walk, not a recursive copy of the caller, so it terminates and is
      * deterministic. Latest-bank cutting gives the minimal count.
      */
-    private static int legsFrom(List<Demand> stops, int start, int carried,
-            boolean potsAreKept, boolean seedsBoxed) {
+    private static int legsFrom(List<Demand> stops, int start, int carried, boolean potsAreKept, boolean seedsBoxed) {
         int legs = 0;
         int from = start;
         while (from < stops.size()) {

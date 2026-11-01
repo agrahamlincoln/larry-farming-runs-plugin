@@ -5,15 +5,10 @@ import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.farming.catalogue.CropData;
 import com.larryfarming.farming.detection.CapabilityState;
 import com.larryfarming.farming.detection.DiaryTiers;
-import com.larryfarming.farming.model.FarmingPreferences;
-import com.larryfarming.farming.model.FarmingRun;
-import com.larryfarming.farming.model.UnlockGate;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.model.Skill;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Whether an {@link UnlockGate} lets a run or stop into this player's game at all.
@@ -49,7 +44,7 @@ public final class RunAvailability {
         if (gate.getDiaryArea() != null) {
             parts.add(DiaryTiers.completed(gate.getDiaryArea(), gate.getDiaryTier(), state));
         }
-        // An empty list is UnlockGate.none(): available from the start.
+        // An empty list is an empty gate: available from the start.
         return parts.isEmpty() ? CapabilityState.HAVE : CapabilityState.all(parts);
     }
 
@@ -66,17 +61,14 @@ public final class RunAvailability {
      */
     public static UnlockGate gateOf(FarmingRun run, FarmingPreferences prefs) {
         UnlockGate written = run.getUnlock();
-        if (prefs == null || run.getSeedPatchType() == null
-                || !isPlainFarmingGate(written)) {
+        if (prefs == null || run.getSeedPatchType() == null || !isPlainFarmingGate(written)) {
             return written;
         }
         int cheapest = Integer.MAX_VALUE;
         for (Crop crop : SeedSelector.plantingLadder(prefs, run.getSeedPatchType())) {
             cheapest = Math.min(cheapest, CropData.forCrop(crop).getFarmingLevel());
         }
-        return cheapest == Integer.MAX_VALUE
-                ? written
-                : UnlockGate.skill(Skill.FARMING, cheapest);
+        return cheapest == Integer.MAX_VALUE ? written : UnlockGate.skill(Skill.FARMING, cheapest);
     }
 
     /**
@@ -126,9 +118,7 @@ public final class RunAvailability {
                 return CapabilityState.HAVE;
             }
         }
-        return state.getBankLastSeen() == null
-                ? CapabilityState.UNKNOWN
-                : CapabilityState.LACK;
+        return state.getBankLastSeen() == null ? CapabilityState.UNKNOWN : CapabilityState.LACK;
     }
 
     /**
@@ -138,8 +128,7 @@ public final class RunAvailability {
      * gives +3, matching every boosted floor in the catalogue; a gate needing a different
      * margin needs its own entry.
      */
-    private static final Map<Skill, int[]> BOOSTS_FOR = Map.of(
-            Skill.FARMING, new int[]{7178, 7180});
+    private static final Map<Skill, int[]> BOOSTS_FOR = Map.of(Skill.FARMING, new int[]{7178, 7180});
 
     /**
      * One player-facing clause naming what stands between this player and the gate, or
@@ -154,11 +143,8 @@ public final class RunAvailability {
         if (gate.getSkill() != null && skillState(gate, state) != CapabilityState.HAVE) {
             needs.add(gate.getLevel() + " " + gate.getSkill().getDisplayName());
         }
-        if (gate.getDiaryArea() != null
-                && DiaryTiers.completed(gate.getDiaryArea(), gate.getDiaryTier(), state)
-                        != CapabilityState.HAVE) {
-            needs.add("the " + gate.getDiaryTier().toLowerCase(Locale.ROOT) + " "
-                    + gate.getDiaryArea() + " diary");
+        if (gate.getDiaryArea() != null && DiaryTiers.completed(gate.getDiaryArea(), gate.getDiaryTier(), state) != CapabilityState.HAVE) {
+            needs.add("the " + gate.getDiaryTier().toLowerCase(Locale.ROOT) + " " + gate.getDiaryArea() + " diary");
         }
         return needs.isEmpty() ? "" : "needs " + String.join(" and ", needs);
     }

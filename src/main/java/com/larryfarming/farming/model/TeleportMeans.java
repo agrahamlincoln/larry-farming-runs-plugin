@@ -1,8 +1,7 @@
 package com.larryfarming.farming.model;
 
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.*;
+import lombok.Getter;
 
 /**
  * One way of reaching a {@link Destination}: a spell on a particular spellbook, or a
@@ -14,6 +13,7 @@ import java.util.Map;
  * <p>A third kind is a spell reached through Spellbook Swap: two casts, both paid in runes,
  * which a rung asks for by name ({@link #afterSwap}).
  */
+@Getter
 public final class TeleportMeans {
 
     public enum Kind {
@@ -22,18 +22,24 @@ public final class TeleportMeans {
     }
 
     private final Kind kind;
+    /** What to call this in an instruction: "Catherby Teleport", "Camelot teleport tablet". */
     private final String displayName;
+    /** The book this spell lives on, or {@link Spellbook#ANY} for a tablet. */
     private final Spellbook spellbook;
     private final int magicLevel;
+    /** The quest behind the spell or tablet, or null when there is none. */
     private final String questName;
+    /** What one cast costs. Empty for a tablet. */
     private final Map<Rune, Integer> runes;
+    /** The tablet's item ID, or 0 for a spell. */
     private final int itemId;
+    /** The spell's icon in the game's spellbook, or 0 for a tablet. */
     private final int spriteId;
+    /** The spell cast after the swap, or null when this is not a swap. */
     private final TeleportMeans swappedSpell;
 
     private TeleportMeans(Kind kind, String displayName, Spellbook spellbook, int magicLevel,
-            String questName, Map<Rune, Integer> runes, int itemId, int spriteId,
-            TeleportMeans swappedSpell) {
+            String questName, Map<Rune, Integer> runes, int itemId, int spriteId, TeleportMeans swappedSpell) {
         this.kind = kind;
         this.displayName = displayName;
         this.spellbook = spellbook;
@@ -64,8 +70,7 @@ public final class TeleportMeans {
         if (costs.isEmpty()) {
             throw new IllegalArgumentException(displayName + ": a teleport spell costs runes");
         }
-        return new TeleportMeans(Kind.SPELL, displayName, spellbook, magicLevel, questName,
-                costs, 0, spriteId, null);
+        return new TeleportMeans(Kind.SPELL, displayName, spellbook, magicLevel, questName, costs, 0, spriteId, null);
     }
 
     /** A teleport tablet, usable on any spellbook with no quest behind it. */
@@ -80,8 +85,7 @@ public final class TeleportMeans {
      * @param questName the quest the tablet refuses to work without, or null for none
      */
     public static TeleportMeans tablet(String displayName, int itemId, String questName) {
-        return new TeleportMeans(Kind.TABLET, displayName, Spellbook.ANY, 0, questName,
-                new EnumMap<>(Rune.class), itemId, 0, null);
+        return new TeleportMeans(Kind.TABLET, displayName, Spellbook.ANY, 0, questName, new EnumMap<>(Rune.class), itemId, 0, null);
     }
 
     /**
@@ -98,16 +102,13 @@ public final class TeleportMeans {
             throw new IllegalArgumentException("a swap joins two plain spells");
         }
         if (swap.getSpellbook() == spell.getSpellbook()) {
-            throw new IllegalArgumentException(
-                    spell.getDisplayName() + " is on the book the swap is cast from");
+            throw new IllegalArgumentException(spell.getDisplayName() + " is on the book the swap is cast from");
         }
         Map<Rune, Integer> both = new EnumMap<>(Rune.class);
         both.putAll(swap.getRunes());
         spell.getRunes().forEach((rune, count) -> both.merge(rune, count, Integer::sum));
-        return new TeleportMeans(Kind.SPELL,
-                swap.getDisplayName() + ", then " + spell.getDisplayName(),
-                swap.getSpellbook(), swap.getMagicLevel(), swap.getQuestName(), both, 0,
-                swap.getSpriteId(), spell);
+        return new TeleportMeans(Kind.SPELL, swap.getDisplayName() + ", then " + spell.getDisplayName(),
+                swap.getSpellbook(), swap.getMagicLevel(), swap.getQuestName(), both, 0, swap.getSpriteId(), spell);
     }
 
     public boolean isSpell() {
@@ -118,51 +119,8 @@ public final class TeleportMeans {
         return kind == Kind.TABLET;
     }
 
-    public Kind getKind() {
-        return kind;
-    }
-
-    /** What to call this in an instruction: "Catherby Teleport", "Camelot teleport tablet". */
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    /** The book this spell lives on, or {@link Spellbook#ANY} for a tablet. */
-    public Spellbook getSpellbook() {
-        return spellbook;
-    }
-
-    public int getMagicLevel() {
-        return magicLevel;
-    }
-
-    /** The quest behind the spell or tablet, or null when there is none. */
-    public String getQuestName() {
-        return questName;
-    }
-
-    /** What one cast costs. Empty for a tablet. */
-    public Map<Rune, Integer> getRunes() {
-        return runes;
-    }
-
-    /** The tablet's item ID, or 0 for a spell. */
-    public int getItemId() {
-        return itemId;
-    }
-
-    /** The spell's icon in the game's spellbook, or 0 for a tablet. */
-    public int getSpriteId() {
-        return spriteId;
-    }
-
     /** Whether this is a swap followed by a spell from another book; see {@link #afterSwap}. */
     public boolean isSwap() {
         return swappedSpell != null;
-    }
-
-    /** The spell cast after the swap, or null when this is not a swap. */
-    public TeleportMeans getSwappedSpell() {
-        return swappedSpell;
     }
 }

@@ -1,39 +1,16 @@
 package com.larryfarming.farming.catalogue;
 
-import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.FarmingWorldMap;
-import com.larryfarming.engine.farming.PatchType;
-import com.larryfarming.farming.model.Approach;
-import com.larryfarming.farming.model.Arrival;
-import com.larryfarming.farming.model.Capability;
-import com.larryfarming.farming.model.ContractStrategy;
-import com.larryfarming.farming.model.FarmingPreferences;
-import com.larryfarming.farming.model.FarmingRun;
-import com.larryfarming.farming.model.PatchRef;
-import com.larryfarming.farming.model.Preset;
-import com.larryfarming.farming.model.Requirement;
-import com.larryfarming.farming.model.RunId;
-import com.larryfarming.farming.model.RunStop;
-import com.larryfarming.farming.model.SeedPolicy;
-import com.larryfarming.farming.model.Spellbook;
-import com.larryfarming.farming.model.TravelOption;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import com.larryfarming.engine.farming.*;
+import com.larryfarming.farming.model.*;
+import java.util.*;
 import lombok.Value;
 
 /**
  * Every farm run, encoded: its stops, the routes to each, and the crops it plants.
  *
- * <p>Written as Java so the compiler checks every patch, crop and capability a stop
- * names. Each run is assembled from its family in {@link Families} and its sites in
- * {@link Site}.
+ * <p>Each run is assembled from its family in {@link Families} and its sites in
+ * {@link Site}, read from the stops table, which fails to load on any patch, crop or
+ * capability it does not know.
  *
  * <p>Everything here is data. Deciding which runs are due, which rung a player can take
  * and what to show them belongs elsewhere.
@@ -48,13 +25,6 @@ public final class FarmingCatalogue {
 
     private static final SeedPolicy SEED_POLICY = Seeds.policy();
 
-    private static final ContractStrategy CONTRACT_STRATEGY =
-            Preset.DEFAULT.getContractPreplants();
-
-    public static List<FarmingRun> allRuns() {
-        return RUNS;
-    }
-
     private static final Map<RunId, List<FarmingRun>> RUNS_BY_ID = collectRunsById();
 
     private static Map<RunId, List<FarmingRun>> collectRunsById() {
@@ -62,11 +32,13 @@ public final class FarmingCatalogue {
         for (FarmingRun run : RUNS) {
             byId.computeIfAbsent(run.getId(), id -> new ArrayList<>()).add(run);
         }
-        Map<RunId, List<FarmingRun>> frozen = new EnumMap<>(RunId.class);
-        for (Map.Entry<RunId, List<FarmingRun>> entry : byId.entrySet()) {
-            frozen.put(entry.getKey(), List.copyOf(entry.getValue()));
-        }
-        return Collections.unmodifiableMap(frozen);
+        return frozen(byId);
+    }
+
+    /** The same map, its lists copied, read-only. */
+    private static <K, V> Map<K, List<V>> frozen(Map<K, List<V>> grouped) {
+        grouped.replaceAll((key, values) -> List.copyOf(values));
+        return Collections.unmodifiableMap(grouped);
     }
 
     /**
@@ -112,10 +84,9 @@ public final class FarmingCatalogue {
      */
     public static List<SiteSwitch> siteSwitches(RunId run) {
         List<SiteSwitch> sites = new ArrayList<>();
-        for (Map.Entry<Site, SiteSwitches.Entry> site : SiteSwitches.BY_SITE.entrySet()) {
-            if (site.getKey().family() == run) {
-                sites.add(new SiteSwitch(site.getValue().key, site.getValue().label,
-                        site.getKey().anyStop()));
+        for (Site site : Site.values()) {
+            if (site.switchKey() != null && site.family() == run) {
+                sites.add(new SiteSwitch(site.switchKey(), site.switchLabel(), site.anyStop()));
             }
         }
         return List.copyOf(sites);
@@ -140,102 +111,32 @@ public final class FarmingCatalogue {
         return Collections.unmodifiableMap(keys);
     }
 
-    /**
-     * The key of the switchable site this stop works, or null when it has no switch. An
-     * allotment feeding a bin answers with its bin's key, so dropping the bin drops it too.
-     */
+    /** The key of the switchable site this stop works, or null when it has no switch. */
     public static String siteKey(RunStop stop) {
-        return SiteSwitches.BY_PATCH.get(
-                stop.feedsAbin() ? stop.getFeeds() : stop.primaryPatch());
+        return SITE_KEYS_BY_PATCH.get(stop.primaryPatch());
     }
 
-    /** The allotments that fill this bin, in registry order; empty for the guild's bin. */
-    public static List<RunStop> feedersOf(PatchRef bin) {
-        return FEEDERS.getOrDefault(bin, List.of());
-    }
+    private static final Map<PatchRef, String> SITE_KEYS_BY_PATCH = collectSiteKeysByPatch();
 
-    private static final Map<PatchRef, List<RunStop>> FEEDERS = collectFeeders();
-
-    private static Map<PatchRef, List<RunStop>> collectFeeders() {
-        Map<PatchRef, List<RunStop>> feeders = new LinkedHashMap<>();
+    private static Map<PatchRef, String> collectSiteKeysByPatch() {
+        Map<PatchRef, String> keys = new HashMap<>();
         for (Site site : Site.values()) {
-            RunStop stop = site.anyStop();
-            if (stop.feedsAbin()) {
-                feeders.computeIfAbsent(stop.getFeeds(), bin -> new ArrayList<>()).add(stop);
-            }
-        }
-        Map<PatchRef, List<RunStop>> frozen = new LinkedHashMap<>();
-        for (Map.Entry<PatchRef, List<RunStop>> entry : feeders.entrySet()) {
-            frozen.put(entry.getKey(), List.copyOf(entry.getValue()));
-        }
-        return Collections.unmodifiableMap(frozen);
-    }
-
-    /** The stop that works this compost bin, or null for a patch no bin stop works. */
-    public static RunStop binStop(PatchRef bin) {
-        return BIN_STOPS.get(bin);
-    }
-
-    private static final Map<PatchRef, RunStop> BIN_STOPS = collectBinStops();
-
-    private static Map<PatchRef, RunStop> collectBinStops() {
-        Map<PatchRef, RunStop> bins = new LinkedHashMap<>();
-        for (Site site : Site.values()) {
-            RunStop stop = site.anyStop();
-            if (stop.getActions().contains(RunStop.StopAction.FILL_COMPOST_BIN)) {
-                bins.put(stop.primaryPatch(), stop);
-            }
-        }
-        return Collections.unmodifiableMap(bins);
-    }
-
-    /**
-     * The site key of the bin this patch is worked to fill, or null when no stop works it
-     * for a bin.
-     */
-    public static String binSiteFedBy(FarmingWorldMap.PatchDef patch) {
-        return FEEDING_PATCHES.get(patch);
-    }
-
-    /** Identity-keyed, as {@code PatchDef} has no {@code equals}. */
-    private static final Map<FarmingWorldMap.PatchDef, String> FEEDING_PATCHES =
-            collectFeedingPatches();
-
-    private static Map<FarmingWorldMap.PatchDef, String> collectFeedingPatches() {
-        Map<FarmingWorldMap.PatchDef, String> feeding = new IdentityHashMap<>();
-        for (FarmingRun run : RUNS) {
-            for (RunStop stop : run.getStops()) {
-                String binSite = stop.feedsAbin() ? siteKey(stop) : null;
-                if (binSite == null) {
-                    continue;
-                }
-                for (PatchRef ref : stop.getPatches()) {
-                    FarmingWorldMap.PatchDef def = ref.resolve();
-                    if (def != null) {
-                        feeding.put(def, binSite);
-                    }
+            if (site.switchKey() != null) {
+                for (PatchRef patch : site.patches()) {
+                    keys.put(patch, site.switchKey());
                 }
             }
         }
-        return Collections.unmodifiableMap(feeding);
-    }
-
-    /** The key of the switchable site that works this patch, or null when none does. */
-    public static String siteKey(FarmingWorldMap.PatchDef patch) {
-        return SiteSwitches.BY_PATCH_DEF.get(patch);
+        return Collections.unmodifiableMap(keys);
     }
 
     /**
      * The crops this stop may grow, best first: the default crop and any the player may
-     * tick in its place. Empty for a stop the run's seeds fill. An allotment feeding a bin
-     * grows its one crop: the bin's row names what fills it.
+     * tick in its place. Empty for a stop the run's seeds fill.
      */
     public static List<Crop> cropChoices(RunStop stop) {
         if (!stop.isFixedCrop()) {
             return List.of();
-        }
-        if (stop.feedsAbin()) {
-            return List.of(stop.getFixedCrop());
         }
         List<Crop> family = CropChoices.forPatch(stop.patchType());
         return family.contains(stop.getFixedCrop()) ? family : List.of(stop.getFixedCrop());
@@ -268,9 +169,7 @@ public final class FarmingCatalogue {
             if (run.getId() != id) {
                 continue;
             }
-            if (spellbook == Spellbook.ANY
-                    || run.getSpellbook() == spellbook
-                    || run.getSpellbook() == Spellbook.ANY) {
+            if (spellbook == Spellbook.ANY || run.getSpellbook() == spellbook || run.getSpellbook() == Spellbook.ANY) {
                 return run;
             }
         }
@@ -287,7 +186,7 @@ public final class FarmingCatalogue {
      * it inside a rung.
      */
     public static Requirement toAfairyRing() {
-        return Networks.TO_A_FAIRY_RING;
+        return CatalogueLoader.loaded().toAfairyRing;
     }
 
     /**
@@ -296,7 +195,7 @@ public final class FarmingCatalogue {
      * in this account takes, which is why a ladder with such a rung is ranked per account.
      */
     public static List<Approach> approaches() {
-        return Networks.APPROACHES;
+        return CatalogueLoader.loaded().approachList;
     }
 
     /**
@@ -310,22 +209,18 @@ public final class FarmingCatalogue {
         return Arrivals.combinedChain(arrival);
     }
 
-    public static ContractStrategy contractStrategy() {
-        return CONTRACT_STRATEGY;
-    }
-
     /**
      * Every Farming Guild patch a contract can name, which is everywhere a contracted crop
      * could be growing.
      *
-     * <p>The same ten the hard-tier preplant list fills. The big compost bin, spirit tree and
-     * anima patch are left out because no contract asks for them.
+     * <p>The spirit tree and anima patch are left out because no contract
+     * asks for them.
      *
      * <p>The scheduler reads these patches to tell whether a contract has grown: the
      * contract varbits name the assigned crop but not whether it is ready.
      */
     public static List<PatchRef> contractPatches() {
-        return Patches.CONTRACT_PATCHES;
+        return CatalogueLoader.loaded().contractPatches;
     }
 
     /**
@@ -333,132 +228,9 @@ public final class FarmingCatalogue {
      *
      * <p>A few capabilities are patch states: a grown spirit tree is a travel option, and a
      * usable Weiss herb patch proves the fire of nourishment is lit. {@code PatchSight}
-     * reads them.
+     * reads them. Only the spirit trees a chain offers a rung for count.
      */
     public static PatchRef patchFor(Capability capability) {
-        return PATCH_BACKED.get(capability);
-    }
-
-    /**
-     * Only the spirit trees a chain offers a rung for. Adding Etceteria or Hosidius needs a
-     * rung as well as an entry here.
-     */
-    private static final Map<Capability, PatchRef> PATCH_BACKED = Map.of(
-            Capability.SPIRIT_TREE_GROWN_BRIMHAVEN, Patches.BRIMHAVEN_SPIRIT_TREE,
-            Capability.SPIRIT_TREE_GROWN_FARMING_GUILD, Patches.FARMING_GUILD_SPIRIT_TREE,
-            Capability.SPIRIT_TREE_GROWN_PORT_SARIM, Patches.PORT_SARIM_SPIRIT_TREE,
-            Capability.WEISS_HERB_PATCH, Patches.WEISS_HERB);
-
-    /**
-     * Whether a contract could be growing in this patch.
-     *
-     * <p>Player settings may not silence a contract patch, even when its patch type
-     * belongs to a family the settings switch off.
-     */
-    public static boolean isContractPatch(FarmingWorldMap.PatchDef patch) {
-        return CONTRACT_PATCH_DEFS.contains(patch);
-    }
-
-    private static final Set<FarmingWorldMap.PatchDef> CONTRACT_PATCH_DEFS =
-            collectContractPatchDefs();
-
-    private static Set<FarmingWorldMap.PatchDef> collectContractPatchDefs() {
-        Set<FarmingWorldMap.PatchDef> defs = new LinkedHashSet<>();
-        for (PatchRef ref : Patches.CONTRACT_PATCHES) {
-            FarmingWorldMap.PatchDef def = ref.resolve();
-            if (def != null) {
-                defs.add(def);
-            }
-        }
-        return Collections.unmodifiableSet(defs);
-    }
-
-    /**
-     * Every patch with a named crop, and the crops it may grow.
-     *
-     * <p>Answers "what would be lost by silencing this patch". Herb and tree patches are
-     * absent: their crop comes from the rotation or the family's ticks.
-     *
-     * <p>A crop counts as named two ways: a stop that {@linkplain RunStop.Builder#plants
-     * names} one, or a whole run whose seed patch type grows one crop
-     * (calquat).
-     *
-     * <p>{@code PatchDef} has no {@code equals}, so this map is identity-keyed. That holds
-     * only because every instance comes from {@link FarmingWorldMap}'s registry; a
-     * deserialized {@code PatchDef} would silently miss.
-     */
-    public static Map<FarmingWorldMap.PatchDef, List<Crop>> namedCropPatches() {
-        return NAMED_CROP_PATCHES;
-    }
-
-    private static final Map<FarmingWorldMap.PatchDef, List<Crop>> NAMED_CROP_PATCHES =
-            collectNamedCropPatches();
-
-    private static Map<FarmingWorldMap.PatchDef, List<Crop>> collectNamedCropPatches() {
-        Map<FarmingWorldMap.PatchDef, List<Crop>> named = new LinkedHashMap<>();
-        for (FarmingRun run : RUNS) {
-            Crop wholeRun = onlyCropOf(run);
-            for (RunStop stop : run.getStops()) {
-                // A feeding allotment answers to its bin's switches, not to a crop's. Catherby
-                // north keeps the snape grass stop's crops, which decide whether it feeds.
-                if (stop.feedsAbin()) {
-                    continue;
-                }
-                List<Crop> crops = stop.isFixedCrop() ? cropChoices(stop)
-                        : wholeRun != null ? List.of(wholeRun) : List.of();
-                if (crops.isEmpty()) {
-                    continue;
-                }
-                for (PatchRef ref : stop.getPatches()) {
-                    FarmingWorldMap.PatchDef def = ref.resolve();
-                    if (def != null) {
-                        named.put(def, crops);
-                    }
-                }
-            }
-        }
-        return Collections.unmodifiableMap(named);
-    }
-
-    /**
-     * The one crop a whole run grows, or null when it is not that kind of run.
-     *
-     * <p>A seed patch type with one crop and no ticks of its own: calquat. A tree family is
-     * ticked crop by crop ({@link FarmingPreferences#familyChoices}), so no one crop
-     * names it.
-     */
-    private static Crop onlyCropOf(FarmingRun run) {
-        PatchType type = run.getSeedPatchType();
-        if (type == null || !FarmingPreferences.familyChoices(type).isEmpty()) {
-            return null;
-        }
-        List<Crop> crops = CropData.plantableIn(type);
-        return crops.size() == 1 ? crops.get(0) : null;
-    }
-
-    /**
-     * Every capability any travel chain or access gate asks for, in the order first
-     * encountered.
-     */
-    private static final Set<Capability> REFERENCED_CAPABILITIES = collectCapabilities();
-
-    public static Set<Capability> allCapabilitiesReferenced() {
-        return REFERENCED_CAPABILITIES;
-    }
-
-    private static Set<Capability> collectCapabilities() {
-        Set<Capability> referenced = new LinkedHashSet<>();
-        for (FarmingRun run : RUNS) {
-            for (RunStop stop : run.getStops()) {
-                for (TravelOption option : stop.getTravel()) {
-                    referenced.addAll(option.getRequires().leafCapabilities());
-                }
-                // The access gate is on no rung but resolves against the account like one.
-                if (stop.getAccessGate() != null) {
-                    referenced.add(stop.getAccessGate());
-                }
-            }
-        }
-        return Collections.unmodifiableSet(referenced);
+        return CatalogueLoader.loaded().patchFor.get(capability);
     }
 }

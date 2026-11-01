@@ -1,6 +1,5 @@
 package com.larryfarming.snapshot;
 
-import com.google.gson.annotations.SerializedName;
 import java.util.List;
 import lombok.Builder;
 import lombok.Value;
@@ -76,42 +75,40 @@ public class FarmingStopAdvice {
     }
 
     @Builder.Default
-    @SerializedName("kind") Kind kind = Kind.PATCH;
+    Kind kind = Kind.PATCH;
 
     /**
      * The patch as the game names it, or the place when the row covers several patches.
      *
      * <p>Display text only. Nothing keys off it: patches persist on region and varbit.
      */
-    @SerializedName("patchName") String patchName;
+    String patchName;
 
-    @SerializedName("outcome") Outcome outcome;
+    Outcome outcome;
 
     /** What to do, imperative: "Icy basalt to Weiss". Empty when not visiting. */
-    @SerializedName("instruction") String instruction;
+    String instruction;
 
     /**
-     * The work already waiting here — "Check the maple", "Harvest 3 patches", "Cure the
-     * disease" — one entry per thing the player does, in the order they do it. Empty when
-     * there is none, or none we have seen.
+     * The work already waiting here — "Check maple", "Harvest ×3", "Cure toadflax" — one
+     * entry per thing the player does, in the order they do it. Empty when there is none,
+     * or none we have seen.
      *
      * <p>Distinct from {@link #plants}, which says what to put in the ground. Without this, a
      * stop with grown crops and no seeds would show only a route.
      *
-     * <p><b>Order is part of the instruction.</b> The volcanic ash lines sit above the line
-     * that empties the compost bin because ash can only be added before the first bucket
-     * comes out.
+     * <p><b>Order is part of the instruction.</b> A bush is checked before it is dug up.
      *
-     * <p>An act and its replanting fold into one entry: "Harvest and plant the irit".
+     * <p>An act and its replanting fold into one entry: "Harvest, replant irit".
      */
     @Builder.Default
-    @SerializedName("actions") List<String> actions = List.of();
+    List<String> actions = List.of();
 
     /** One clause of reasoning, shown when the answer needs explaining. */
-    @SerializedName("because") String because;
+    String because;
 
     /** What kind of skip this is, shown on the row heading; null for a visited stop. */
-    @SerializedName("skipReason") FarmingSkipReason skipReason;
+    FarmingSkipReason skipReason;
 
     /**
      * What the skip is waiting on ("toadflax"), for the heading to qualify
@@ -120,23 +117,23 @@ public class FarmingStopAdvice {
      * <p>Set only where "{@code <subject> <label>}" reads as a heading: the skips about
      * something in the ground. A seed shortfall names its seed in a clause instead.
      */
-    @SerializedName("subject") String subject;
+    String subject;
 
     /**
      * When whatever is growing here finishes, as an epoch second, or 0 when there is
      * nothing to count down to. Unworded for the same reason as
      * {@link FarmingRunStatus#getReadyAtEpochSec()}.
      */
-    @SerializedName("readyAtEpochSec") long readyAtEpochSec;
+    long readyAtEpochSec;
 
     /**
      * True when the route rests on something unverifiable, such as a house portal or a
      * grown spirit tree. Shown as a suggestion rather than an instruction.
      */
-    @SerializedName("uncertain") boolean uncertain;
+    boolean uncertain;
 
     /** True for the extras the default route weaves in rather than parts of the route. */
-    @SerializedName("optional") boolean optional;
+    boolean optional;
 
     /**
      * Why this one is optional, as the catalogue words it: "regrows more slowly than a herb
@@ -144,45 +141,45 @@ public class FarmingStopAdvice {
      *
      * <p>Kept out of {@link #getBecause()}, which for a visited stop holds the route.
      */
-    @SerializedName("optionalReason") String optionalReason;
+    String optionalReason;
 
     /**
      * What to plant at this stop, one entry per crop (see {@link FarmingPlantAdvice}). Empty
      * when nothing goes in the ground here.
      */
-    @SerializedName("plants") List<FarmingPlantAdvice> plants;
+    List<FarmingPlantAdvice> plants;
 
     /**
      * The patches at this arrival being left alone, one entry each. Empty when every patch
      * here is being worked. With {@link #plants}, accounts for every patch at the stop.
      */
-    @SerializedName("setAside") List<FarmingPatchNote> setAside;
+    List<FarmingPatchNote> setAside;
 
     /**
      * The item this route is taken on (a tablet, a cloak, a basalt), or 0 when it is not
      * taken on an item. At most one of this and {@link #getTravelSpriteId()} is set.
      */
-    @SerializedName("travelItemId") int travelItemId;
+    int travelItemId;
 
     /** The spell icon this route is cast from, or 0 when the route is not a spell. */
-    @SerializedName("travelSpriteId") int travelSpriteId;
+    int travelSpriteId;
 
     /**
      * The name of the {@code Destination} this route's teleport lands at, or null for a
      * route taken on an item. Not drawn: a teleport spent on the way stays paid while the
      * next stop lands where it did.
      */
-    @SerializedName("landing") String landing;
+    String landing;
 
     /**
      * The produce that pictures this arrival in the row's margin: the first crop planted
      * here, or failing that the crop being harvested or checked. 0 when no single crop
-     * covers the work, such as a compost bin.
+     * covers the work, such as a contract errand alone.
      *
      * <p>Not read off {@link #getPlants()}: a replant folded into the harvest line and a
      * check both leave the plantings without that crop.
      */
-    @SerializedName("iconItemId") int iconItemId;
+    int iconItemId;
 
     /**
      * A quiet aside about this stop, or empty. Two things feed it, joined with " — " when
@@ -192,14 +189,14 @@ public class FarmingStopAdvice {
      * <p>Kept out of {@link #getBecause()}, which holds the route or the skip reason. Unlike
      * {@link #uncertain}, which describes the route, a note describes the stop.
      */
-    @SerializedName("note") String note;
+    String note;
 
     /**
-     * What the row guesses, or empty: "Not seen yet, so assumed empty." when a patch the
+     * What the row guesses, or empty: "Unseen, assumed empty" when a patch the
      * row plants has never been observed. Unlike {@link #note}, drawn on the row, since the
      * guess may be the reason the player is sent here.
      */
-    @SerializedName("assumption") String assumption;
+    String assumption;
 
     /**
      * What to take out of the bank here, for the next leg only. Empty on every other row,
@@ -212,7 +209,7 @@ public class FarmingStopAdvice {
      * plants three means one is already in the bag.
      */
     @Builder.Default
-    @SerializedName("withdraw") List<FarmingCarryItem> withdraw = List.of();
+    List<FarmingCarryItem> withdraw = List.of();
 
     /**
      * What to put back at this bank before withdrawing: the trip's own things the rest of
@@ -220,20 +217,20 @@ public class FarmingStopAdvice {
      * player holds now. Quantities are what is in the bag.
      */
     @Builder.Default
-    @SerializedName("deposit") List<FarmingCarryItem> deposit = List.of();
+    List<FarmingCarryItem> deposit = List.of();
 
     /**
      * Whether the bag lacks room for this bank's withdrawals and the harvest, so the
      * deposits matter rather than tidy up.
      */
-    @SerializedName("depositUrgent") boolean depositUrgent;
+    boolean depositUrgent;
 
     /**
      * Partway round, what this stop needs that the bag lacks, as one sentence: "No axe in
      * your bag. Bank at Catherby first." Empty when the bag has everything.
      */
     @Builder.Default
-    @SerializedName("warning") String warning = "";
+    String warning = "";
 
     /**
      * The farming tools to leave with the tool leprechaun once this stop is done, since no
@@ -241,5 +238,5 @@ public class FarmingStopAdvice {
      * elsewhere.
      */
     @Builder.Default
-    @SerializedName("leprechaun") String leprechaun = "";
+    String leprechaun = "";
 }

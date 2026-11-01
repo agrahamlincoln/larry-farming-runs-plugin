@@ -4,23 +4,20 @@ import com.larryfarming.snapshot.FarmingSettingPick;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.util.function.BiConsumer;
-import javax.swing.BorderFactory;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
+import javax.swing.*;
 import net.runelite.client.ui.FontManager;
 
 /**
- * A setting's label beside its control. Every such row on the tab is built here, so the
- * labels share one width and the controls line up down the tab.
+ * A setting's label beside its control. Every such row in the panel is built here, so the
+ * labels share one width and the controls line up down the panel.
  */
 final class SettingRow
 {
 	/**
-	 * Wide enough for the longest label, "Make more below" (83 pixels in the small font), and
+	 * Wide enough for the longest label, "Favourite herb" (74 pixels in the small font), and
 	 * no wider, so the chips beside "Best seeds in" keep their room at sidebar width.
 	 */
-	private static final int LABEL_WIDTH = 84;
+	private static final int LABEL_WIDTH = 75;
 	private static final int ROW_HEIGHT = 23;
 
 	private SettingRow()

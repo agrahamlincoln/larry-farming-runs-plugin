@@ -2,110 +2,40 @@ package com.larryfarming;
 
 import com.google.gson.Gson;
 import com.google.inject.Provides;
-import com.larryfarming.engine.EventApplier;
-import com.larryfarming.engine.ItemCounts;
-import com.larryfarming.engine.QuestStages;
-import com.larryfarming.engine.RunePouch;
-import com.larryfarming.engine.SeedBoxChat;
-import com.larryfarming.engine.SeedBoxListing;
-import com.larryfarming.engine.StateEngine;
-import com.larryfarming.engine.farming.ContractProduce;
-import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.FarmingScanHold;
-import com.larryfarming.engine.farming.FarmingWorldMap;
+import com.larryfarming.engine.*;
+import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.FarmingPlanner;
 import com.larryfarming.farming.FarmingPlannerPersistence;
 import com.larryfarming.farming.catalogue.CropData;
-import com.larryfarming.farming.detection.ArdougneFarmTeleportWatch;
-import com.larryfarming.farming.detection.BottomlessBucket;
-import com.larryfarming.farming.detection.CapabilitySources;
-import com.larryfarming.farming.detection.HouseEntry;
-import com.larryfarming.farming.detection.HouseWatch;
-import com.larryfarming.farming.detection.PortalNexus;
-import com.larryfarming.farming.engine.EnergyTopUp;
+import com.larryfarming.farming.detection.*;
+import com.larryfarming.farming.model.FarmingPreferences;
 import com.larryfarming.farming.model.Spellbook;
-import com.larryfarming.model.EquipmentSlot;
-import com.larryfarming.model.ItemStack;
-import com.larryfarming.model.PlayerState;
-import com.larryfarming.model.QuestStatus;
+import com.larryfarming.model.*;
 import com.larryfarming.overlay.FarmingAdvisorInfoBox;
-import com.larryfarming.panel.FarmingPanel;
-import com.larryfarming.panel.IconProvider;
-import com.larryfarming.panel.LarryPanel;
-import com.larryfarming.panel.LarryVersion;
-import com.larryfarming.panel.ReportActions;
+import com.larryfarming.panel.*;
 import com.larryfarming.persistence.ConfigStore;
 import com.larryfarming.persistence.StatePersistence;
-import com.larryfarming.report.IssueLink;
-import com.larryfarming.report.Journal;
-import com.larryfarming.report.ReportService;
-import com.larryfarming.report.Trace;
 import com.larryfarming.snapshot.FarmingAdvice;
 import com.larryfarming.snapshot.FarmingRunStatus;
-import java.awt.Component;
-import java.io.IOException;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ScheduledExecutorService;
+import java.time.*;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
-import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.ChatMessageType;
-import net.runelite.api.Client;
-import net.runelite.api.EnumComposition;
-import net.runelite.api.EnumID;
-import net.runelite.api.EquipmentInventorySlot;
-import net.runelite.api.GameState;
-import net.runelite.api.Item;
-import net.runelite.api.ItemComposition;
-import net.runelite.api.ItemContainer;
-import net.runelite.api.MenuAction;
-import net.runelite.api.Player;
-import net.runelite.api.Quest;
-import net.runelite.api.QuestState;
+import net.runelite.api.*;
 import net.runelite.api.Skill;
-import net.runelite.api.WidgetNode;
-import net.runelite.api.WorldType;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.events.ChatMessage;
-import net.runelite.api.events.GameObjectSpawned;
-import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
-import net.runelite.api.events.ItemContainerChanged;
-import net.runelite.api.events.MenuOptionClicked;
-import net.runelite.api.events.StatChanged;
-import net.runelite.api.events.VarbitChanged;
-import net.runelite.api.events.WidgetClosed;
-import net.runelite.api.events.WidgetLoaded;
+import net.runelite.api.events.*;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
-import net.runelite.api.gameval.ItemID;
-import net.runelite.api.gameval.NpcID;
 import net.runelite.api.gameval.VarbitID;
-import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetModalMode;
-import net.runelite.api.widgets.WidgetUtil;
-import net.runelite.client.RuneLiteProperties;
+import net.runelite.api.widgets.*;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
-import net.runelite.client.config.RuneScapeProfileType;
 import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.events.ConfigChanged;
-import net.runelite.client.events.OverlayMenuClicked;
-import net.runelite.client.events.ProfileChanged;
+import net.runelite.client.events.*;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.plugins.Plugin;
@@ -114,10 +44,7 @@ import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
-import net.runelite.client.util.Filepath;
-import net.runelite.client.util.ImageUtil;
-import net.runelite.client.util.LinkBrowser;
-import net.runelite.client.util.Text;
+import net.runelite.client.util.*;
 
 @Slf4j
 @PluginDescriptor(
@@ -133,23 +60,10 @@ public class LarryPlugin extends Plugin
 {
 	private static final int INVENTORY_SIZE = 28;
 
-	private static final String[] EQUIPMENT_SLOT_NAMES = {
-		"HEAD", "CAPE", "AMULET", "WEAPON", "BODY",
-		"SHIELD", "LEGS", "GLOVES", "BOOTS", "RING", "AMMO"
-	};
-	private static final int[] EQUIPMENT_SLOT_INDICES = {
-		EquipmentInventorySlot.HEAD.getSlotIdx(),
-		EquipmentInventorySlot.CAPE.getSlotIdx(),
-		EquipmentInventorySlot.AMULET.getSlotIdx(),
-		EquipmentInventorySlot.WEAPON.getSlotIdx(),
-		EquipmentInventorySlot.BODY.getSlotIdx(),
-		EquipmentInventorySlot.SHIELD.getSlotIdx(),
-		EquipmentInventorySlot.LEGS.getSlotIdx(),
-		EquipmentInventorySlot.GLOVES.getSlotIdx(),
-		EquipmentInventorySlot.BOOTS.getSlotIdx(),
-		EquipmentInventorySlot.RING.getSlotIdx(),
-		EquipmentInventorySlot.AMMO.getSlotIdx()
-	};
+	private static final EquipmentSlot[] EQUIPMENT_SLOTS = EquipmentSlot.values();
+	/** Each of {@link #EQUIPMENT_SLOTS}' index in the worn container; the names match. */
+	private static final int[] EQUIPMENT_SLOT_INDICES = Arrays.stream(EQUIPMENT_SLOTS)
+		.mapToInt(slot -> EquipmentInventorySlot.valueOf(slot.name()).getSlotIdx()).toArray();
 
 	/** Matches RuneLite widget colour/formatting tags. */
 	private static final Pattern WIDGET_TAG = Pattern.compile("<[^>]+>");
@@ -164,14 +78,6 @@ public class LarryPlugin extends Plugin
 	private static final int VARBIT_FARMING_CONTRACT_TYPE = CapabilitySources.CONTRACT_PRODUCE_VARBIT;
 	/** Seed pack: fallback advisor icon. */
 	private static final int ADVISOR_FALLBACK_ICON_ITEM_ID = 22993;
-	/** What Guildmaster Jane says as she hands over a contract's reward. */
-	private static final String CONTRACT_REWARDED = "You'll be wanting a reward then. Here you go.";
-	/** Ticks between bringing the contracts-a-day figure up to the clock: about a minute. */
-	private static final int CONTRACT_RATE_TICKS = 100;
-
-	/** The time in a report's suggested file name, so two reports never share one. */
-	private static final DateTimeFormatter REPORT_STAMP =
-		DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss");
 
 	/** Login ticks to wait for the local player's name before reading the account anyway. */
 	private static final int LOGIN_READY_MAX_TICKS = 10;
@@ -205,9 +111,6 @@ public class LarryPlugin extends Plugin
 	@Inject
 	private ClientToolbar clientToolbar;
 
-	@Inject
-	private ScheduledExecutorService executor;
-
 	private LarryPanel panel;
 	private IconProvider iconProvider;
 	private NavigationButton navButton;
@@ -221,18 +124,6 @@ public class LarryPlugin extends Plugin
 
 	/** Plans the farm runs over {@link #engine}'s account. Volatile for the same reason. */
 	private volatile FarmingPlanner planner;
-
-	/** The player's farming settings profiles. Volatile for the same reason. */
-	private volatile SettingsProfiles profiles;
-
-	/** Shows the profiles on the panel. Volatile for the same reason. */
-	private volatile ProfileControl profileControl;
-
-	/** Keeps the bug report journal. Volatile for the same reason. */
-	private volatile ReportService reports;
-
-	/** Where the save dialog opens, in Larry's data directory, or null without one. */
-	private volatile Filepath reportsFolder;
 
 	private final int[] previousXp = new int[Skill.values().length];
 
@@ -276,22 +167,6 @@ public class LarryPlugin extends Plugin
 	 * nobody is not charged against the day's allowance.
 	 */
 	private final ArdougneFarmTeleportWatch ardougneFarmTeleport = new ArdougneFarmTeleportWatch();
-
-	/**
-	 * Puts a "You treat the patch" line down to the bottomless bucket only when the player
-	 * used the bucket on the patch, since a loose bucket gives the same line. A bucket used
-	 * on anything with no such line after it has changed its uses unseen.
-	 */
-	private final BottomlessBucket bottomlessBucket = new BottomlessBucket();
-
-	/**
-	 * The item dialogue box's text as last read, so an open box is parsed once rather than
-	 * on every tick. Null while no box is open.
-	 */
-	private String lastObjectBoxText;
-
-	/** Whether Jane's reward line was on screen last tick, so one hand-in counts once. */
-	private boolean contractRewardShown;
 
 	/**
 	 * Reads what is built in the player's own house while it loads: whose house it is from
@@ -358,27 +233,13 @@ public class LarryPlugin extends Plugin
 		StateEngine stateEngine = new StateEngine(new StatePersistence(store, gson));
 		FarmingPlannerPersistence plannerPersistence = new FarmingPlannerPersistence(store);
 		FarmingPlanner farmingPlanner = FarmingPlanner.attachTo(stateEngine, plannerPersistence);
-		SettingsProfiles settingsProfiles = new SettingsProfiles(store, gson,
-			this::reloadPreferences);
-		// Before the first read, so settings that differ from the preset are kept in a profile.
-		settingsProfiles.load();
-		profiles = settingsProfiles;
 		farmingPlanner.setPreferences(ConfiguredCrops.from(store));
 		boolean showBanks = plannerPersistence.loadFarmingShowBanks();
 		farmingPlanner.setOfferedBanksShown(showBanks);
-		Journal journal = new Journal(gson, System::currentTimeMillis, client::getTickCount);
-		stateEngine.setJournal(journal);
-		farmingPlanner.setJournal(journal);
-		Trace.install(journal);
-		Filepath data = reportDirectory();
-		reportsFolder = makeReportsFolder(data);
-		ReportService reportService = new ReportService(journal, store, LarryConfig.GROUP,
-			stateEngine, farmingPlanner, data, executor, System::currentTimeMillis);
 
 		// Published only once they hold the settings, so the client thread never sees them without.
 		engine = stateEngine;
 		planner = farmingPlanner;
-		reports = reportService;
 
 		FarmingPanel farmingPanel = new FarmingPanel();
 		// Client thread: the preview changes what the planner plans, and plans are built there.
@@ -403,54 +264,30 @@ public class LarryPlugin extends Plugin
 		farmingPanel.setSettingsOpen(plannerPersistence.loadFarmingSettingsOpen());
 		farmingPanel.setSettingsOpenCallback(plannerPersistence::saveFarmingSettingsOpen);
 
-		// A setting changed in the panel saves to its hidden config item. The save posts a
+		// A setting changed in the panel saves to its config key. The save posts a
 		// ConfigChanged, and onConfigChanged re-plans from it.
 		farmingPanel.setSettingCallback((key, value) -> ConfiguredCrops.write(store, key, value));
-		ProfileControl control = new ProfileControl(settingsProfiles, farmingPanel);
-		farmingPanel.setProfileActions(control);
-		profileControl = control;
-		control.refresh();
+		// Each key written posts a ConfigChanged, which re-plans as a single change does.
+		farmingPanel.setResetCallback(() -> ConfiguredCrops.apply(store, ConfiguredCrops.valuesOf(FarmingPreferences.defaults())));
 
 		panel = new LarryPanel(farmingPanel);
 		iconProvider = new IconProvider(itemManager, spriteManager);
 		iconProvider.setOnImageLoaded(panel::iconLoaded);
 		panel.setIconProvider(iconProvider);
 		panel.setPlanner(farmingPlanner);
-		panel.setReportActions(new ReportActions()
-		{
-			@Override
-			public void save(String message, Component parent, Outcome outcome)
-			{
-				saveReport(message, parent, outcome);
-			}
 
-			@Override
-			public void openIssue(String message)
-			{
-				clientThread.invoke(() -> LinkBrowser.browse(IssueLink.forMessage(message, origin(),
-					IssueLink.runsOf(farmingPlanner.getAdvice()), LocalDate.now())));
-			}
-		});
-
-		navButton = NavigationButton.builder()
-			.tooltip("Larry")
-			.icon(ImageUtil.loadImageResource(LarryPlugin.class, "panel_icon.png"))
-			.priority(6)
-			.panel(panel)
-			.build();
+		navButton = NavigationButton.builder().tooltip("Larry").icon(ImageUtil.loadImageResource(LarryPlugin.class, "panel_icon.png"))
+			.priority(6).panel(panel).build();
 		clientToolbar.addNavigation(navButton);
 
-		resetSessionCaches();
-		loginReady = false;
-		loginSnapshotPending = false;
+		endSession();
 
 		// Arm the login gate here when the plugin starts while already logged in.
 		// GameStateChanged only fires on a transition, so waiting for LOGGED_IN would leave
 		// every handler gated behind loginReady forever.
 		clientThread.invokeLater(() ->
 		{
-			if (client.getGameState() != GameState.LOGGED_IN
-				|| !tracksProgressOn(client.getWorldType()))
+			if (client.getGameState() != GameState.LOGGED_IN || !tracksProgressOn(client.getWorldType()))
 			{
 				return;
 			}
@@ -465,8 +302,6 @@ public class LarryPlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
-		removeFarmingAdvisorInfoBox();
-
 		if (navButton != null)
 		{
 			clientToolbar.removeNavigation(navButton);
@@ -485,35 +320,37 @@ public class LarryPlugin extends Plugin
 		{
 			stateEngine.forceSave();
 		}
-		ReportService service = reports;
-		if (service != null)
-		{
-			// The journal is the client thread's; the save itself runs on the executor.
-			clientThread.invoke(service::save);
-		}
-		reports = null;
-		Trace.install(null);
 		engine = null;
 		planner = null;
-		profiles = null;
-		profileControl = null;
 		// RuneLite keeps the plugin instance across disable and enable, so a listing left
-		// open here would swallow the next "2 x Thing." chat line after re-enabling.
-		seedBoxListing = null;
-		// Likewise a held patch scan would reach the next engine, hours stale.
-		farmScanHold.clear();
-		lastFarmTickLocation = null;
-		lastFarmRegions = new HashSet<>();
-		ardougneFarmTeleport.clear();
-		bottomlessBucket.clear();
-		lastObjectBoxText = null;
-		houseWatch.clear();
-		depositBoxOpen = false;
-		depositBoxInventorySnapshot = null;
-		seedVaultCheckIn = 0;
+		// open here would swallow the next "2 x Thing." chat line after re-enabling, and a
+		// held patch scan would reach the next engine, hours stale.
+		endSession();
+	}
+
+	/**
+	 * Drops everything that belongs to the session being left. The engine outlives a logout
+	 * or hop, and the plugin instance outlives a disable, so anything still held would be
+	 * credited to the next account or the next start.
+	 */
+	private void endSession()
+	{
 		resetSessionCaches();
 		loginReady = false;
 		loginSnapshotPending = false;
+		depositBoxOpen = false;
+		depositBoxInventorySnapshot = null;
+		seedVaultCheckIn = 0;
+		// An open listing would read its first "2 x Thing." as a seed in the box.
+		seedBoxListing = null;
+		// A hop can land the next account at the Ardougne patch inside the window.
+		ardougneFarmTeleport.clear();
+		// A house half-read, or a click into one, belongs to the account that left.
+		houseWatch.clear();
+		removeFarmingAdvisorInfoBox();
+		lastFarmTickLocation = null;
+		lastFarmRegions = new HashSet<>();
+		farmScanHold.clear();
 	}
 
 	/**
@@ -535,133 +372,6 @@ public class LarryPlugin extends Plugin
 		lastRegionId = -1;
 		lastModalCloseTick = -1;
 		loginLoadFailures = 0;
-	}
-
-	// ---------------------------------------------------------------
-	// Bug reports
-	// ---------------------------------------------------------------
-
-	/** Larry's own data directory, where the journal is kept, or null if it cannot open. */
-	private Filepath reportDirectory()
-	{
-		try
-		{
-			// The client makes plugin-data, but not the plugin's own folder inside it.
-			Filepath directory = getPluginDirectory();
-			directory.createDirectories();
-			return directory;
-		}
-		catch (IOException | RuntimeException e)
-		{
-			log.warn("No data directory for Larry; bug reports will hold this session only", e);
-			return null;
-		}
-	}
-
-	/** Where a report comes from. Client thread: it reads the world and a varbit. */
-	private ReportService.Origin origin()
-	{
-		RuneScapeProfileType type = RuneScapeProfileType.getCurrent(client);
-		return new ReportService.Origin(LarryVersion.SHOWN, RuneLiteProperties.getVersion(),
-			type != null ? type.name() : "UNKNOWN", client.getVarbitValue(VarbitID.IRONMAN));
-	}
-
-	/**
-	 * The folder the save dialog opens in, inside Larry's data directory, made at start-up.
-	 * Null without one; the dialog then opens where the client chooses.
-	 */
-	private static Filepath makeReportsFolder(Filepath data)
-	{
-		if (data == null)
-		{
-			return null;
-		}
-		try
-		{
-			Filepath folder = data.join("reports");
-			folder.createDirectories();
-			return folder;
-		}
-		catch (IOException | RuntimeException e)
-		{
-			log.debug("No reports folder in Larry's data directory", e);
-			return null;
-		}
-	}
-
-	/**
-	 * Builds the report, then asks the player where to save it. The checkpoint is taken on the
-	 * client thread, the text built on the executor, and the save dialog shown on the EDT.
-	 */
-	private void saveReport(String message, Component parent, ReportActions.Outcome outcome)
-	{
-		ReportService service = reports;
-		if (service == null)
-		{
-			outcome.notSaved("Larry is switched off, so he has nothing to report.");
-			return;
-		}
-		outcome.working("Building the report...");
-		clientThread.invoke(() -> service.buildReport(message, origin(),
-			text -> SwingUtilities.invokeLater(() -> chooseAndWrite(text, parent, outcome)),
-			() -> SwingUtilities.invokeLater(() ->
-				outcome.notSaved("Larry could not build the report. Please try again."))));
-	}
-
-	/**
-	 * Asks where on the EDT, as the chooser requires, then writes on the executor. The dialog
-	 * opens in Larry's reports folder, where nothing else lies to be picked by mistake.
-	 */
-	private void chooseAndWrite(String text, Component parent, ReportActions.Outcome outcome)
-	{
-		String name = "larry-report-" + REPORT_STAMP.format(LocalDateTime.now()) + ".json";
-		Filepath.Chooser chooser = new Filepath.Chooser()
-			.setIsSave()
-			.setAcceptsFiles()
-			.setDialogTitle("Save Larry's report")
-			.addExtensionFilter("Larry report (.json)", "json")
-			.setDefaultExtension("json");
-		Filepath folder = reportsFolder;
-		if (folder != null)
-		{
-			chooser.setCurrentDirectory(folder);
-		}
-		// After the folder: the name is placed in whichever folder the chooser has open.
-		List<Filepath> chosen = chooser.setFileName(name).showDialog(parent);
-		if (chosen == null || chosen.isEmpty())
-		{
-			outcome.notSaved("You closed the save window, so no file was written.");
-			return;
-		}
-		Filepath file = chosen.get(0);
-		outcome.working("Saving " + file.getFileName() + "...");
-		executor.execute(() ->
-		{
-			boolean written;
-			try
-			{
-				file.write(text);
-				written = true;
-			}
-			catch (IOException | RuntimeException e)
-			{
-				log.warn("Could not save the bug report", e);
-				written = false;
-			}
-			boolean ok = written;
-			SwingUtilities.invokeLater(() ->
-			{
-				if (ok)
-				{
-					outcome.saved(file.getFileName(),
-						() -> LinkBrowser.open(file.getParent().toString()));
-				}
-				else
-				{
-					outcome.notSaved("Larry could not write to that folder. Try another.");
-				}
-			});
-		});
 	}
 
 	@Provides
@@ -692,26 +402,9 @@ public class LarryPlugin extends Plugin
 		{
 			return;
 		}
-		boolean setting = ConfiguredCrops.isCropKey(event.getKey());
-		if (!setting && !SettingsProfiles.isProfileKey(event.getKey()))
-		{
-			return;
-		}
-		// A profile change writes its keys on the EDT, then re-plans and redraws once itself.
-		SettingsProfiles current = profiles;
-		if (current != null && current.isApplying())
-		{
-			return;
-		}
-		if (setting)
+		if (ConfiguredCrops.isCropKey(event.getKey()))
 		{
 			reloadPreferences();
-		}
-		// A setting change can start or end unsaved changes, so the control redraws too.
-		ProfileControl control = profileControl;
-		if (control != null)
-		{
-			control.refresh();
 		}
 	}
 
@@ -724,23 +417,6 @@ public class LarryPlugin extends Plugin
 			return;
 		}
 		reloadPreferences();
-		// The new RuneLite profile carries its own Larry profiles, or none yet.
-		// RuneLite posts this from its executor; the profiles change only on the EDT.
-		SettingsProfiles current = profiles;
-		ProfileControl control = profileControl;
-		if (current == null || control == null)
-		{
-			return;
-		}
-		SwingUtilities.invokeLater(() ->
-		{
-			if (profiles != current)
-			{
-				return;
-			}
-			current.load();
-			control.refresh();
-		});
 	}
 
 	private void reloadPreferences()
@@ -780,8 +456,7 @@ public class LarryPlugin extends Plugin
 			houseWatch.sceneLoaded();
 			// LOGGED_IN is not a login. The client re-enters it after every loading screen
 			// (teleports, boats, stairs). Re-reading the account then would reload the saved
-			// state and wipe every live reading, such as the seed box read stamp and run
-			// energy.
+			// state and wipe every live reading, such as the seed box read stamp.
 			//
 			// A real login arrives with no session established and none pending. The
 			// LOGIN_SCREEN/HOPPING arm below clears both flags, so logouts, hops and fresh
@@ -798,7 +473,7 @@ public class LarryPlugin extends Plugin
 			}
 			if (!tracksProgressOn(client.getWorldType()))
 			{
-				Trace.debug(log, "PvP Arena world: farm run planning paused until you leave");
+				log.debug("PvP Arena world: farm run planning paused until you leave");
 				return;
 			}
 			loginSnapshotPending = true;
@@ -813,45 +488,13 @@ public class LarryPlugin extends Plugin
 				learnSeedNames();
 			});
 		}
-		else if (event.getGameState() == GameState.LOGIN_SCREEN
-			|| event.getGameState() == GameState.HOPPING)
+		else if (event.getGameState() == GameState.LOGIN_SCREEN || event.getGameState() == GameState.HOPPING)
 		{
 			if (loginReady)
 			{
 				stateEngine.forceSave();
 			}
-			ReportService service = reports;
-			if (service != null && event.getGameState() == GameState.LOGIN_SCREEN)
-			{
-				// Even a login cut short: its events must not reach the next account's session.
-				service.loggedOut();
-			}
-			else if (service != null && loginReady)
-			{
-				// A hop: the same account logs straight back in, and its session goes on.
-				service.save();
-			}
-			loginReady = false;
-			loginSnapshotPending = false;
-			resetSessionCaches();
-			depositBoxOpen = false;
-			depositBoxInventorySnapshot = null;
-			seedVaultCheckIn = 0;
-			// Everything below belongs to the session being left. The engine outlives a
-			// logout or hop, so anything still held would be credited to the next account.
-			// An open listing would read its first "2 x Thing." as a seed in the box.
-			seedBoxListing = null;
-			// A hop can land the next account at the Ardougne patch inside the window.
-			ardougneFarmTeleport.clear();
-			// A bucket click, or a box read, belongs to the account that left.
-			bottomlessBucket.clear();
-			lastObjectBoxText = null;
-			// A house half-read, or a click into one, belongs to the account that left.
-			houseWatch.clear();
-			removeFarmingAdvisorInfoBox();
-			lastFarmTickLocation = null;
-			lastFarmRegions = new HashSet<>();
-			farmScanHold.clear();
+			endSession();
 			LarryPanel shown = panel;
 			if (shown != null)
 			{
@@ -866,14 +509,24 @@ public class LarryPlugin extends Plugin
 		previousQuestStates.clear();
 		for (Quest quest : Quest.values())
 		{
-			try
+			QuestState state = questState(quest);
+			if (state != null)
 			{
-				previousQuestStates.put(quest, quest.getState(client));
+				previousQuestStates.put(quest, state);
 			}
-			catch (RuntimeException e)
-			{
-				// Some quests may not be queryable
-			}
+		}
+	}
+
+	/** A quest's state, or null for one that cannot be queried. */
+	private QuestState questState(Quest quest)
+	{
+		try
+		{
+			return quest.getState(client);
+		}
+		catch (RuntimeException e)
+		{
+			return null;
 		}
 	}
 
@@ -910,8 +563,7 @@ public class LarryPlugin extends Plugin
 	private boolean sendLoginSnapshot()
 	{
 		StateEngine stateEngine = engine;
-		if (stateEngine == null || client.getLocalPlayer() == null
-			|| !tracksProgressOn(client.getWorldType()))
+		if (stateEngine == null || client.getLocalPlayer() == null || !tracksProgressOn(client.getWorldType()))
 		{
 			return false;
 		}
@@ -927,14 +579,12 @@ public class LarryPlugin extends Plugin
 			loginLoadFailures++;
 			if (loginLoadFailures < LOGIN_LOAD_ATTEMPTS)
 			{
-				Trace.debug(log, "Failed to load the saved account (attempt {}), retrying next tick",
-					loginLoadFailures, e);
+				log.debug("Failed to load the saved account (attempt {}), retrying next tick", loginLoadFailures, e);
 				loginSnapshotPending = true;
 			}
 			else
 			{
-				log.warn("Failed to load the saved account; planning paused until the next "
-					+ "login, and nothing is saved", e);
+				log.warn("Failed to load the saved account; planning paused until the next " + "login, and nothing is saved", e);
 				loginSnapshotPending = false;
 			}
 			return false;
@@ -948,30 +598,21 @@ public class LarryPlugin extends Plugin
 			{
 				continue;
 			}
-			skills.put(skill.getName(), new EventApplier.SkillSnapshot(
-				client.getRealSkillLevel(skill),
-				client.getSkillExperience(skill)));
+			skills.put(skill.getName(), new EventApplier.SkillSnapshot(client.getRealSkillLevel(skill), client.getSkillExperience(skill)));
 		}
 
 		List<String> completedQuests = new ArrayList<>();
 		List<String> startedQuests = new ArrayList<>();
 		for (Quest quest : Quest.values())
 		{
-			try
+			QuestState qs = questState(quest);
+			if (qs == QuestState.FINISHED)
 			{
-				QuestState qs = quest.getState(client);
-				if (qs == QuestState.FINISHED)
-				{
-					completedQuests.add(quest.getName());
-				}
-				else if (qs == QuestState.IN_PROGRESS)
-				{
-					startedQuests.add(quest.getName());
-				}
+				completedQuests.add(quest.getName());
 			}
-			catch (RuntimeException e)
+			else if (qs == QuestState.IN_PROGRESS)
 			{
-				// Some quests may not be queryable
+				startedQuests.add(quest.getName());
 			}
 		}
 
@@ -983,8 +624,7 @@ public class LarryPlugin extends Plugin
 		}
 
 		ItemContainer eqContainer = client.getItemContainer(InventoryID.WORN);
-		Map<EquipmentSlot, ItemStack> equipment = eqContainer != null
-			? readEquipment(eqContainer.getItems())
+		Map<EquipmentSlot, ItemStack> equipment = eqContainer != null ? readEquipment(eqContainer.getItems())
 			: new EnumMap<>(EquipmentSlot.class);
 
 		stateEngine.onLogin(skills, completedQuests, startedQuests, inventory, equipment);
@@ -1060,23 +700,20 @@ public class LarryPlugin extends Plugin
 	{
 		for (Quest quest : Quest.values())
 		{
-			try
+			QuestStatus status = toQuestStatus(questState(quest));
+			if (status != null)
 			{
-				QuestStatus status = toQuestStatus(quest.getState(client));
-				if (status != null)
-				{
-					ps.getQuests().put(quest.getName(), status);
-				}
-			}
-			catch (RuntimeException e)
-			{
-				// Some quests may not be queryable
+				ps.getQuests().put(quest.getName(), status);
 			}
 		}
 	}
 
 	private static QuestStatus toQuestStatus(QuestState state)
 	{
+		if (state == null)
+		{
+			return null;
+		}
 		switch (state)
 		{
 			case FINISHED:
@@ -1104,7 +741,7 @@ public class LarryPlugin extends Plugin
 		}
 		catch (IndexOutOfBoundsException e)
 		{
-			Trace.debug(log, "Varbit {} does not exist in this client, skipping", varbitId);
+			log.debug("Varbit {} does not exist in this client, skipping", varbitId);
 		}
 	}
 
@@ -1175,12 +812,6 @@ public class LarryPlugin extends Plugin
 		{
 			return;
 		}
-		// The bucket's dialogue box may arrive as a message box line as well as on screen.
-		if (event.getType() == ChatMessageType.MESBOX)
-		{
-			readBottomlessBucket(event.getMessage());
-			return;
-		}
 		if (!SeedBoxChat.isReadableGameChat(event.getType()))
 		{
 			return;
@@ -1190,26 +821,6 @@ public class LarryPlugin extends Plugin
 		// which rarely carry a tag, and the replace would allocate a string per message.
 		String raw = event.getMessage();
 		String message = raw.indexOf('<') < 0 ? raw : WIDGET_TAG.matcher(raw).replaceAll("");
-
-		if (BottomlessBucket.isTreatment(message))
-		{
-			// Any grade answers the click; only ultracompost spends a use Larry counts.
-			FarmingPlanner farmingPlanner = planner;
-			if (bottomlessBucket.treated(client.getTickCount()) && farmingPlanner != null
-				&& BottomlessBucket.isUltracompostTreatment(message))
-			{
-				Trace.debug(log, "Bottomless bucket treated a patch; one use spent");
-				farmingPlanner.bottomlessBucketUsed();
-			}
-			return;
-		}
-		// A patch already treated answers the click too, and leaves the bucket as it was.
-		if (BottomlessBucket.isRefusedTreatment(message))
-		{
-			bottomlessBucket.refused();
-			return;
-		}
-		readBottomlessBucket(message);
 
 		// Checked before the movement lines. A whole-box statement is the only correction
 		// for a drifted tally, since movement lines only adjust the count.
@@ -1233,84 +844,6 @@ public class LarryPlugin extends Plugin
 		commitSeedBoxListing();
 
 		SeedBoxChat.parseSeedBoxMove(message).ifPresent(this::applySeedBoxMove);
-	}
-
-	/**
-	 * Takes the bottomless bucket's uses from a line of its Check or Fill dialogue, if this
-	 * is one.
-	 */
-	private void readBottomlessBucket(String text)
-	{
-		Integer uses = BottomlessBucket.ultracompostUses(text);
-		FarmingPlanner farmingPlanner = planner;
-		if (uses != null && farmingPlanner != null)
-		{
-			Trace.debug(log, "Bottomless bucket read: {} uses of ultracompost", uses);
-			bottomlessBucket.read();
-			farmingPlanner.bottomlessBucketRead(uses);
-		}
-	}
-
-	/**
-	 * Forgets the bottomless bucket's uses when a compost bin is emptied into it: the
-	 * bucket used on the bin, or the bin's Take with a bucket carried. The game says nothing
-	 * of the uses added, so the figure is unknown until the next reading.
-	 */
-	private void forgetBucketEmptyingAbin(MenuOptionClicked event)
-	{
-		boolean useOn = event.getMenuAction() == MenuAction.WIDGET_TARGET_ON_GAME_OBJECT;
-		if (!useOn && !"Take".equals(event.getMenuOption()) || event.getMenuTarget() == null)
-		{
-			return;
-		}
-		String target = WIDGET_TAG.matcher(event.getMenuTarget()).replaceAll("");
-		boolean intoTheBucket;
-		if (useOn)
-		{
-			Widget selected = client.getSelectedWidget();
-			intoTheBucket = selected != null && BottomlessBucket.isBucket(selected.getItemId())
-				&& BottomlessBucket.isUseOnAbin(target);
-		}
-		else if (BottomlessBucket.isTakeFromAbin(event.getMenuOption(), target))
-		{
-			// Loose empty buckets carried take the compost first, so the Take fills the
-			// bottomless bucket only when no empty bucket is carried.
-			ItemContainer inventory = client.getItemContainer(InventoryID.INV);
-			intoTheBucket = inventory != null
-				&& !inventory.contains(ItemID.BUCKET_EMPTY)
-				&& (inventory.contains(BottomlessBucket.FILLED_ITEM_ID)
-					|| inventory.contains(BottomlessBucket.EMPTY_ITEM_ID));
-		}
-		else
-		{
-			return;
-		}
-		FarmingPlanner farmingPlanner = planner;
-		if (intoTheBucket && farmingPlanner != null)
-		{
-			Trace.debug(log, "Bottomless bucket filled from a compost bin; its uses are unknown");
-			// Answered here, so the watch does not report the same click again.
-			bottomlessBucket.clear();
-			farmingPlanner.bottomlessBucketChangedUnseen();
-		}
-	}
-
-	/**
-	 * Reads the item dialogue box the bottomless bucket opens on Check and Fill. The game
-	 * draws it in the {@code Objectbox} interface, as RuneLite's dialogue crowdsourcing reads
-	 * it, and its text is parsed only when it changes.
-	 */
-	private void readObjectBox()
-	{
-		Widget box = client.getWidget(InterfaceID.Objectbox.TEXT);
-		String text = box != null && !box.isHidden() ? box.getText() : null;
-		if (text == null || text.equals(lastObjectBoxText))
-		{
-			lastObjectBoxText = text;
-			return;
-		}
-		lastObjectBoxText = text;
-		readBottomlessBucket(text);
 	}
 
 	/**
@@ -1341,8 +874,7 @@ public class LarryPlugin extends Plugin
 		}
 		if (listing.getSeeds().size() < listing.getLines())
 		{
-			Trace.debug(log, "Seed box listed {} lines and {} were names we know",
-				listing.getLines(), listing.getSeeds().size());
+			log.debug("Seed box listed {} lines and {} were names we know", listing.getLines(), listing.getSeeds().size());
 		}
 		stateEngine.onSeedBoxChanged(listing.getSeeds());
 	}
@@ -1392,8 +924,7 @@ public class LarryPlugin extends Plugin
 		Integer itemId = itemIdsByName.get(move.getItemName().toLowerCase(Locale.ROOT));
 		if (itemId == null)
 		{
-			Trace.debug(log, "Seed box stored an item never seen in a tracked container: {}",
-				move.getItemName());
+			log.debug("Seed box stored an item never seen in a tracked container: {}", move.getItemName());
 			return;
 		}
 		engine.onSeedBoxStored(new ItemStack(itemId, move.getQuantity(), move.getItemName()));
@@ -1437,13 +968,7 @@ public class LarryPlugin extends Plugin
 				{
 					loginSnapshotPending = false;
 					loginReady = true;
-					stateEngine.refreshContractRate(Instant.now());
-					Trace.debug(log, "Login ready after {} tick(s)", loginTickCounter);
-					ReportService service = reports;
-					if (service != null)
-					{
-						service.accountLoaded();
-					}
+					log.debug("Login ready after {} tick(s)", loginTickCounter);
 				}
 			}
 
@@ -1474,14 +999,6 @@ public class LarryPlugin extends Plugin
 		// Before the re-plan, so a house scan committed this tick is planned this tick.
 		handleHouse();
 
-		// Likewise a bucket checked this tick, or used on something that was not a patch.
-		readObjectBox();
-		if (bottomlessBucket.usedElsewhere(client.getTickCount()))
-		{
-			Trace.debug(log, "Bottomless bucket used with no treatment after it; its uses are unknown");
-			farmingPlanner.bottomlessBucketChangedUnseen();
-		}
-
 		// After the region and before the re-plan, so a teleport spent this tick is already
 		// gone from the allowance the route is picked against.
 		handleArdougneFarmTeleport();
@@ -1495,11 +1012,8 @@ public class LarryPlugin extends Plugin
 
 		// Read the contract crop before the advisor box reconciles.
 		readContractCrop();
-		readContractHandIn(stateEngine);
 
 		reconcileFarmingAdvisorInfoBox();
-
-		handleRunEnergy();
 
 		pollQuestStates();
 
@@ -1513,11 +1027,6 @@ public class LarryPlugin extends Plugin
 		// After the engine's flush, whose announcement re-plans too. This catches the
 		// planner's own inputs and a run coming due with no game event at all.
 		farmingPlanner.flushIfDirty();
-		ReportService service = reports;
-		if (service != null)
-		{
-			service.afterTick();
-		}
 
 		stateEngine.tickSave();
 
@@ -1537,27 +1046,23 @@ public class LarryPlugin extends Plugin
 		}
 		for (Quest quest : Quest.values())
 		{
-			try
+			QuestState currentState = questState(quest);
+			if (currentState == null)
 			{
-				QuestState currentState = quest.getState(client);
-				QuestState previousState = previousQuestStates.put(quest, currentState);
-				if (previousState == null || previousState == currentState)
-				{
-					continue;
-				}
-				if (currentState == QuestState.FINISHED)
-				{
-					engine.onQuestProgress(quest.getName(), QuestStatus.COMPLETED, null);
-				}
-				else if (previousState == QuestState.NOT_STARTED
-					&& currentState == QuestState.IN_PROGRESS)
-				{
-					engine.onQuestProgress(quest.getName(), QuestStatus.IN_PROGRESS, null);
-				}
+				continue;
 			}
-			catch (RuntimeException e)
+			QuestState previousState = previousQuestStates.put(quest, currentState);
+			if (previousState == null || previousState == currentState)
 			{
-				// Some quests may not be queryable
+				continue;
+			}
+			if (currentState == QuestState.FINISHED)
+			{
+				engine.onQuestProgress(quest.getName(), QuestStatus.COMPLETED, null);
+			}
+			else if (previousState == QuestState.NOT_STARTED && currentState == QuestState.IN_PROGRESS)
+			{
+				engine.onQuestProgress(quest.getName(), QuestStatus.IN_PROGRESS, null);
 			}
 		}
 	}
@@ -1572,16 +1077,14 @@ public class LarryPlugin extends Plugin
 		// Patch varbits are only sent once the post-login welcome screen is dismissed, and
 		// it does not register as modal. Nulling the location makes the same-region gate
 		// demand two clean ticks after dismissal.
-		Widget motw = client.getWidget(InterfaceID.WelcomeScreen.MOTW);
-		if (motw != null && !motw.isHidden())
+		if (isShown(InterfaceID.WelcomeScreen.MOTW))
 		{
 			lastFarmTickLocation = null;
 			farmScanHold.clear();
 			return;
 		}
 
-		Player local = client.getLocalPlayer();
-		WorldPoint current = local == null ? null : local.getWorldLocation();
+		WorldPoint current = playerLocation();
 		WorldPoint previous = lastFarmTickLocation;
 		lastFarmTickLocation = current;
 
@@ -1594,8 +1097,7 @@ public class LarryPlugin extends Plugin
 		{
 			for (FarmingScanHold.Scan scan : farmScanHold.release(farmRegionsAt(current)))
 			{
-				engine.updateFarming(scan.getRegion(), scan.getValues(),
-					scan.isAllowOffsetLearning(), scan.getObservedAtEpochSec());
+				engine.updateFarming(scan.getRegion(), scan.getValues(), scan.isAllowOffsetLearning(), scan.getObservedAtEpochSec());
 			}
 			if (farmScanHold.wasDropped())
 			{
@@ -1605,8 +1107,7 @@ public class LarryPlugin extends Plugin
 			}
 		}
 
-		if (previous == null || current == null
-			|| previous.getRegionID() != current.getRegionID())
+		if (previous == null || current == null || previous.getRegionID() != current.getRegionID())
 		{
 			return;
 		}
@@ -1633,8 +1134,7 @@ public class LarryPlugin extends Plugin
 		// The first scan after entering a region or closing a modal can land mid-way
 		// through missed growth and would poison the learned farm-tick offset. Sample the
 		// values but skip offset learning.
-		boolean allowOffsetLearning = !regionChanged
-			&& client.getTickCount() - lastModalCloseTick > 1;
+		boolean allowOffsetLearning = !regionChanged && client.getTickCount() - lastModalCloseTick > 1;
 
 		long now = Instant.now().getEpochSecond();
 		List<FarmingScanHold.Scan> scans = new ArrayList<>();
@@ -1677,34 +1177,10 @@ public class LarryPlugin extends Plugin
 		Crop crop = ContractProduce.byVarbitValue(value);
 		if (crop == null && value != 0 && planner.getContractCrop() != null)
 		{
-			Trace.debug(log, "Unrecognised farming contract varbit value: {}", value);
+			log.debug("Unrecognised farming contract varbit value: {}", value);
 		}
 		// The scheduler uses it to know which guild patch the contract sits in.
 		planner.setContractCrop(crop);
-	}
-
-	/**
-	 * Count a contract handed in when Guildmaster Jane says her reward line, as RuneLite's
-	 * Time Tracking reads it, and bring the contracts-a-day figure up to the clock once a
-	 * minute. The line stays up for several ticks, so only its first tick counts.
-	 */
-	private void readContractHandIn(StateEngine stateEngine)
-	{
-		Widget head = client.getWidget(InterfaceID.ChatLeft.HEAD);
-		Widget text = client.getWidget(InterfaceID.ChatLeft.TEXT);
-		boolean shown = head != null && !head.isHidden()
-			&& head.getModelId() == NpcID.FARMING_GUILD_MASTER
-			&& text != null && CONTRACT_REWARDED.equals(Text.removeTags(text.getText()));
-		Instant now = Instant.now();
-		if (shown && !contractRewardShown)
-		{
-			stateEngine.onContractHandedIn(now);
-		}
-		else if (client.getTickCount() % CONTRACT_RATE_TICKS == 0)
-		{
-			stateEngine.refreshContractRate(now);
-		}
-		contractRewardShown = shown;
 	}
 
 	/** Show the advisor box exactly while a run is due. */
@@ -1725,9 +1201,7 @@ public class LarryPlugin extends Plugin
 		if (farmingAdvisorInfoBox == null)
 		{
 			advisorIconItemId = iconItemId;
-			farmingAdvisorInfoBox = new FarmingAdvisorInfoBox(
-				itemManager.getImage(iconItemId), this,
-				() ->
+			farmingAdvisorInfoBox = new FarmingAdvisorInfoBox(itemManager.getImage(iconItemId), this, () ->
 				{
 					FarmingAdvice current = farmingPlanner.getAdvice();
 					return current != null ? current.getRuns() : null;
@@ -1773,42 +1247,11 @@ public class LarryPlugin extends Plugin
 	public void onOverlayMenuClicked(OverlayMenuClicked event)
 	{
 		OverlayMenuEntry entry = event.getEntry();
-		if (entry != null && navButton != null
-			&& FarmingAdvisorInfoBox.MENU_OPTION.equals(entry.getOption())
+		if (entry != null && navButton != null && FarmingAdvisorInfoBox.MENU_OPTION.equals(entry.getOption())
 			&& FarmingAdvisorInfoBox.MENU_TARGET.equals(entry.getTarget()))
 		{
 			clientToolbar.openPanel(navButton);
 		}
-	}
-
-	/**
-	 * Pushes run energy only when it crosses a band the advice reads: the low flag, which
-	 * {@link EnergyTopUp#lowAfter} latches, or the dose count. Every push re-plans, and
-	 * energy moves on almost every running tick.
-	 *
-	 * <p>Compared against the player state, not a field here, so a stale value cannot
-	 * survive a logout and suppress the first real reading.
-	 */
-	private void handleRunEnergy()
-	{
-		PlayerState state = engine.getPlayerState();
-		if (state == null)
-		{
-			return;
-		}
-		int energy = client.getEnergy();
-		int known = state.getRunEnergy();
-		boolean low = EnergyTopUp.lowAfter(
-			known != PlayerState.RUN_ENERGY_UNREAD && state.isRunEnergyLow(), energy);
-		// An unread value always goes through. Zero is a real reading, not unread, or an
-		// empty orb would push and re-plan every tick.
-		if (known != PlayerState.RUN_ENERGY_UNREAD
-			&& EnergyTopUp.dosesToFill(known) == EnergyTopUp.dosesToFill(energy)
-			&& low == state.isRunEnergyLow())
-		{
-			return;
-		}
-		engine.onRunEnergyChanged(energy, low);
 	}
 
 	/**
@@ -1824,38 +1267,43 @@ public class LarryPlugin extends Plugin
 		Player local = client.getLocalPlayer();
 		boolean inHouse = local != null && HouseWatch.isHouseRegion(
 			WorldPoint.fromLocalInstance(client, local.getLocalLocation()).getRegionID());
-		HouseWatch.Scan scan = houseWatch.tick(inHouse,
-			houseWatch.awaitsInterfaceClose() && isHouseLoadingShown());
+		// Whether the "Loading house" interface is still up, polled only while a house load
+		// waits on it: the interface's absence settles it, so a close event the client never
+		// fires cannot leave a load waiting.
+		HouseWatch.Scan scan = houseWatch.tick(inHouse, houseWatch.awaitsInterfaceClose() && isShown(InterfaceID.PohLoading.UNIVERSE));
 		FarmingPlanner farmingPlanner = planner;
 		if (scan == null || farmingPlanner == null)
 		{
 			return;
 		}
 		// The building-mode varbit is logged only. Nothing here decides on it.
-		Trace.debug(log, "House scan committed: own house by {}, building mode varbit {}, found {}",
+		log.debug("House scan committed: own house by {}, building mode varbit {}, found {}",
 			scan.getSignal(), client.getVarbitValue(VarbitID.POH_BUILDING_MODE), scan.getFound());
 		farmingPlanner.houseScanned(scan.getFound(), Instant.now().getEpochSecond());
 	}
 
-	/**
-	 * Whether the "Loading house" interface is still up. Polled once a tick, and only while
-	 * a house load waits on it: the interface's absence settles it, so a close event the
-	 * client never fires cannot leave a load waiting.
-	 */
-	private boolean isHouseLoadingShown()
+	/** Where the local player stands, or null with no local player. */
+	private WorldPoint playerLocation()
 	{
-		Widget root = client.getWidget(InterfaceID.PohLoading.UNIVERSE);
-		return root != null && !root.isHidden();
+		Player local = client.getLocalPlayer();
+		return local != null ? local.getWorldLocation() : null;
+	}
+
+	/** Whether the widget exists and is not hidden. */
+	private boolean isShown(int componentId)
+	{
+		Widget widget = client.getWidget(componentId);
+		return widget != null && !widget.isHidden();
 	}
 
 	private void handleRegionTracking()
 	{
-		Player localPlayer = client.getLocalPlayer();
-		if (localPlayer == null)
+		WorldPoint at = playerLocation();
+		if (at == null)
 		{
 			return;
 		}
-		int regionId = localPlayer.getWorldLocation().getRegionID();
+		int regionId = at.getRegionID();
 		if (regionId != lastRegionId)
 		{
 			lastRegionId = regionId;
@@ -1970,12 +1418,7 @@ public class LarryPlugin extends Plugin
 		}
 		else if (containerId == InventoryID.BANK)
 		{
-			int hash = contentsHash(items);
-			if (hash != previousBankHash)
-			{
-				previousBankHash = hash;
-				engine.onBankChanged(toItemStacks(items));
-			}
+			readIfMoved(items, previousBankHash, h -> previousBankHash = h, engine::onBankChanged);
 		}
 		else if (containerId == InventoryID.SEED_VAULT)
 		{
@@ -1985,30 +1428,46 @@ public class LarryPlugin extends Plugin
 		{
 			// Never observed to fire: the box is read from its Check listing in chat. If the
 			// container is ever reported, its snapshot replaces the tally.
-			int hash = contentsHash(items);
-			if (hash != previousSeedBoxHash)
+			readIfMoved(items, previousSeedBoxHash, h -> previousSeedBoxHash = h, engine::onSeedBoxChanged);
+		}
+	}
+
+	/**
+	 * Hands a container's contents to {@code read} if they moved since {@code previous}, the
+	 * hash they had then, so a reopen with nothing moved is a no-op. The new hash is
+	 * remembered before the read, so contents a read throws on are not read again until they
+	 * move.
+	 */
+	private void readIfMoved(Item[] items, int previous, IntConsumer remember, Consumer<List<ItemStack>> read)
+	{
+		int hash = 1;
+		for (Item item : items)
+		{
+			if (item.getId() != -1)
 			{
-				previousSeedBoxHash = hash;
-				engine.onSeedBoxChanged(toItemStacks(items));
+				hash = 31 * hash + item.getId();
+				hash = 31 * hash + item.getQuantity();
 			}
+		}
+		if (hash != previous)
+		{
+			remember.accept(hash);
+			read.accept(toItemStacks(items));
 		}
 	}
 
 	/**
 	 * Takes the vault's contents if they moved since the last read.
 	 *
-	 * @param source which path read them, which the journal notes
+	 * @param source which path read them, for the debug log
 	 */
 	private void readSeedVault(Item[] items, String source)
 	{
-		int hash = contentsHash(items);
-		if (hash != previousSeedVaultHash)
+		readIfMoved(items, previousSeedVaultHash, h -> previousSeedVaultHash = h, stacks ->
 		{
-			previousSeedVaultHash = hash;
-			List<ItemStack> stacks = toItemStacks(items);
-			Trace.debug(log, "Seed vault read from {}: {} stacks", source, stacks.size());
+			log.debug("Seed vault read from {}: {} stacks", source, stacks.size());
 			engine.onSeedVaultChanged(stacks);
-		}
+		});
 	}
 
 	/**
@@ -2019,10 +1478,9 @@ public class LarryPlugin extends Plugin
 	 */
 	private void checkOpenedSeedVault()
 	{
-		Widget open = client.getWidget(InterfaceID.SeedVault.UNIVERSE);
-		if (open == null || open.isHidden())
+		if (!isShown(InterfaceID.SeedVault.UNIVERSE))
 		{
-			Trace.debug(log, "Seed vault closed within a tick of opening; left unread");
+			log.debug("Seed vault closed within a tick of opening; left unread");
 			return;
 		}
 		// A container the client already holds posts no change when the vault reopens
@@ -2030,7 +1488,7 @@ public class LarryPlugin extends Plugin
 		ItemContainer vault = client.getItemContainer(InventoryID.SEED_VAULT);
 		if (vault != null)
 		{
-			Trace.debug(log, "Seed vault opened holding {} stacks", vault.count());
+			log.debug("Seed vault opened holding {} stacks", vault.count());
 			readSeedVault(vault.getItems(), "its open interface");
 			return;
 		}
@@ -2043,8 +1501,7 @@ public class LarryPlugin extends Plugin
 		for (int i = 0; i < INVENTORY_SIZE; i++)
 		{
 			currentSlots[i] = i < items.length && items[i].getId() != -1
-				? ((long) items[i].getId() << 32) | (items[i].getQuantity() & 0xFFFFFFFFL)
-				: -1L;
+				? ((long) items[i].getId() << 32) | (items[i].getQuantity() & 0xFFFFFFFFL) : -1L;
 		}
 		if (previousInventorySlots != null && Arrays.equals(previousInventorySlots, currentSlots))
 		{
@@ -2083,34 +1540,20 @@ public class LarryPlugin extends Plugin
 	/** The first 28 slots, noted items resolved to their base, names learned for the seed box. */
 	private List<ItemStack> readInventory(Item[] items)
 	{
-		List<ItemStack> itemStacks = new ArrayList<>();
-		for (int i = 0; i < INVENTORY_SIZE && i < items.length; i++)
-		{
-			if (items[i].getId() != -1)
-			{
-				CanonicalItem item = resolveCanonicalItem(items[i].getId());
-				itemStacks.add(new ItemStack(item.itemId, items[i].getQuantity(), item.name));
-				rememberItemId(itemIdsByName, item);
-			}
-		}
-		return itemStacks;
+		return toItemStacks(Arrays.copyOf(items, Math.min(INVENTORY_SIZE, items.length)));
 	}
 
 	/** The worn items by slot, each named from its item composition. */
 	private Map<EquipmentSlot, ItemStack> readEquipment(Item[] items)
 	{
 		Map<EquipmentSlot, ItemStack> equipment = new EnumMap<>(EquipmentSlot.class);
-		for (int i = 0; i < EQUIPMENT_SLOT_NAMES.length; i++)
+		for (int i = 0; i < EQUIPMENT_SLOTS.length; i++)
 		{
 			int slotIdx = EQUIPMENT_SLOT_INDICES[i];
 			if (slotIdx < items.length && items[slotIdx].getId() != -1)
 			{
 				ItemComposition comp = itemManager.getItemComposition(items[slotIdx].getId());
-				EquipmentSlot slot = EquipmentSlot.fromString(EQUIPMENT_SLOT_NAMES[i]);
-				if (slot != null)
-				{
-					equipment.put(slot, new ItemStack(items[slotIdx].getId(), 1, comp.getName()));
-				}
+				equipment.put(EQUIPMENT_SLOTS[i], new ItemStack(items[slotIdx].getId(), 1, comp.getName()));
 			}
 		}
 		return equipment;
@@ -2133,21 +1576,6 @@ public class LarryPlugin extends Plugin
 			}
 		}
 		return itemStacks;
-	}
-
-	/** Hashes a container's contents, so a reopen with nothing moved is a no-op. */
-	private static int contentsHash(Item[] items)
-	{
-		int hash = 1;
-		for (Item item : items)
-		{
-			if (item.getId() != -1)
-			{
-				hash = 31 * hash + item.getId();
-				hash = 31 * hash + item.getQuantity();
-			}
-		}
-		return hash;
 	}
 
 	/**
@@ -2225,10 +1653,9 @@ public class LarryPlugin extends Plugin
 		}
 		else if (group == InterfaceID.POH_LOADING && engine != null && loginReady)
 		{
-			String decided = houseWatch.houseLoading(
-				HouseWatch.isSoloIronman(client.getVarbitValue(VarbitID.IRONMAN)),
+			String decided = houseWatch.houseLoading(HouseWatch.isSoloIronman(client.getVarbitValue(VarbitID.IRONMAN)),
 				client.getTickCount());
-			Trace.debug(log, "Loading a house: {}", decided);
+			log.debug("Loading a house: {}", decided);
 		}
 		else if (group == InterfaceID.TELENEXUS_TELEPORT)
 		{
@@ -2247,18 +1674,17 @@ public class LarryPlugin extends Plugin
 	private void readNexus()
 	{
 		FarmingPlanner farmingPlanner = planner;
-		if (engine == null || farmingPlanner == null || !loginReady
-			|| !houseWatch.isInOwnHouse())
+		if (engine == null || farmingPlanner == null || !loginReady || !houseWatch.isInOwnHouse())
 		{
 			return;
 		}
 		Set<Integer> destinations = PortalNexus.fullRead(this::varbitOrZero);
 		if (destinations == null)
 		{
-			Trace.debug(log, "Portal Nexus menu opened with every slot reading zero; nothing learned");
+			log.debug("Portal Nexus menu opened with every slot reading zero; nothing learned");
 			return;
 		}
-		Trace.debug(log, "Portal Nexus read in full: destinations {}", destinations);
+		log.debug("Portal Nexus read in full: destinations {}", destinations);
 		farmingPlanner.nexusRead(destinations, Instant.now().getEpochSecond());
 	}
 
@@ -2302,8 +1728,7 @@ public class LarryPlugin extends Plugin
 		Map<Integer, ItemStack> byId = new HashMap<>();
 		for (ItemStack stack : stacks)
 		{
-			byId.merge(stack.getItemId(), stack, (a, b) ->
-				new ItemStack(a.getItemId(), a.getQuantity() + b.getQuantity(), a.getName()));
+			byId.merge(stack.getItemId(), stack, (a, b) -> new ItemStack(a.getItemId(), a.getQuantity() + b.getQuantity(), a.getName()));
 		}
 		return byId;
 	}
@@ -2329,14 +1754,13 @@ public class LarryPlugin extends Plugin
 			int have = left == null ? 0 : left.getQuantity();
 			if (have < had.getQuantity())
 			{
-				deposited.add(new ItemStack(had.getItemId(), had.getQuantity() - have,
-					had.getName()));
+				deposited.add(new ItemStack(had.getItemId(), had.getQuantity() - have, had.getName()));
 			}
 		}
 
 		if (!deposited.isEmpty())
 		{
-			Trace.debug(log, "Deposit box inference: {} item type(s) deposited", deposited.size());
+			log.debug("Deposit box inference: {} item type(s) deposited", deposited.size());
 			engine.onDepositInferred(deposited);
 		}
 
@@ -2357,25 +1781,13 @@ public class LarryPlugin extends Plugin
 
 		// Whose house a click leads into. The "Loading house" interface spends it.
 		houseWatch.entryClicked(HouseEntry.of(clickKind(event.getMenuAction()),
-			event.getMenuOption(), event.getMenuTarget(), dialogLine(event)),
-			client.getTickCount());
-
-		// Which item went on an object, so the next compost line is put down to it. Read as
-		// RuneLite's CompostTracker reads it, from the selected widget.
-		if (event.getMenuAction() == MenuAction.WIDGET_TARGET_ON_GAME_OBJECT)
-		{
-			Widget selected = client.getSelectedWidget();
-			bottomlessBucket.used(client.getTickCount(),
-				selected != null ? selected.getItemId() : -1);
-		}
-		forgetBucketEmptyingAbin(event);
+			event.getMenuOption(), event.getMenuTarget(), dialogLine(event)), client.getTickCount());
 
 		// Only armed here. The tick handler confirms whether the teleport happened.
 		if (ArdougneFarmTeleportWatch.isFarmTeleportOption(event.getMenuOption())
 			&& ArdougneFarmTeleportWatch.isCloak(clickedItemId(event)))
 		{
-			Player clicker = client.getLocalPlayer();
-			WorldPoint from = clicker != null ? clicker.getWorldLocation() : null;
+			WorldPoint from = playerLocation();
 			if (from != null)
 			{
 				ardougneFarmTeleport.clicked(client.getTickCount(), from.getX(), from.getY());
@@ -2433,8 +1845,7 @@ public class LarryPlugin extends Plugin
 			return itemId;
 		}
 		Widget widget = event.getMenuEntry().getWidget();
-		if (widget == null
-			|| WidgetUtil.componentToInterface(widget.getId()) != InterfaceID.WORNITEMS)
+		if (widget == null || WidgetUtil.componentToInterface(widget.getId()) != InterfaceID.WORNITEMS)
 		{
 			return -1;
 		}
@@ -2453,8 +1864,7 @@ public class LarryPlugin extends Plugin
 		{
 			return;
 		}
-		Player localPlayer = client.getLocalPlayer();
-		WorldPoint at = localPlayer != null ? localPlayer.getWorldLocation() : null;
+		WorldPoint at = playerLocation();
 		if (at != null && ardougneFarmTeleport.arrived(client.getTickCount(), at.getX(), at.getY()))
 		{
 			planner.recordArdougneFarmTeleport();

@@ -2,10 +2,7 @@ package com.larryfarming.diary;
 
 import com.larryfarming.model.PlayerState;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 /**
  * The game's own completion flag for each achievement diary tier.
@@ -82,8 +79,7 @@ public final class DiaryVarbits {
         return Collections.unmodifiableMap(ids);
     }
 
-    private static void put(Map<String, Integer> ids, String area,
-            int easy, int medium, int hard, int elite) {
+    private static void put(Map<String, Integer> ids, String area, int easy, int medium, int hard, int elite) {
         ids.put(key(area, EASY), easy);
         ids.put(key(area, MEDIUM), medium);
         ids.put(key(area, HARD), hard);

@@ -2,27 +2,19 @@ package com.larryfarming.farming.engine;
 
 import static com.larryfarming.farming.engine.CropNames.inSentence;
 
-import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.CropState;
-import com.larryfarming.engine.farming.FarmingWorldMap;
-import com.larryfarming.engine.farming.PatchPrediction;
-import com.larryfarming.engine.farming.PatchType;
+import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.catalogue.CropData;
 import com.larryfarming.farming.catalogue.FarmingCatalogue;
-import com.larryfarming.farming.detection.CapabilityState;
-import com.larryfarming.farming.model.FarmingRun;
-import com.larryfarming.farming.model.PatchRef;
-import com.larryfarming.farming.model.RunStop;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingSkipReason;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
  * The stops a run leaves alone for what is in their ground or in the player's stock: a
  * standing crop still doing its job, a patch still growing, a seed the player does not
- * have, a compost bin with nothing left to do.
+ * have.
  *
  * <p>Route refusals are {@link RunPlanner}'s. These rules run after it, on the stops it
  * routed, and turn a visit into a skip or drop it.
@@ -46,8 +38,7 @@ final class StopSkipRules {
      * in the region, so an unknown patch keeps its stop: a missed lily costs a diseased
      * crop and a skipped ready cactus a whole harvest, while a wasted visit costs a moment.
      */
-    static List<StopPlan> leaveStandingCrops(FarmingRun run, List<StopPlan> plans,
-            FarmingInputs inputs, PlayerState state) {
+    static List<StopPlan> leaveStandingCrops(FarmingRun run, List<StopPlan> plans, FarmingInputs inputs, PlayerState state) {
         List<StopPlan> kept = new ArrayList<>(plans.size());
         for (StopPlan plan : plans) {
             RunStop stop = plan.getStop();
@@ -63,17 +54,7 @@ final class StopSkipRules {
             // only as a place to be; its verdict comes from the runs list, which reads the
             // contract's own varbits.
             if (stop.isErrand()) {
-                kept.add(inputs.contractIsStillGrowing()
-                        ? skipUntilTheErrandIsDue(stop, inputs) : plan);
-                continue;
-            }
-            // Off, Larry leaves the bins and their allotments as they stand.
-            if (CompostUpkeep.leavesAlone(stop, inputs, state)) {
-                continue;
-            }
-            // An allotment the bin is not to work today is dropped: the bin's row says
-            // when its watermelons are ready, and the player's own crop needs no mention.
-            if (stop.feedsAbin() && leavesTheAllotmentAlone(stop, plans, inputs)) {
+                kept.add(inputs.contractIsStillGrowing() ? skipUntilTheErrandIsDue(stop, inputs) : plan);
                 continue;
             }
             PatchPrediction seen = inputs.patchAt(stop.primaryPatch());
@@ -108,114 +89,17 @@ final class StopSkipRules {
                     skip = foldIn(skip, skipIfNoSeed(stop, crop, state));
                 }
             } else if (stop.isPlanting()) {
-                // Only planting stops: a compost bin decodes as Crop.COMPOST growing, not as
-                // idle, and would otherwise always read as still full.
                 skip = skipIfPatchesStillFull(stop, inputs);
                 skip = foldIn(skip, skipIfNoRotationSeed(run, stop, inputs, state));
-            } else if (nothingLeftHere(stop, inputs) && !binIsFullAndOpen(stop, inputs)
-                    && (roomLeftIn(stop, inputs) == 0 || !aSourceFills(stop, inputs, state))) {
-                // A full bin left open is not finished: nothing rots until the player
-                // closes it. A bin with room stays only while something will fill it.
+            } else if (nothingLeftHere(stop, inputs)) {
                 continue;
             }
             if (skip == null && stop.isPlanting()) {
                 skip = skipIfUnseenWithNoKnownSeed(run, stop, inputs, state);
             }
-            // A feeding allotment is never a row's reason, so it never stays as a skip:
-            // growing watermelons are the bin's to wait for, and one short of seed is left
-            // out as a switched-off crop is, rather than noted at every farm.
-            if (skip != null && stop.feedsAbin()) {
-                continue;
-            }
             kept.add(skip != null ? skip : plan);
         }
-        return withoutFarmBinsNothingFills(kept, inputs);
-    }
-
-    /**
-     * The plans less each farm bin with room and nothing else to do that no allotment will
-     * fill: none of its allotments is being worked today and none grows watermelons for it.
-     * A second pass, because a bin's fate rests on its allotments, which the first pass
-     * decides after it.
-     */
-    private static List<StopPlan> withoutFarmBinsNothingFills(List<StopPlan> plans,
-            FarmingInputs inputs) {
-        List<StopPlan> kept = new ArrayList<>(plans.size());
-        for (StopPlan plan : plans) {
-            RunStop bin = plan.getStop();
-            boolean idleFarmBin = plan.isVisit()
-                    && bin.getActions().contains(RunStop.StopAction.FILL_COMPOST_BIN)
-                    && !CompostUpkeep.isTheBigBin(bin) && roomLeftIn(bin, inputs) > 0
-                    && nothingLeftHere(bin, inputs);
-            if (!idleFarmBin || anAllotmentWorkedFor(bin, plans)
-                    || CompostUpkeep.watermelonsGrowingFor(bin, inputs)) {
-                kept.add(plan);
-            }
-        }
         return kept;
-    }
-
-    private static boolean anAllotmentWorkedFor(RunStop bin, List<StopPlan> plans) {
-        for (StopPlan plan : plans) {
-            if (plan.isVisit() && bin.primaryPatch().equals(plan.getStop().getFeeds())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Whether this bin has a fill source on this visit. A farm bin's allotments fill it
-     * while upkeep is on. The guild's big bin is filled from a watermelon contract or from
-     * produce the player owns.
-     */
-    private static boolean aSourceFills(RunStop bin, FarmingInputs inputs, PlayerState state) {
-        if (!CompostUpkeep.isOn(inputs, state)) {
-            return false;
-        }
-        if (!CompostUpkeep.isTheBigBin(bin)) {
-            return true;
-        }
-        return CompostUpkeep.watermelonContractReady(inputs)
-                || CompostUpkeep.bankFillFor(bin, inputs, state) > 0;
-    }
-
-    /**
-     * Whether a feeding allotment is not the bin's to work today.
-     *
-     * <p>Anything living there but watermelons is the player's own and is left alone. Ready
-     * watermelons are the bin's supply: they wait in the ground until the bin can take
-     * them, so they are not picked while it is closed or full.
-     */
-    static boolean leavesTheAllotmentAlone(RunStop allotment, List<StopPlan> plans,
-            FarmingInputs inputs) {
-        return holdsAnotherCrop(allotment, inputs)
-                || CompostUpkeep.holdsReadyFill(allotment, inputs)
-                        && !binTakesFill(allotment, plans, inputs);
-    }
-
-    /** Whether a feeding allotment holds a living crop other than its watermelons. */
-    static boolean holdsAnotherCrop(RunStop allotment, FarmingInputs inputs) {
-        for (PatchRef ref : allotment.getPatches()) {
-            PatchPrediction seen = inputs.patchAt(ref);
-            if (seen != null && seen.getCrop() != null && seen.getCrop() != Crop.WEEDS
-                    && seen.getCrop() != allotment.getFixedCrop()
-                    && seen.getState() != CropState.DEAD) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** Whether the bin this allotment feeds is being visited and will take fill. */
-    private static boolean binTakesFill(RunStop allotment, List<StopPlan> plans,
-            FarmingInputs inputs) {
-        for (StopPlan plan : plans) {
-            if (plan.isVisit() && plan.getStop().primaryPatch().equals(allotment.getFeeds())) {
-                return CompostUpkeep.roomThisVisit(plan.getStop(), inputs) > 0;
-            }
-        }
-        return false;
     }
 
     /**
@@ -237,72 +121,11 @@ final class StopSkipRules {
     /**
      * Whether every patch at this stop has been looked at and none of them wants anything.
      *
-     * <p>Only asked of a stop that puts nothing in the ground, which means a compost bin.
-     * An emptied bin is dropped, not skipped: there is no decision to explain.
-     *
-     * <p>Never on a guess: an unseen bin reads through {@link PatchWork#at} like an emptied
-     * one, so {@link #everyPatchLookedAt} keeps every bin on a fresh account's trip.
+     * <p>Only asked of a stop that puts nothing in the ground. Such a stop is dropped, not
+     * skipped: there is no decision to explain. Never on a guess: an unseen patch keeps it.
      */
-    static boolean nothingLeftHere(RunStop stop, FarmingInputs inputs) {
+    private static boolean nothingLeftHere(RunStop stop, FarmingInputs inputs) {
         return everyPatchLookedAt(stop, inputs) && !anythingToDoAt(stop, inputs);
-    }
-
-    /**
-     * How many more items the compost bin at this stop would take, or 0 if none would.
-     *
-     * <p>A part-filled bin reads as idle, so {@link PatchWork#at} finds no work at it. That
-     * is right about whether to travel there, but the bin is still an in-passing errand.
-     *
-     * <p>Deliberately not a {@link PatchWork.Act}: an empty bin is its resting state, so
-     * counting it as work would make its run due forever. This keeps the stop alive without
-     * making it a reason to go; bins are {@code optional}, and the runs list ignores
-     * optional stops for due-ness.
-     */
-    static int roomLeftIn(RunStop stop, FarmingInputs inputs) {
-        if (!stop.getActions().contains(RunStop.StopAction.FILL_COMPOST_BIN)) {
-            return 0;
-        }
-        for (PatchRef ref : stop.getPatches()) {
-            PatchPrediction seen = inputs.patchAt(ref);
-            if (seen == null || seen.getCrop() == null) {
-                continue;
-            }
-            // Capacity is getHarvestStages. getStages is the three-step rot after closing.
-            if (seen.getState() == CropState.EMPTY) {
-                return seen.getCrop() == Crop.EMPTY_BIG_COMPOST_BIN
-                        ? Crop.BIG_COMPOST.getHarvestStages()
-                        : Crop.COMPOST.getHarvestStages();
-            }
-            if (seen.getState() == CropState.FILLING) {
-                // The decode counts from zero, so a bin showing stage 8 is holding nine.
-                return Math.max(0,
-                        seen.getCrop().getHarvestStages() - (seen.getStage() + 1));
-            }
-        }
-        return 0;
-    }
-
-    /**
-     * Whether the bin at this stop is holding all it can and still standing open.
-     *
-     * <p>A bin does not close itself. After its fifteenth item (thirty at the guild) it waits
-     * for the player to select Close, and only then rots for 35–70 minutes. A filling bin is
-     * idle to {@link PatchWork#at} and has no room for a top-up, so nothing else here sees
-     * this.
-     */
-    static boolean binIsFullAndOpen(RunStop stop, FarmingInputs inputs) {
-        if (!stop.getActions().contains(RunStop.StopAction.FILL_COMPOST_BIN)) {
-            return false;
-        }
-        for (PatchRef ref : stop.getPatches()) {
-            PatchPrediction seen = inputs.patchAt(ref);
-            if (seen != null && seen.getCrop() != null
-                    && seen.getState() == CropState.FILLING
-                    && seen.getStage() + 1 >= seen.getCrop().getHarvestStages()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -330,26 +153,18 @@ final class StopSkipRules {
      * planting stops whose every patch stands empty, since a crop in a patch is a reason to
      * go.
      */
-    static List<StopPlan> dropStopsTheSeedsRanOutBefore(List<StopPlan> plans,
-            List<List<Crop>> cropFor, FarmingInputs inputs) {
+    static List<StopPlan> dropStopsTheSeedsRanOutBefore(List<StopPlan> plans, List<List<Crop>> cropFor, FarmingInputs inputs) {
         List<StopPlan> kept = new ArrayList<>(plans.size());
         for (int i = 0; i < plans.size(); i++) {
             StopPlan plan = plans.get(i);
             if (seedRanOutAt(plan, cropFor.get(i), inputs)) {
                 // A tree the run declined to fell is not a seed that ran out; "no seed" would
                 // send the player to buy a sapling they hold.
-                kept.add(new StopPlan(plan.getStop(), StopPlan.Outcome.SKIP, null,
-                        CapabilityState.HAVE, "",
-                        anythingStandingAt(plan, inputs)
-                                ? FarmingSkipReason.STANDING_CROP
-                                : FarmingSkipReason.NO_SEED,
-                        0L, Collections.emptySet(), null));
+                kept.add(StopPlan.skip(plan.getStop(), "", anythingStandingAt(plan, inputs) ? FarmingSkipReason.STANDING_CROP
+                                : FarmingSkipReason.NO_SEED, 0L));
                 continue;
             }
-            kept.add(leftStandingAt(plan, cropFor.get(i), inputs)
-                    ? new StopPlan(plan.getStop(), StopPlan.Outcome.SKIP, null,
-                            CapabilityState.HAVE, "", FarmingSkipReason.STANDING_CROP, 0L,
-                            Collections.emptySet(), null)
+            kept.add(leftStandingAt(plan, cropFor.get(i), inputs) ? StopPlan.skip(plan.getStop(), "", FarmingSkipReason.STANDING_CROP, 0L)
                     : plan);
         }
         return kept;
@@ -417,8 +232,7 @@ final class StopSkipRules {
         // A standing crop that does not regrow: the Catherby white lily (declared
         // .standingCrop(), no regrow rate). A guard flower stands while it lives, so
         // standsEmpty decides.
-        return PatchWork.standsEmpty(seen, stop, inputs.getNowEpochSec())
-                ? null : seen.getCrop();
+        return PatchWork.standsEmpty(seen, stop, inputs.getNowEpochSec()) ? null : seen.getCrop();
     }
 
     /**
@@ -427,14 +241,12 @@ final class StopSkipRules {
      * so it is ground on both sides of it.
      */
     private static boolean owedItsCheckBeforeTheAxe(PatchRef ref, PatchPrediction seen) {
-        if (seen == null || seen.getCrop() == null || seen.isIdle()
-                || seen.getCrop() == Crop.WEEDS || seen.getState() != CropState.GROWING
+        if (seen == null || seen.getCrop() == null || seen.isIdle() || seen.getCrop() == Crop.WEEDS || seen.getState() != CropState.GROWING
                 || isStillGrowing(seen)) {
             return false;
         }
         FarmingWorldMap.PatchDef def = ref.resolve();
-        return def != null
-                && (def.getType() == PatchType.TREE || def.getType() == PatchType.HARDWOOD_TREE);
+        return def != null && (def.getType() == PatchType.TREE || def.getType() == PatchType.HARDWOOD_TREE);
     }
 
     /**
@@ -449,15 +261,13 @@ final class StopSkipRules {
      * {@link PatchWork#at} ranks those above a harvest.
      */
     static boolean leftStandingAt(StopPlan plan, List<Crop> assigned, FarmingInputs inputs) {
-        if (!plan.isVisit() || !plan.getStop().isStandingCrop() || !assigned.isEmpty()
-                || inputs.getPreferences().picksFruitInPassing()
+        if (!plan.isVisit() || !plan.getStop().isStandingCrop() || !assigned.isEmpty() || inputs.getPreferences().picksFruitInPassing()
                 || plan.getStop().isErrand()) {
             return false;
         }
         boolean anythingToPick = false;
         for (PatchRef ref : plan.getStop().getPatches()) {
-            PatchWork.Act act = PatchWork.at(inputs.patchAt(ref), plan.getStop(),
-                    inputs.getNowEpochSec());
+            PatchWork.Act act = PatchWork.at(inputs.patchAt(ref), plan.getStop(), inputs.getNowEpochSec());
             if (act == null) {
                 continue;
             }
@@ -474,19 +284,18 @@ final class StopSkipRules {
     /**
      * Whether this stop was going to plant and the stock ran out before it.
      */
-    static boolean seedRanOutAt(StopPlan plan, List<Crop> assigned,
-            FarmingInputs inputs) {
+    static boolean seedRanOutAt(StopPlan plan, List<Crop> assigned, FarmingInputs inputs) {
         if (!plan.isVisit() || !plan.getStop().isPlanting() || !assigned.isEmpty()) {
             return false;
         }
         // An errand is the reason to go, so no seed shortage drops it. The contract's held
         // patch is assigned nothing, which would otherwise read as a seed running out.
-        if (plan.getStop().isErrand()) {
-            return false;
-        }
-        for (PatchRef ref : plan.getStop().getPatches()) {
-            if (!PatchWork.standsEmpty(inputs.patchAt(ref), plan.getStop(),
-                    inputs.getNowEpochSec())) {
+        return !plan.getStop().isErrand() && everyPatchStandsEmpty(plan.getStop(), inputs);
+    }
+
+    private static boolean everyPatchStandsEmpty(RunStop stop, FarmingInputs inputs) {
+        for (PatchRef ref : stop.getPatches()) {
+            if (!PatchWork.standsEmpty(inputs.patchAt(ref), stop, inputs.getNowEpochSec())) {
                 return false;
             }
         }
@@ -512,24 +321,18 @@ final class StopSkipRules {
         // Checked first: below the level, "no seed" is false and would send the player to
         // buy seeds they hold, and holding the seed would not make it plantable.
         if (FixedCrops.belowLevel(state, data)) {
-            return new StopPlan(stop, StopPlan.Outcome.SKIP, null, CapabilityState.HAVE,
-                    inSentence(crop) + " needs " + data.getFarmingLevel() + " Farming",
-                    FarmingSkipReason.NEEDS_LEVEL, 0L, Collections.emptySet(), null);
+            return StopPlan.skip(stop, inSentence(crop) + " needs " + data.getFarmingLevel() + " Farming",
+                    FarmingSkipReason.NEEDS_LEVEL, 0L);
         }
         if (!SeedSelector.definitelyOutOf(crop, state, data.getSeedsPerPatch())) {
             return null;
         }
         // A tree names both forms: potting a held seed is a bank trip, buying a sapling a
         // shop trip. Item names are the game's ("no oak sapling or acorn"). Any ticked
-        // anima seed or coral frag would do, so the line names none of the three.
-        String stock = data.isSaplingPlanted()
-                ? data.getSaplingName() + " or " + data.getSeedName()
-                : data.getPatchType() == PatchType.ANIMA ? "anima seed"
-                : data.getPatchType() == PatchType.CORAL ? "coral frag"
-                : data.getSeedName();
-        return new StopPlan(stop, StopPlan.Outcome.SKIP, null, CapabilityState.HAVE,
-                "no " + inSentence(stock), FarmingSkipReason.NO_SEED, 0L,
-                Collections.emptySet(), null);
+        // anima seed would do, so the line names none of the three.
+        String stock = data.isSaplingPlanted() ? data.getSaplingName() + " or " + data.getSeedName()
+                : data.getPatchType() == PatchType.ANIMA ? "anima seed" : data.getSeedName();
+        return StopPlan.skip(stop, "no " + inSentence(stock), FarmingSkipReason.NO_SEED, 0L);
     }
 
     /**
@@ -544,20 +347,12 @@ final class StopSkipRules {
      * go whether or not a seed follows. A tree already checked counts as empty, because
      * replanting is the only thing left to do at it. Unobserved patches never count.
      */
-    private static StopPlan skipIfNoRotationSeed(FarmingRun run, RunStop stop, FarmingInputs inputs,
-            PlayerState state) {
-        if (!RunScheduler.definitelyOutOfSeeds(run, stop, state, inputs.getPreferences())) {
+    private static StopPlan skipIfNoRotationSeed(FarmingRun run, RunStop stop, FarmingInputs inputs, PlayerState state) {
+        if (!RunScheduler.definitelyOutOfSeeds(run, stop, state, inputs.getPreferences()) || !everyPatchStandsEmpty(stop, inputs)) {
             return null;
         }
-        for (PatchRef ref : stop.getPatches()) {
-            if (!PatchWork.standsEmpty(inputs.patchAt(ref), stop, inputs.getNowEpochSec())) {
-                return null;
-            }
-        }
         // No clause: the rotation has no one seed to name.
-        return new StopPlan(stop, StopPlan.Outcome.SKIP, null, CapabilityState.HAVE,
-                "", FarmingSkipReason.NO_SEED, 0L,
-                Collections.emptySet(), null);
+        return StopPlan.skip(stop, "", FarmingSkipReason.NO_SEED, 0L);
     }
 
     /**
@@ -566,19 +361,14 @@ final class StopSkipRules {
      * known seed the row could name nothing to plant. The scheduler counts such a patch for
      * nothing, by the same {@link RunScheduler#knowsAseedFor}.
      */
-    private static StopPlan skipIfUnseenWithNoKnownSeed(FarmingRun run, RunStop stop,
-            FarmingInputs inputs, PlayerState state) {
+    private static StopPlan skipIfUnseenWithNoKnownSeed(FarmingRun run, RunStop stop, FarmingInputs inputs, PlayerState state) {
         for (PatchRef ref : stop.getPatches()) {
             if (inputs.patchAt(ref) != null) {
                 return null;
             }
         }
-        if (RunScheduler.knowsAseedFor(run, stop, state, inputs.getPreferences())) {
-            return null;
-        }
-        return new StopPlan(stop, StopPlan.Outcome.SKIP, null, CapabilityState.HAVE,
-                "", FarmingSkipReason.NO_SEED, 0L,
-                Collections.emptySet(), null);
+        return RunScheduler.knowsAseedFor(run, stop, state, inputs.getPreferences()) ? null
+                : StopPlan.skip(stop, "", FarmingSkipReason.NO_SEED, 0L);
     }
 
     /**
@@ -599,8 +389,7 @@ final class StopSkipRules {
         if (candidate == null) {
             return current;
         }
-        FarmingSkipReason winner = FarmingSkipReason.moreUrgent(
-                current.getSkipReason(), candidate.getSkipReason());
+        FarmingSkipReason winner = FarmingSkipReason.moreUrgent(current.getSkipReason(), candidate.getSkipReason());
         StopPlan kept = winner == current.getSkipReason() ? current : candidate;
         if (winner == FarmingSkipReason.NEEDS_LEVEL) {
             return kept;
@@ -610,8 +399,7 @@ final class StopSkipRules {
             return kept;
         }
         return new StopPlan(kept.getStop(), kept.getOutcome(), kept.getRoute(),
-                kept.getConfidence(), kept.getBecause(), kept.getSkipReason(), readyAt,
-                kept.getNeeds(), kept.getTeleport());
+                kept.getConfidence(), kept.getBecause(), kept.getSkipReason(), readyAt, kept.getNeeds(), kept.getTeleport());
     }
 
     /**
@@ -623,10 +411,8 @@ final class StopSkipRules {
      */
     private static StopPlan skipUntilTheErrandIsDue(RunStop stop, FarmingInputs inputs) {
         String because = inputs.contractDetail();
-        return new StopPlan(stop, StopPlan.Outcome.SKIP, null, CapabilityState.HAVE,
-                because.isEmpty() ? "nothing to do for the contract yet" : because,
-                FarmingSkipReason.STILL_GROWING, inputs.contractReadyAtEpochSec(),
-                Collections.emptySet(), null);
+        return StopPlan.skip(stop, because.isEmpty() ? "nothing to do for the contract yet" : because,
+                FarmingSkipReason.STILL_GROWING, inputs.contractReadyAtEpochSec());
     }
 
     /**
@@ -634,14 +420,11 @@ final class StopSkipRules {
      * crops the stop may grow.
      */
     private static StopPlan skipIfStanding(RunStop stop, PatchPrediction seen) {
-        if (seen == null || !FixedCrops.grows(stop, seen.getCrop())
-                || !isAlive(seen.getState())) {
+        if (seen == null || !FixedCrops.grows(stop, seen.getCrop()) || !isAlive(seen.getState())) {
             return null;
         }
-        return new StopPlan(stop, StopPlan.Outcome.SKIP, null, CapabilityState.HAVE,
-                "your " + inSentence(seen.getCrop()) + " is still growing here",
-                FarmingSkipReason.STANDING_CROP, seen.getDoneEstimateEpochSec(),
-                Collections.emptySet(), null);
+        return StopPlan.skip(stop, "your " + inSentence(seen.getCrop()) + " is still growing here",
+                FarmingSkipReason.STANDING_CROP, seen.getDoneEstimateEpochSec());
     }
 
     /** The paced skip: nothing to harvest yet at a patch still filling out. */
@@ -649,10 +432,8 @@ final class StopSkipRules {
         if (seen == null || !FixedCrops.grows(stop, seen.getCrop()) || !isStillGrowing(seen)) {
             return null;
         }
-        return new StopPlan(stop, StopPlan.Outcome.SKIP, null, CapabilityState.HAVE,
-                "your " + inSentence(seen.getCrop()) + " is still growing",
-                FarmingSkipReason.STILL_GROWING, seen.getDoneEstimateEpochSec(),
-                Collections.emptySet(), null);
+        return StopPlan.skip(stop, "your " + inSentence(seen.getCrop()) + " is still growing",
+                FarmingSkipReason.STILL_GROWING, seen.getDoneEstimateEpochSec());
     }
 
     /**
@@ -663,7 +444,7 @@ final class StopSkipRules {
      * this run or not.
      *
      * <p>Only a crop still filling out. Ready, diseased, dead and empty patches all have work
-     * waiting. Weeds and compost bins read as idle, not as a crop.
+     * waiting. Weeds read as idle, not as a crop.
      */
     private static StopPlan skipIfPatchesStillFull(RunStop stop, FarmingInputs inputs) {
         // Every patch must be growing, not just the primary: Fossil Island is three hardwood
@@ -671,8 +452,7 @@ final class StopSkipRules {
         long readyAt = 0L;
         for (PatchRef ref : stop.getPatches()) {
             PatchPrediction seen = inputs.patchAt(ref);
-            if (seen == null || seen.getCrop() == null || seen.isIdle()
-                    || !isStillGrowing(seen)) {
+            if (seen == null || seen.getCrop() == null || seen.isIdle() || !isStillGrowing(seen)) {
                 return null;
             }
             readyAt = Math.max(readyAt, seen.getDoneEstimateEpochSec());
@@ -682,11 +462,8 @@ final class StopSkipRules {
         if (primary == null || primary.getCrop() == null) {
             return null;
         }
-        Crop growing = primary.getCrop();
-        return new StopPlan(stop, StopPlan.Outcome.SKIP, null, CapabilityState.HAVE,
-                "your " + inSentence(growing) + " is still growing here",
-                FarmingSkipReason.STILL_GROWING, readyAt,
-                Collections.emptySet(), null);
+        return StopPlan.skip(stop, "your " + inSentence(primary.getCrop()) + " is still growing here",
+                FarmingSkipReason.STILL_GROWING, readyAt);
     }
 
     /**
@@ -705,10 +482,8 @@ final class StopSkipRules {
                 readyAt = Math.max(readyAt, seen.getDoneEstimateEpochSec());
             }
         }
-        return new StopPlan(stop, StopPlan.Outcome.SKIP, null, CapabilityState.HAVE,
-                "your " + inSentence(primary.getCrop()) + " is regrowing here",
-                FarmingSkipReason.STILL_GROWING, readyAt,
-                Collections.emptySet(), null);
+        return StopPlan.skip(stop, "your " + inSentence(primary.getCrop()) + " is regrowing here",
+                FarmingSkipReason.STILL_GROWING, readyAt);
     }
 
     /** Whether what is in the patch is still doing its job. */

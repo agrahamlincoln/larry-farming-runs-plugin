@@ -1,19 +1,11 @@
 package com.larryfarming.panel;
 
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
+import java.awt.*;
+import javax.swing.*;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 
-/** What the tab shows while no account is logged in: Larry, his line, and a nudge to log in. */
+/** What the panel shows while no account is logged in: Larry, his line, and a nudge to log in. */
 class LoggedOutCard extends JPanel
 {
 	static final String LOG_IN = "Log in to plan a farm run.";

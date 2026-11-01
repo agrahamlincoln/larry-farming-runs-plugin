@@ -1,8 +1,6 @@
 package com.larryfarming.farming.model;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Value;
+import lombok.*;
 
 /**
  * One rung of a {@link RunStop}'s downgrade chain: a way of reaching the patch,
@@ -56,6 +54,7 @@ public class TravelOption {
     Destination destination;
 
     /** Coins this rung costs to travel, or zero when it is free. */
+    @With(AccessLevel.PRIVATE)
     int fareCoins;
 
     /**
@@ -70,8 +69,8 @@ public class TravelOption {
      * landing and the patch. Rungs to one arrival land far apart, and one landing can bank
      * free on the way to one patch but not another.
      *
-     * <p>{@code RunStop.Builder.banks} replaces the entry in the stop's own list rather than
-     * mutating the rung, so a shared chain can carry different figures per stop.
+     * <p>A figure replaces the entry in the stop's own list rather than mutating the rung, so
+     * a shared chain can carry different figures per stop.
      */
     int bankDetour;
 
@@ -97,6 +96,7 @@ public class TravelOption {
      * Hosidius" is wrong advice for a player housed anywhere else, so it waits for the
      * house's town to be read.
      */
+    @With(AccessLevel.PRIVATE)
     boolean certainOnly;
 
     /**
@@ -109,6 +109,7 @@ public class TravelOption {
      * beside a ring, so it carries the ring twice: once marked this way above the tablet,
      * and once plainly below it.
      */
+    @With(AccessLevel.PRIVATE)
     boolean startOnly;
 
     /**
@@ -126,21 +127,17 @@ public class TravelOption {
     /** What this rung spends, or null when it has no walk figure. */
     Cost cost;
 
-    private TravelOption(Requirement requires, String instruction, Destination destination,
-            int fareCoins, int bankDetour, boolean bankUpstairs, Bank bank,
-            boolean certainOnly) {
-        this(requires, instruction, destination, fareCoins, bankDetour, bankUpstairs, bank,
-                certainOnly, false, UNMEASURED, null);
+    /** A rung with no figures, fare or conditions yet. */
+    private static TravelOption rung(Requirement requires, String instruction, Destination destination) {
+        return new TravelOption(requires, instruction, destination, 0, UNMEASURED, false, null, false, false, UNMEASURED, null);
     }
 
     public static TravelOption via(Capability requires, String instruction) {
-        return new TravelOption(Requirement.cap(requires), instruction, null, 0, UNMEASURED,
-                false, null, false);
+        return via(Requirement.cap(requires), instruction);
     }
 
     public static TravelOption via(Requirement requires, String instruction) {
-        return new TravelOption(requires, instruction, null, 0, UNMEASURED, false, null,
-                false);
+        return rung(requires, instruction, null);
     }
 
     /**
@@ -149,14 +146,12 @@ public class TravelOption {
      * @param rest what to do after arriving, or "" when arriving is the whole of it
      */
     public static TravelOption to(Destination destination, String rest) {
-        return new TravelOption(Requirement.reach(destination), rest, destination, 0,
-                UNMEASURED, false, null, false);
+        return rung(Requirement.reach(destination), rest, destination);
     }
 
     /** Arriving somewhere, plus something else that also has to hold. */
     public static TravelOption to(Destination destination, Requirement alsoNeeds, String rest) {
-        return new TravelOption(Requirement.all(Requirement.reach(destination), alsoNeeds),
-                rest, destination, 0, UNMEASURED, false, null, false);
+        return rung(Requirement.all(Requirement.reach(destination), alsoNeeds), rest, destination);
     }
 
     /**
@@ -170,14 +165,12 @@ public class TravelOption {
      * @param rest what to do after arriving, or "" when arriving is the whole of it
      */
     public static TravelOption swapTo(Destination destination, String rest) {
-        return new TravelOption(Requirement.reachBySwap(destination), rest, destination, 0,
-                UNMEASURED, false, null, false);
+        return rung(Requirement.reachBySwap(destination), rest, destination);
     }
 
     /** The same rung, offered only when it certainly holds. See {@link #isCertainOnly()}. */
     public TravelOption onlyWhenCertain() {
-        return new TravelOption(requires, instruction, destination, fareCoins, bankDetour,
-                bankUpstairs, bank, true, startOnly, walk, cost);
+        return withCertainOnly(true);
     }
 
     /**
@@ -185,8 +178,7 @@ public class TravelOption {
      * See {@link #isStartOnly()}.
      */
     public TravelOption onlyFromAstart() {
-        return new TravelOption(requires, instruction, destination, fareCoins, bankDetour,
-                bankUpstairs, bank, certainOnly, true, walk, cost);
+        return withStartOnly(true);
     }
 
     /**
@@ -199,8 +191,7 @@ public class TravelOption {
         if (coins <= 0) {
             throw new IllegalArgumentException("a fare has to cost something");
         }
-        return new TravelOption(requires, instruction, destination, coins, bankDetour,
-                bankUpstairs, bank, certainOnly, startOnly, walk, cost);
+        return withFareCoins(coins);
     }
 
     /**
@@ -219,8 +210,7 @@ public class TravelOption {
         if (bank == null) {
             throw new IllegalArgumentException("a bank detour has to name its bank");
         }
-        return new TravelOption(requires, instruction, destination, fareCoins, tiles, upstairs,
-                bank, certainOnly, startOnly, walk, cost);
+        return new TravelOption(requires, instruction, destination, fareCoins, tiles, upstairs, bank, certainOnly, startOnly, walk, cost);
     }
 
     /**
@@ -251,11 +241,6 @@ public class TravelOption {
         return walk != UNMEASURED && walk != FLOOR;
     }
 
-    /** Whether this rung starts wherever the player is. See {@link #FLOOR}. */
-    public boolean isFloor() {
-        return walk == FLOOR;
-    }
-
     /**
      * The same rung for a player the previous stop left a short walk from where
      * {@code granted} would take them: that part reads as held, so it packs nothing, and
@@ -277,19 +262,12 @@ public class TravelOption {
             return this;
         }
         return new TravelOption(requires.granting(granted), walk + instruction, null,
-                fareCoins, bankDetour, bankUpstairs, bank, certainOnly, false,
-                hasWalkFigure() ? this.walk + tiles : this.walk, cost);
+                fareCoins, bankDetour, bankUpstairs, bank, certainOnly, false, hasWalkFigure() ? this.walk + tiles : this.walk, cost);
     }
 
     /** Whether anybody has walked the bank from this rung. */
     public boolean hasBankFigure() {
         return bankDetour != UNMEASURED;
-    }
-
-    /** A route needing nothing — a valid floor for a chain that has no skip. */
-    public static TravelOption always(String instruction) {
-        return new TravelOption(Requirement.none(), instruction, null, 0, UNMEASURED, false,
-                null, false);
     }
 
     /**
@@ -319,9 +297,7 @@ public class TravelOption {
         if (destination == null || means == null) {
             return instruction;
         }
-        return instruction == null || instruction.isEmpty()
-                ? means.getDisplayName()
-                : means.getDisplayName() + ", " + instruction;
+        return instruction == null || instruction.isEmpty() ? means.getDisplayName() : means.getDisplayName() + ", " + instruction;
     }
 
     /**
@@ -339,10 +315,8 @@ public class TravelOption {
         if (then < 0) {
             return alreadyAt();
         }
-        String rest = instruction.substring(then == 0 ? THEN.length() : then + 2
-                + THEN.length());
-        return rest.isEmpty() ? alreadyAt()
-                : Character.toUpperCase(rest.charAt(0)) + rest.substring(1);
+        String rest = instruction.substring(then == 0 ? THEN.length() : then + 2 + THEN.length());
+        return rest.isEmpty() ? alreadyAt() : Character.toUpperCase(rest.charAt(0)) + rest.substring(1);
     }
 
     /**
@@ -350,9 +324,7 @@ public class TravelOption {
      * destination when it has no zone.
      */
     private String alreadyAt() {
-        return "You are already at "
-                + (destination.getZone() != null
-                        ? destination.getZone().getDisplayName()
+        return "You are already at " + (destination.getZone() != null ? destination.getZone().getDisplayName()
                         : destination.getDisplayName());
     }
 

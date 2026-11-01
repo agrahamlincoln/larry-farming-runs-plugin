@@ -5,7 +5,7 @@ import com.larryfarming.snapshot.FarmingHouse;
 import java.util.function.BiConsumer;
 
 /**
- * The farming tab's house fold: what the player's house holds, as two columns of rows under
+ * The side panel's house fold: what the player's house holds, as two columns of rows under
  * "Portals", "Portal Nexus" and "Garden", in a fixed order.
  *
  * <p>An item Larry has not seen is the player's to declare, ticked for built. An item he
@@ -24,18 +24,15 @@ class HouseFold extends Fold
 	static final String NEXUS_NOT_SEEN = ": Nexus not opened yet";
 
 	private final RebuildGuard guard = new RebuildGuard();
-	private BiConsumer<String, String> settingCallback;
+	private final BiConsumer<String, String> send;
 	private FarmingHouse.Sight sight;
 
-	HouseFold()
+	/** @param send receives each ticked row as its config key and new value */
+	HouseFold(BiConsumer<String, String> send)
 	{
 		super("Your house");
+		this.send = send;
 		setVisible(false);
-	}
-
-	void setSettingCallback(BiConsumer<String, String> callback)
-	{
-		this.settingCallback = callback;
 	}
 
 	/** Draws the fold's rows from the advice. Hidden for advice without them. */
@@ -58,7 +55,7 @@ class HouseFold extends Fold
 			return;
 		}
 		content().removeAll();
-		content().add(SiteList.inGroups(house.getGroups(), this::send));
+		content().add(SiteList.inGroups(house.getGroups(), send));
 		content().revalidate();
 		content().repaint();
 	}
@@ -73,14 +70,6 @@ class HouseFold extends Fold
 				return NEXUS_NOT_SEEN;
 			default:
 				return "";
-		}
-	}
-
-	private void send(String key, String value)
-	{
-		if (settingCallback != null && key != null)
-		{
-			settingCallback.accept(key, value);
 		}
 	}
 }

@@ -6,8 +6,8 @@ import java.util.Map;
 /**
  * Where the player's house is, read from the game.
  *
- * <p>Chains that say "redirected" or "POH tab" mean a house teleport, which only helps if
- * the house is in the right town.
+ * <p>A rung that needs POH_IN_&lt;town&gt; is a house teleport, which only helps if the house
+ * is in that town.
  *
  * <p>Varbit 2187 ({@code POH_HOUSE_LOCATION}) holds the town. Zero means no house: client
  * script 3809 refuses the Construction lamp option with "You must own a house" on zero.
@@ -28,9 +28,7 @@ public final class HouseLocation {
     public static final int NO_HOUSE = 0;
 
     /** The varbit's value for each town a chain asks about. */
-    private static final Map<Capability, Integer> TOWN_VALUES = Map.of(
-            Capability.POH_IN_TAVERLEY, 2,
-            Capability.POH_IN_BRIMHAVEN, 5,
+    private static final Map<Capability, Integer> TOWN_VALUES = Map.of(Capability.POH_IN_TAVERLEY, 2, Capability.POH_IN_BRIMHAVEN, 5,
             Capability.POH_IN_HOSIDIUS, 8);
 
     /**
@@ -53,22 +51,6 @@ public final class HouseLocation {
     public static Boolean ownsHouse(Map<Integer, Integer> varbits) {
         Integer value = reading(varbits);
         return value == null ? null : value != NO_HOUSE;
-    }
-
-    /**
-     * The town the house is in, or null when it is unread or in a town no chain asks about.
-     */
-    public static Capability locationOf(Map<Integer, Integer> varbits) {
-        Integer value = reading(varbits);
-        if (value == null) {
-            return null;
-        }
-        for (Map.Entry<Capability, Integer> town : TOWN_VALUES.entrySet()) {
-            if (town.getValue().equals(value)) {
-                return town.getKey();
-            }
-        }
-        return null;
     }
 
     private static Integer reading(Map<Integer, Integer> varbits) {

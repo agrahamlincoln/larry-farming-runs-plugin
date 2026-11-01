@@ -3,21 +3,9 @@ package com.larryfarming.farming.detection;
 import com.larryfarming.engine.ItemCounts;
 import com.larryfarming.farming.catalogue.CarryItems;
 import com.larryfarming.farming.engine.DailyTeleportLedger;
-import com.larryfarming.farming.model.Capability;
-import com.larryfarming.farming.model.Destination;
-import com.larryfarming.farming.model.PatchRef;
-import com.larryfarming.farming.model.Requirement;
-import com.larryfarming.farming.model.Spellbook;
-import com.larryfarming.farming.model.TravelMethod;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Answers what a player can currently do, both for single capabilities and for the
@@ -69,46 +57,19 @@ public final class CapabilityResolver {
      */
     private final TravelTaken taken;
 
-    public CapabilityResolver() {
-        this(Spellbook.STANDARD);
-    }
-
     /** The book this resolver plans for: the one the trip will be walked on. */
     public Spellbook getBook() {
         return onBook;
     }
 
-    public CapabilityResolver(Spellbook onBook) {
-        this(onBook, null, 0L);
-    }
-
     /**
-     * Also weighs daily teleport allowances. A null ledger never finds an allowance
-     * exhausted.
+     * A resolver for this book, weighing daily teleport allowances (a null ledger never finds
+     * one exhausted), what is growing in the player's patches, and what their house was last
+     * seen to hold. Without a sight, patch capabilities such as a grown spirit tree read as
+     * absent; without a house, every house capability does.
      */
-    public CapabilityResolver(Spellbook onBook,
-            DailyTeleportLedger dailyLedger, long nowEpochSec) {
-        this(onBook, dailyLedger, nowEpochSec, PatchSight.blind());
-    }
-
-    /**
-     * Also sees what is growing in the player's patches. Pass it wherever a
-     * {@code FarmingInputs} is in scope: without it, patch capabilities such as a grown
-     * spirit tree read as absent (see {@link PatchSight#blind()}).
-     */
-    public CapabilityResolver(Spellbook onBook,
-            DailyTeleportLedger dailyLedger, long nowEpochSec, PatchSight sight) {
-        this(onBook, dailyLedger, nowEpochSec, sight, HouseSight.unseen());
-    }
-
-    /**
-     * Also sees what the player's house was last seen to hold. Without it, every house
-     * capability reads as absent (see {@link HouseSight#unseen()}).
-     */
-    public CapabilityResolver(Spellbook onBook, DailyTeleportLedger dailyLedger,
-            long nowEpochSec, PatchSight sight, HouseSight house) {
-        this(onBook, dailyLedger, nowEpochSec, sight, house, true,
-                Collections.<TravelMethod>emptySet(), Collections.<Capability>emptySet(),
+    public CapabilityResolver(Spellbook onBook, DailyTeleportLedger dailyLedger, long nowEpochSec, PatchSight sight, HouseSight house) {
+        this(onBook, dailyLedger, nowEpochSec, sight, house, true, Collections.<TravelMethod>emptySet(), Collections.<Capability>emptySet(),
                 TravelTaken.NONE);
     }
 
@@ -132,10 +93,8 @@ public final class CapabilityResolver {
      * Derived from this resolver so the two cannot drift in anything else they carry.
      */
     public CapabilityResolver blindToPosition() {
-        return readsPosition
-                ? new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house, false,
-                        switchedOff, houseDeclared, taken)
-                : this;
+        return readsPosition ? new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house, false,
+                        switchedOff, houseDeclared, taken) : this;
     }
 
     /**
@@ -148,11 +107,9 @@ public final class CapabilityResolver {
      * all ask here, so all three follow the switch.
      */
     public CapabilityResolver switchingOff(Set<TravelMethod> methods) {
-        Set<TravelMethod> wanted = methods == null || methods.isEmpty()
-                ? Collections.<TravelMethod>emptySet()
+        Set<TravelMethod> wanted = methods == null || methods.isEmpty() ? Collections.<TravelMethod>emptySet()
                 : Collections.unmodifiableSet(EnumSet.copyOf(methods));
-        return wanted.equals(switchedOff) ? this
-                : new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house,
+        return wanted.equals(switchedOff) ? this : new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house,
                         readsPosition, wanted, houseDeclared, taken);
     }
 
@@ -165,11 +122,9 @@ public final class CapabilityResolver {
      * out.
      */
     public CapabilityResolver declaringHouse(Set<Capability> declared) {
-        Set<Capability> wanted = declared == null || declared.isEmpty()
-                ? Collections.<Capability>emptySet()
+        Set<Capability> wanted = declared == null || declared.isEmpty() ? Collections.<Capability>emptySet()
                 : Collections.unmodifiableSet(EnumSet.copyOf(declared));
-        return wanted.equals(houseDeclared) ? this
-                : new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house,
+        return wanted.equals(houseDeclared) ? this : new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house,
                         readsPosition, switchedOff, wanted, taken);
     }
 
@@ -180,8 +135,7 @@ public final class CapabilityResolver {
      */
     public CapabilityResolver travelling(TravelTaken spent) {
         TravelTaken wanted = spent != null ? spent : TravelTaken.NONE;
-        return wanted.equals(taken) ? this
-                : new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house,
+        return wanted.equals(taken) ? this : new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house,
                         readsPosition, switchedOff, houseDeclared, wanted);
     }
 
@@ -213,16 +167,14 @@ public final class CapabilityResolver {
         if (readsPosition && taken.reached(destination)) {
             return teleported(destination);
         }
-        return TeleportPlanner.best(destination, state, onBook, readsPosition,
-                tabletsOff(destination));
+        return TeleportPlanner.best(destination, state, onBook, readsPosition, tabletsOff(destination));
     }
 
     /**
      * {@link #teleport}, for the place a rung arrives at: by Spellbook Swap where the rung
      * names the swap.
      */
-    public TeleportPlanner.Choice teleportFor(Requirement rung, Destination destination,
-            PlayerState state) {
+    public TeleportPlanner.Choice teleportFor(Requirement rung, Destination destination, PlayerState state) {
         if (rung.contains(Requirement.reachBySwap(destination))) {
             return bySwap(destination, state);
         }
@@ -234,8 +186,7 @@ public final class CapabilityResolver {
      * place's zone.
      */
     private static TeleportPlanner.Choice teleported(Destination destination) {
-        return new TeleportPlanner.Choice(null, CapabilityState.HAVE,
-                "you have teleported to " + destination.getDisplayName());
+        return new TeleportPlanner.Choice(null, CapabilityState.HAVE, "you have teleported to " + destination.getDisplayName());
     }
 
     /**
@@ -251,8 +202,7 @@ public final class CapabilityResolver {
         if (switchedOff.contains(TravelMethod.TELEPORT_TABLETS)) {
             return TravelMethod.TELEPORT_TABLETS;
         }
-        if (destination == Destination.SALVE_GRAVEYARD
-                && switchedOff.contains(TravelMethod.SALVE_GRAVEYARD_TABLETS)) {
+        if (destination == Destination.SALVE_GRAVEYARD && switchedOff.contains(TravelMethod.SALVE_GRAVEYARD_TABLETS)) {
             return TravelMethod.SALVE_GRAVEYARD_TABLETS;
         }
         return null;
@@ -261,8 +211,7 @@ public final class CapabilityResolver {
     /** {@link TeleportPlanner#bySwap}, unless the player has switched the swap off. */
     private TeleportPlanner.Choice bySwap(Destination destination, PlayerState state) {
         if (switchedOff.contains(TravelMethod.SPELLBOOK_SWAP)) {
-            return new TeleportPlanner.Choice(null, CapabilityState.LACK,
-                    TravelMethod.SPELLBOOK_SWAP.switchedOffReason());
+            return new TeleportPlanner.Choice(null, CapabilityState.LACK, TravelMethod.SPELLBOOK_SWAP.switchedOffReason());
         }
         if (readsPosition && taken.reached(destination)) {
             return teleported(destination);
@@ -277,8 +226,7 @@ public final class CapabilityResolver {
     public CapabilityVerdict resolve(Capability capability, PlayerState state) {
         TravelMethod off = switchFailing(capability);
         if (off != null) {
-            return CapabilityVerdict.lack(CapabilityVerdict.Source.DECLARED,
-                    off.switchedOffReason());
+            return CapabilityVerdict.lack(CapabilityVerdict.Source.DECLARED, off.switchedOffReason());
         }
         if (readsPosition && taken.used(capability)) {
             return CapabilityVerdict.have(CapabilityVerdict.Source.DETECTED,
@@ -300,19 +248,16 @@ public final class CapabilityResolver {
         if (needs != null && onBook != Spellbook.ANY && needs != onBook) {
             return CapabilityVerdict.lack(CapabilityVerdict.Source.DETECTED,
                     capability.getDisplayName() + " is on the " + needs.getDisplayName()
-                            + " spellbook. You are on the " + onBook.getDisplayName()
-                            + " spellbook");
+                            + " spellbook. You are on the " + onBook.getDisplayName() + " spellbook");
         }
         if (CapabilitySources.isDetectable(capability)) {
-            CapabilityVerdict detected =
-                    CapabilitySources.resolve(capability, state, sight, house, houseDeclared);
+            CapabilityVerdict detected = CapabilitySources.resolve(capability, state, sight, house, houseDeclared);
             // A rule can still answer UNKNOWN, e.g. a varbit the login scan has not read.
             if (detected.getState() != CapabilityState.UNKNOWN) {
                 return detected;
             }
         }
-        return CapabilityVerdict.unknown(
-                "not sure whether you have " + capability.getDisplayName());
+        return CapabilityVerdict.unknown("not sure whether you have " + capability.getDisplayName());
     }
 
     /**
@@ -333,8 +278,7 @@ public final class CapabilityResolver {
         // Substituting the held tier may only relax a ration, never impose one. An
         // Ardougne cloak 1's Monastery teleport is unlimited, and must not inherit cloak 2's
         // farm-teleport limit.
-        if (capability.isRationedDaily()
-                && capability.getTierFamily() != Capability.TierFamily.NONE) {
+        if (capability.isRationedDaily() && capability.getTierFamily() != Capability.TierFamily.NONE) {
             Set<Capability> owned = new HashSet<>();
             for (Capability tier : Capability.values()) {
                 if (tier.getTierFamily() == capability.getTierFamily()
@@ -361,8 +305,7 @@ public final class CapabilityResolver {
      * one is, so a rung like "run north from the Falador tree patch" is free for a player
      * going there anyway. A rung standing on an uncertain stop inherits its uncertainty.
      */
-    public CapabilityState evaluate(Requirement requirement, PlayerState state,
-            Map<PatchRef, CapabilityState> reachedPatches) {
+    public CapabilityState evaluate(Requirement requirement, PlayerState state, Map<PatchRef, CapabilityState> reachedPatches) {
         return evaluate(requirement, null, state, reachedPatches);
     }
 
@@ -384,29 +327,22 @@ public final class CapabilityResolver {
             case CAPABILITY:
                 return resolve(requirement.getCapability(), state).getState();
             case DESTINATION:
-                return (requirement.isBySwap()
-                        ? bySwap(requirement.getDestination(), state)
+                return (requirement.isBySwap() ? bySwap(requirement.getDestination(), state)
                         : teleport(requirement.getDestination(), state)).getState();
             case REACHED_PATCH:
-                return reachedPatches == null ? CapabilityState.LACK
-                        : reachedPatches.getOrDefault(requirement.getPatch(),
+                return reachedPatches == null ? CapabilityState.LACK : reachedPatches.getOrDefault(requirement.getPatch(),
                                 CapabilityState.LACK);
             // Never UNKNOWN: a wrongly assumed position costs the teleport the player did
             // not pack, so an unread region is a no.
             case STANDING_IN:
-                return readsPosition && state != null
-                        && requirement.getZone().covers(state.getRegionId())
-                        ? CapabilityState.HAVE
+                return readsPosition && state != null && requirement.getZone().covers(state.getRegionId()) ? CapabilityState.HAVE
                         : CapabilityState.LACK;
             case ALL:
-                return CapabilityState.all(
-                        evaluateParts(requirement, granted, state, reachedPatches));
+                return CapabilityState.all(evaluateParts(requirement, granted, state, reachedPatches));
             case ANY:
-                return CapabilityState.any(
-                        evaluateParts(requirement, granted, state, reachedPatches));
+                return CapabilityState.any(evaluateParts(requirement, granted, state, reachedPatches));
             default:
-                throw new IllegalArgumentException(
-                        "unknown requirement kind " + requirement.getKind());
+                throw new IllegalArgumentException("unknown requirement kind " + requirement.getKind());
         }
     }
 
@@ -424,13 +360,11 @@ public final class CapabilityResolver {
      * mentions. Under an "or" only the taken branch counts (see {@link #takenBranch}).
      * When no branch is settled, every capability the "or" mentions stands.
      */
-    public Set<Capability> reliedOn(Requirement requirement, PlayerState state,
-            Map<PatchRef, CapabilityState> reachedPatches) {
+    public Set<Capability> reliedOn(Requirement requirement, PlayerState state, Map<PatchRef, CapabilityState> reachedPatches) {
         switch (requirement.getKind()) {
             // A travel item already used up on the way has nothing left to pack.
             case CAPABILITY:
-                return readsPosition && taken.used(requirement.getCapability())
-                        ? Collections.emptySet()
+                return readsPosition && taken.used(requirement.getCapability()) ? Collections.emptySet()
                         : Collections.singleton(requirement.getCapability());
             // A destination is packed for from the teleport the planner chooses (see
             // reliedOnDestination). The other two name ground, not anything to bring.
@@ -453,8 +387,7 @@ public final class CapabilityResolver {
                 return requirement.leafCapabilities();
             }
             default:
-                throw new IllegalArgumentException(
-                        "unknown requirement kind " + requirement.getKind());
+                throw new IllegalArgumentException("unknown requirement kind " + requirement.getKind());
         }
     }
 
@@ -469,8 +402,7 @@ public final class CapabilityResolver {
      * unlike {@code reliedOn}'s widest-answer fallback, because a teleport named in error is a
      * consumable withdrawn and spent.
      */
-    public Destination reliedOnDestination(Requirement requirement, PlayerState state,
-            Map<PatchRef, CapabilityState> reachedPatches) {
+    public Destination reliedOnDestination(Requirement requirement, PlayerState state, Map<PatchRef, CapabilityState> reachedPatches) {
         switch (requirement.getKind()) {
             case DESTINATION:
                 return requirement.getDestination();
@@ -484,8 +416,7 @@ public final class CapabilityResolver {
                 return null;
             case ANY: {
                 Requirement taken = takenBranch(requirement, state, reachedPatches);
-                return taken == null ? null
-                        : reliedOnDestination(taken, state, reachedPatches);
+                return taken == null ? null : reliedOnDestination(taken, state, reachedPatches);
             }
             default:
                 return null;
@@ -503,12 +434,9 @@ public final class CapabilityResolver {
      * <p>Public so the planner can rank a rung by the walk of the way in it takes, from the
      * same answer the bag packs for.
      */
-    public Requirement takenBranch(Requirement requirement, PlayerState state,
-            Map<PatchRef, CapabilityState> reachedPatches) {
-        Requirement taken = firstMatching(requirement, state, reachedPatches,
-                CapabilityState.HAVE);
-        return taken != null ? taken
-                : firstMatching(requirement, state, reachedPatches, CapabilityState.UNKNOWN);
+    public Requirement takenBranch(Requirement requirement, PlayerState state, Map<PatchRef, CapabilityState> reachedPatches) {
+        Requirement taken = firstMatching(requirement, state, reachedPatches, CapabilityState.HAVE);
+        return taken != null ? taken : firstMatching(requirement, state, reachedPatches, CapabilityState.UNKNOWN);
     }
 
     /** The first part of an "or" in the state asked for. */
@@ -586,8 +514,7 @@ public final class CapabilityResolver {
                 return nearest;
             }
             default:
-                throw new IllegalArgumentException(
-                        "unknown requirement kind " + requirement.getKind());
+                throw new IllegalArgumentException("unknown requirement kind " + requirement.getKind());
         }
     }
 
@@ -613,8 +540,7 @@ public final class CapabilityResolver {
                 }
             }
         }
-        return capability.getDetectability() == Capability.Detectability.ITEM
-                && !CapabilitySources.isBarredFromGetting(capability, state)
+        return capability.getDetectability() == Capability.Detectability.ITEM && !CapabilitySources.isBarredFromGetting(capability, state)
                 ? Gap.ITEM : Gap.UNLOCK;
     }
 
@@ -626,22 +552,18 @@ public final class CapabilityResolver {
     private Gap gapToPlace(Requirement place, PlayerState state) {
         Destination destination = place.getDestination();
         boolean tablets = tabletsAllowed(destination);
-        TeleportPlanner.Choice choice = place.isBySwap()
-                ? bySwap(destination, state)
-                : teleport(destination, state);
+        TeleportPlanner.Choice choice = place.isBySwap() ? bySwap(destination, state) : teleport(destination, state);
         if (choice.getState() == CapabilityState.HAVE) {
             return Gap.NONE;
         }
         if (place.isBySwap()) {
-            return !switchedOff.contains(TravelMethod.SPELLBOOK_SWAP)
-                    && TeleportPlanner.isOpenBySwap(destination, state, onBook)
+            return !switchedOff.contains(TravelMethod.SPELLBOOK_SWAP) && TeleportPlanner.isOpenBySwap(destination, state, onBook)
                     ? Gap.TELEPORT : Gap.UNLOCK;
         }
         if (TeleportPlanner.wantsOnlyRunes(destination, state, onBook)) {
             return Gap.RESTOCK;
         }
-        return TeleportPlanner.isOpenToGet(destination, state, onBook, tablets)
-                ? Gap.TELEPORT : Gap.UNLOCK;
+        return TeleportPlanner.isOpenToGet(destination, state, onBook, tablets) ? Gap.TELEPORT : Gap.UNLOCK;
     }
 
     /**
@@ -660,8 +582,7 @@ public final class CapabilityResolver {
             TeleportPlanner.Choice choice = teleportFor(requirement, destination, state);
             // Varrock and the Grand Exchange share a spell and a tablet, so both can give
             // the same reason; it reads once.
-            if (choice.getState() != CapabilityState.HAVE
-                    && !missing.contains(choice.getBecause())) {
+            if (choice.getState() != CapabilityState.HAVE && !missing.contains(choice.getBecause())) {
                 missing.add(choice.getBecause());
             }
         }
@@ -687,8 +608,7 @@ public final class CapabilityResolver {
      * landing is no way in, and naming it would point the player at a landing they cannot
      * choose, or spend one of the two reasons on it.
      */
-    private void collectExplained(Requirement requirement, PlayerState state,
-            Set<Destination> places, Set<Capability> capabilities) {
+    private void collectExplained(Requirement requirement, PlayerState state, Set<Destination> places, Set<Capability> capabilities) {
         switch (requirement.getKind()) {
             case DESTINATION:
                 places.add(requirement.getDestination());
@@ -724,9 +644,7 @@ public final class CapabilityResolver {
             return false;
         }
         for (Requirement part : way.getParts()) {
-            if (part.getKind() == Requirement.Kind.CAPABILITY
-                    && resolve(part.getCapability(), state).getState()
-                            == CapabilityState.LACK) {
+            if (part.getKind() == Requirement.Kind.CAPABILITY && resolve(part.getCapability(), state).getState() == CapabilityState.LACK) {
                 return true;
             }
         }

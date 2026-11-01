@@ -2,18 +2,9 @@ package com.larryfarming.farming.detection;
 
 import com.larryfarming.engine.ItemCounts;
 import com.larryfarming.farming.catalogue.Teleports;
-import com.larryfarming.farming.model.Destination;
-import com.larryfarming.farming.model.Rune;
-import com.larryfarming.farming.model.Spellbook;
-import com.larryfarming.farming.model.TeleportMeans;
-import com.larryfarming.farming.model.TravelMethod;
-import com.larryfarming.farming.model.Zone;
-import com.larryfarming.model.PlayerState;
-import com.larryfarming.model.QuestStatus;
-import com.larryfarming.model.Skill;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import com.larryfarming.farming.model.*;
+import com.larryfarming.model.*;
+import java.util.*;
 import lombok.Value;
 
 /**
@@ -56,41 +47,19 @@ public final class TeleportPlanner {
      * @param readsPosition whether the player's own position may answer this. False for a
      *               stop further down the trip, which the player will have left this place
      *               long before reaching — see {@link CapabilityResolver#blindToPosition()}
-     */
-    public static Choice best(Destination destination, PlayerState state, Spellbook onBook,
-            boolean readsPosition) {
-        return best(destination, state, onBook, readsPosition, true);
-    }
-
-    /**
-     * The same, with the player's say over tablets.
-     *
-     * <p>{@link CapabilityResolver} passes the standard book until the login read of the
-     * spellbook varbit, so a refused tablet answers LACK in that window even for a player on
-     * the Arceuus book.
-     *
-     * @param tablets false when the player refuses this place's tablet. The tablet then
-     *               never answers, owned or not, and with no spell on the open book the
-     *               place is out of reach whatever the bank holds.
-     */
-    public static Choice best(Destination destination, PlayerState state, Spellbook onBook,
-            boolean readsPosition, boolean tablets) {
-        return best(destination, state, onBook, readsPosition,
-                tablets ? null : TravelMethod.TELEPORT_TABLETS);
-    }
-
-    /**
-     * The same, naming the switch that refuses this place's tablet, so a shortfall can say
-     * which one the player turned off.
-     *
-     * @param tabletsOff the switch refusing this place's tablet, or null while it is allowed
+     * @param tabletsOff the switch refusing this place's tablet, or null while it is allowed.
+     *               A refused tablet never answers, owned or not, and with no spell on the
+     *               open book the place is out of reach whatever the bank holds. Naming the
+     *               switch lets a shortfall say which one the player turned off.
+     *               {@link CapabilityResolver} passes the standard book until the login read
+     *               of the spellbook varbit, so a refused tablet answers LACK in that window
+     *               even for a player on the Arceuus book.
      */
     public static Choice best(Destination destination, PlayerState state, Spellbook onBook,
             boolean readsPosition, TravelMethod tabletsOff) {
         boolean tablets = tabletsOff == null;
         if (state == null) {
-            return new Choice(null, CapabilityState.UNKNOWN,
-                    "not sure how you would reach " + destination.getDisplayName());
+            return new Choice(null, CapabilityState.UNKNOWN, "not sure how you would reach " + destination.getDisplayName());
         }
 
         // Already there: no means, so the bag asks for no runes or tablet. This removes a
@@ -98,8 +67,7 @@ public final class TeleportPlanner {
         // Zone.covers reads an unknown region as a no.
         Zone zone = destination.getZone();
         if (readsPosition && zone != null && zone.covers(state.getRegionId())) {
-            return new Choice(null, CapabilityState.HAVE,
-                    "you are already at " + zone.getDisplayName());
+            return new Choice(null, CapabilityState.HAVE, "you are already at " + zone.getDisplayName());
         }
 
         TeleportMeans unconfirmed = null;
@@ -141,18 +109,14 @@ public final class TeleportPlanner {
         // Checked before the unseen bank: with the tablet refused and no spell on this
         // book, nothing the bank could hold would change the answer.
         if (!tablets && !hasSpellOn(destination, onBook)) {
-            return new Choice(null, CapabilityState.LACK,
-                    "you switched off tablets to " + destination.getDisplayName());
+            return new Choice(null, CapabilityState.LACK, "you switched off tablets to " + destination.getDisplayName());
         }
         // An unseen bank cannot prove the player is out of tablets or runes, so answer
         // UNKNOWN like every item rule. LACK here drops the stop's patches from the run.
         if (state.getBankLastSeen() == null) {
-            return new Choice(null, CapabilityState.UNKNOWN,
-                    "open your bank to check your teleports to "
-                            + destination.getDisplayName());
+            return new Choice(null, CapabilityState.UNKNOWN, "open your bank to check your teleports to " + destination.getDisplayName());
         }
-        return new Choice(null, CapabilityState.LACK,
-                shortfall(destination, state, onBook, tabletsOff));
+        return new Choice(null, CapabilityState.LACK, shortfall(destination, state, onBook, tabletsOff));
     }
 
     private static boolean owns(TeleportMeans tablet, PlayerState state) {
@@ -180,25 +144,20 @@ public final class TeleportPlanner {
      *
      * @param onBook the book the swap is cast from, which must be the swap's own
      */
-    public static Choice bySwap(Destination destination, PlayerState state, Spellbook onBook,
-            boolean readsPosition) {
+    public static Choice bySwap(Destination destination, PlayerState state, Spellbook onBook, boolean readsPosition) {
         if (state == null) {
-            return new Choice(null, CapabilityState.UNKNOWN,
-                    "not sure how you would reach " + destination.getDisplayName());
+            return new Choice(null, CapabilityState.UNKNOWN, "not sure how you would reach " + destination.getDisplayName());
         }
         Zone zone = destination.getZone();
         if (readsPosition && zone != null && zone.covers(state.getRegionId())) {
-            return new Choice(null, CapabilityState.HAVE,
-                    "you are already at " + zone.getDisplayName());
+            return new Choice(null, CapabilityState.HAVE, "you are already at " + zone.getDisplayName());
         }
         TeleportMeans swap = Teleports.bySwap(destination);
         if (swap == null) {
-            return new Choice(null, CapabilityState.LACK, "no spell on another spellbook reaches "
-                    + destination.getDisplayName());
+            return new Choice(null, CapabilityState.LACK, "no spell on another spellbook reaches " + destination.getDisplayName());
         }
         if (onBook != swap.getSpellbook()) {
-            return new Choice(null, CapabilityState.LACK,
-                    Teleports.SPELLBOOK_SWAP.getDisplayName() + " is on the "
+            return new Choice(null, CapabilityState.LACK, Teleports.SPELLBOOK_SWAP.getDisplayName() + " is on the "
                             + swap.getSpellbook().getDisplayName() + " spellbook");
         }
         Choice locked = locked(swap, state);
@@ -212,8 +171,7 @@ public final class TeleportPlanner {
         if (missing == null) {
             return new Choice(swap, CapabilityState.HAVE, "you can cast " + swap.getDisplayName());
         }
-        return state.getBankLastSeen() == null
-                ? new Choice(swap, CapabilityState.UNKNOWN,
+        return state.getBankLastSeen() == null ? new Choice(swap, CapabilityState.UNKNOWN,
                         "open your bank to check your runes for " + swap.getDisplayName())
                 : new Choice(swap, CapabilityState.LACK, shortReason(missing, swap));
     }
@@ -231,8 +189,7 @@ public final class TeleportPlanner {
         if (missing != null) {
             return new Choice(means, CapabilityState.LACK, shortReason(missing, means));
         }
-        return new Choice(means, CapabilityState.HAVE,
-                "you can cast " + means.getDisplayName());
+        return new Choice(means, CapabilityState.HAVE, "you can cast " + means.getDisplayName());
     }
 
     /**
@@ -243,20 +200,17 @@ public final class TeleportPlanner {
     private static Choice locked(TeleportMeans means, PlayerState state) {
         int magic = state.getSkillLevel(Skill.MAGIC);
         if (magic < means.getMagicLevel()) {
-            return new Choice(means, CapabilityState.LACK,
-                    means.getDisplayName() + " needs " + means.getMagicLevel()
+            return new Choice(means, CapabilityState.LACK, means.getDisplayName() + " needs " + means.getMagicLevel()
                             + " Magic and you have " + magic);
         }
         if (means.getQuestName() != null) {
             QuestStatus status = state.getQuests().get(means.getQuestName());
             if (status == null) {
-                return new Choice(means, CapabilityState.UNKNOWN,
-                        "not sure whether you have finished " + means.getQuestName()
+                return new Choice(means, CapabilityState.UNKNOWN, "not sure whether you have finished " + means.getQuestName()
                                 + ", which " + means.getDisplayName() + " needs");
             }
             if (status != QuestStatus.COMPLETED) {
-                return new Choice(means, CapabilityState.LACK,
-                        means.getDisplayName() + " needs " + means.getQuestName());
+                return new Choice(means, CapabilityState.LACK, means.getDisplayName() + " needs " + means.getQuestName());
             }
         }
         return null;
@@ -277,14 +231,12 @@ public final class TeleportPlanner {
      * Whether a spell on the open book reaches this place and only runes keep the player from
      * casting it: its level and quest are met. False with no state to read.
      */
-    public static boolean wantsOnlyRunes(Destination destination, PlayerState state,
-            Spellbook onBook) {
+    public static boolean wantsOnlyRunes(Destination destination, PlayerState state, Spellbook onBook) {
         if (state == null) {
             return false;
         }
         for (TeleportMeans means : Teleports.to(destination)) {
-            if (means.isSpell() && means.getSpellbook() == onBook
-                    && locked(means, state) == null && shortOf(means, state) != null) {
+            if (means.isSpell() && means.getSpellbook() == onBook && locked(means, state) == null && shortOf(means, state) != null) {
                 return true;
             }
         }
@@ -298,15 +250,12 @@ public final class TeleportPlanner {
      *
      * @param tablets false when the player refuses this place's tablet
      */
-    public static boolean isOpenToGet(Destination destination, PlayerState state,
-            Spellbook onBook, boolean tablets) {
+    public static boolean isOpenToGet(Destination destination, PlayerState state, Spellbook onBook, boolean tablets) {
         if (state == null) {
             return true;
         }
         for (TeleportMeans means : Teleports.to(destination)) {
-            boolean offered = means.isTablet()
-                    ? tablets
-                    : means.isSpell() && means.getSpellbook() == onBook;
+            boolean offered = means.isTablet() ? tablets : means.isSpell() && means.getSpellbook() == onBook;
             if (offered && !questBarred(means, state)) {
                 return true;
             }
@@ -318,14 +267,12 @@ public final class TeleportPlanner {
      * {@link #isOpenToGet} for a Spellbook Swap rung: the swap is cast from the open book,
      * and neither it nor the spell it borrows waits on an unfinished quest.
      */
-    public static boolean isOpenBySwap(Destination destination, PlayerState state,
-            Spellbook onBook) {
+    public static boolean isOpenBySwap(Destination destination, PlayerState state, Spellbook onBook) {
         TeleportMeans swap = Teleports.bySwap(destination);
         if (swap == null || swap.getSpellbook() != onBook) {
             return false;
         }
-        return state == null
-                || (!questBarred(swap, state) && !questBarred(swap.getSwappedSpell(), state));
+        return state == null || (!questBarred(swap, state) && !questBarred(swap.getSwappedSpell(), state));
     }
 
     /** True when the player is seen short of this spell's or tablet's quest. */
@@ -338,31 +285,24 @@ public final class TeleportPlanner {
     }
 
     private static String shortReason(Rune rune, TeleportMeans means) {
-        return "you are short of " + rune.getDisplayName().toLowerCase() + "s for "
-                + means.getDisplayName();
+        return "you are short of " + rune.getDisplayName().toLowerCase() + "s for " + means.getDisplayName();
     }
 
     /**
      * Why nothing works, one reason per means. An off-book spell is reported as being on
      * another spellbook, never as a missing requirement the player may already have.
      */
-    private static String shortfall(Destination destination, PlayerState state,
-            Spellbook onBook, TravelMethod tabletsOff) {
+    private static String shortfall(Destination destination, PlayerState state, Spellbook onBook, TravelMethod tabletsOff) {
         // A set: one switch can refuse several tablets, and its reason reads once.
         Set<String> reasons = new LinkedHashSet<>();
         for (TeleportMeans means : Teleports.to(destination)) {
             if (means.isTablet()) {
-                Choice locked = tabletsOff == null && owns(means, state)
-                        ? locked(means, state) : null;
-                reasons.add(tabletsOff != null
-                        ? tabletsOff.switchedOffReason()
-                        : locked != null
-                                ? locked.getBecause()
+                Choice locked = tabletsOff == null && owns(means, state) ? locked(means, state) : null;
+                reasons.add(tabletsOff != null ? tabletsOff.switchedOffReason() : locked != null ? locked.getBecause()
                                 // Tablets lead with a place, so the name keeps its capital.
                                 : "you have no " + means.getDisplayName());
             } else if (means.getSpellbook() != onBook) {
-                reasons.add(means.getDisplayName() + " is on the "
-                        + means.getSpellbook().getDisplayName() + " spellbook");
+                reasons.add(means.getDisplayName() + " is on the " + means.getSpellbook().getDisplayName() + " spellbook");
             } else {
                 reasons.add(castable(means, state).getBecause());
             }

@@ -1,0 +1,97 @@
+# Every capability's attributes, one row per Capability constant (the constants and what
+# each means stay in Java): its name for a player, phrased as the game phrases it; how it
+# can be answered from game state; how many times a day it can be used, 0 for no cap; and,
+# for items that are upgrades of one another, its family and its tier, higher being better.
+#
+# capability	name	detectability	daily uses	tier family	tier
+ARDOUGNE_CLOAK_1	Ardougne cloak 1	VARBIT	0	ARDOUGNE_CLOAK	1
+ARDOUGNE_CLOAK_2	Ardougne cloak 2	VARBIT	3	ARDOUGNE_CLOAK	2
+ARDOUGNE_CLOAK_3	Ardougne cloak 3	VARBIT	5	ARDOUGNE_CLOAK	3
+ARDOUGNE_CLOAK_4	Ardougne cloak 4	VARBIT	0	ARDOUGNE_CLOAK	4
+EXPLORERS_RING_2	Explorer's ring 2	VARBIT	3	EXPLORERS_RING	2
+EXPLORERS_RING_3	Explorer's ring 3	VARBIT	0	EXPLORERS_RING	3
+EXPLORERS_RING_4	Explorer's ring 4	VARBIT	0	EXPLORERS_RING	4
+DIARY_CAPE	Achievement diary cape	ITEM	0	NONE	0
+VARROCK_DIARY_MEDIUM	Medium Varrock diary	VARBIT	0	NONE	0
+FARMING_CAPE	Farming cape	ITEM	0	NONE	0
+CONSTRUCTION_CAPE	Construction cape	ITEM	0	NONE	0
+HUNTER_CAPE	Hunter cape	ITEM	0	NONE	0
+FISHING_CAPE	Fishing cape	ITEM	0	NONE	0
+QUEST_CAPE	Quest point cape	ITEM	0	NONE	0
+SKILLS_NECKLACE	Skills necklace	ITEM	0	NONE	0
+GAMES_NECKLACE	Games necklace	ITEM	0	NONE	0
+COMBAT_BRACELET	Combat bracelet	ITEM	0	NONE	0
+RING_OF_DUELING	Ring of dueling	ITEM	0	NONE	0
+RING_OF_WEALTH	Ring of wealth	ITEM	0	NONE	0
+RING_OF_THE_ELEMENTS	Ring of the elements	ITEM	0	NONE	0
+SLAYER_RING	Slayer ring	ITEM	0	NONE	0
+ROYAL_SEED_POD	Royal seed pod	ITEM	0	NONE	0
+XERICS_TALISMAN	Xeric's talisman	ITEM	0	NONE	0
+KHAREDSTS_MEMOIRS	Kharedst's memoirs	ITEM	0	NONE	0
+BOOK_OF_THE_DEAD	Book of the Dead	ITEM	0	NONE	0
+DIGSITE_PENDANT	Digsite pendant	ITEM	0	NONE	0
+TELEPORT_CRYSTAL	Teleport crystal	ITEM	0	NONE	0
+CHRONICLE	Chronicle	ITEM	0	NONE	0
+ECTOPHIAL	Ectophial	ITEM	0	NONE	0
+ICY_BASALT	Icy basalt	ITEM	0	NONE	0
+STONY_BASALT	Stony basalt	ITEM	0	NONE	0
+MOKHAIOTL_WAYSTONE	Mokhaiotl waystone	ITEM	0	NONE	0
+BRIMHAVEN_TABLET	Brimhaven teleport tablet	ITEM	0	NONE	0
+RESPAWN_TELEPORT	Respawn Teleport	VARBIT	0	NONE	0
+FERTILE_SOIL	Fertile Soil	VARBIT	0	NONE	0
+RESPAWN_AVAILABLE_CAMELOT	Camelot respawn point	VARBIT	0	NONE	0
+RESPAWN_AVAILABLE_FALADOR	Falador respawn point	VARBIT	0	NONE	0
+FAIRY_RINGS	Fairy rings	VARBIT	0	NONE	0
+STAFFLESS_FAIRY_RINGS	Fairy rings without a staff	VARBIT	0	NONE	0
+VARLAMORE_FAIRY_RINGS	Varlamore fairy rings	VARBIT	0	NONE	0
+VARLAMORE_ACCESS	Access to Varlamore	VARBIT	0	NONE	0
+GNOME_GLIDER	Gnome glider	VARBIT	0	NONE	0
+BALLOON_STATION_TAVERLEY	Taverley balloon station	VARBIT	0	NONE	0
+BALLOON_STATION_CASTLE_WARS	Castle Wars balloon station	VARBIT	0	NONE	0
+BALLOON_STATION_GRAND_TREE	Grand Tree balloon station	VARBIT	0	NONE	0
+BALLOON_STATION_VARROCK	Varrock balloon station	VARBIT	0	NONE	0
+LOVAKENGJ_MINECART	Lovakengj minecart network	VARBIT	0	NONE	0
+CHARTER_SHIP	Charter ship	VARBIT	0	NONE	0
+QUETZAL_WHISTLE	Quetzal whistle	ITEM	0	NONE	0
+RENU	Renu, your quetzal	VARBIT	0	NONE	0
+QUETZAL_SITE_KASTORI	Kastori quetzal landing site	VARBIT	0	NONE	0
+MOUNTAIN_GUIDE	Mountain guide	VARBIT	0	NONE	0
+CANAL_BARGE	Canal barge to Fossil Island	VARBIT	0	NONE	0
+HARMONY_ISLAND_ACCESS	Access to Harmony Island	VARBIT	0	NONE	0
+FOSSIL_ISLAND_ZIPLINE	Fossil Island zipline	SKILL	0	NONE	0
+TAVERLEY_CLIMBING_ROCKS	Taverley climbing rocks	SKILL	0	NONE	0
+PENDANT_OF_ATES	Pendant of Ates	ITEM	0	NONE	0
+ATES_STATUE_KASTORI	Kastori statue activated	VARBIT	0	NONE	0
+ATES_STATUE_NEMUS_RETREAT	Nemus Retreat statue activated	VARBIT	0	NONE	0
+SAILORS_AMULET	Sailors' amulet	ITEM	0	NONE	0
+POH_IN_HOSIDIUS	House in Hosidius	VARBIT	0	NONE	0
+POH_IN_BRIMHAVEN	House in Brimhaven	VARBIT	0	NONE	0
+POH_IN_TAVERLEY	House in Taverley	VARBIT	0	NONE	0
+POH_PORTAL_WEISS	House portal to Weiss	SEEN	0	NONE	0
+POH_PORTAL_TROLL_STRONGHOLD	House portal to the Troll Stronghold	SEEN	0	NONE	0
+POH_PORTAL_KOUREND	House portal to Kourend	SEEN	0	NONE	0
+POH_PORTAL_FENKENSTRAIN	House portal to Fenkenstrain's Castle	SEEN	0	NONE	0
+POH_PORTAL_HARMONY	House portal to Harmony Island	SEEN	0	NONE	0
+POH_NEXUS_WEISS	Weiss attuned in your Portal Nexus	SEEN	0	NONE	0
+POH_NEXUS_HARMONY	Harmony Island attuned in your Portal Nexus	SEEN	0	NONE	0
+POH_NEXUS_TROLL_STRONGHOLD	Troll Stronghold attuned in your Portal Nexus	SEEN	0	NONE	0
+POH_SPIRIT_TREE	Spirit tree in your house	SEEN	0	NONE	0
+POH_FAIRY_RING	Fairy ring in your house	SEEN	0	NONE	0
+NECKLACE_OF_PASSAGE	Necklace of passage	ITEM	0	NONE	0
+SPIRIT_TREE_NETWORK	Spirit tree network	VARBIT	0	NONE	0
+SPIRIT_TREE_STRONGHOLD	Gnome Stronghold spirit tree	VARBIT	0	NONE	0
+SPIRIT_TREE_GROWN_BRIMHAVEN	Grown spirit tree in Brimhaven	VARBIT	0	NONE	0
+SPIRIT_TREE_GROWN_FARMING_GUILD	Grown spirit tree in the Farming Guild	VARBIT	0	NONE	0
+SPIRIT_TREE_GROWN_PORT_SARIM	Grown spirit tree in Port Sarim	VARBIT	0	NONE	0
+LLETYA_ACCESS	Access to Lletya	VARBIT	0	NONE	0
+MORYTANIA_ACCESS	Access to Morytania	VARBIT	0	NONE	0
+TROLL_STRONGHOLD_HERB_PATCH	Troll Stronghold herb patch	VARBIT	0	NONE	0
+WEISS_HERB_PATCH	Fire of nourishment at Weiss	VARBIT	0	NONE	0
+LOCUS_OASIS_PATCH	Locus Oasis hardwood patches	VARBIT	0	NONE	0
+GREAT_CONCH_ACCESS	Access to the Great Conch	VARBIT	0	NONE	0
+BOTTOMLESS_COMPOST_BUCKET	Bottomless compost bucket	ITEM	0	NONE	0
+ULTRACOMPOST	Ultracompost	ITEM	0	NONE	0
+MAGIC_SECATEURS	Magic secateurs	ITEM	0	NONE	0
+SEED_DIBBER	Seed dibber	ITEM	0	NONE	0
+SPADE	Spade	ITEM	0	NONE	0
+BARE_HAND_PLANTING	Barbarian planting	VARBIT	0	NONE	0

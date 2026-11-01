@@ -1,16 +1,13 @@
 package com.larryfarming.panel;
 
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Graphics;
-import java.awt.LayoutManager;
+import java.awt.*;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 
 /**
  * The colour of the game's inventory panel, painted behind the slots of an item grid.
  *
- * <p>Only slot cells are filled. The gaps between them keep the tab's own background.
+ * <p>Only slot cells are filled. The gaps between them keep the panel's own background.
  *
  * <p>A flat colour, not the sprite: the inventory sprite carries a bevel and shading that
  * show up as artifacts when tiled or scaled into a sidebar grid. The colour still comes from
@@ -65,8 +62,7 @@ class InventoryBackdrop extends JPanel
 		for (int i = 0, count = getComponentCount(); i < count; i++)
 		{
 			Component child = getComponent(i);
-			if (!(child instanceof JComponent)
-				|| ((JComponent) child).getClientProperty(SLOT) == null)
+			if (!(child instanceof JComponent) || ((JComponent) child).getClientProperty(SLOT) == null)
 			{
 				continue;
 			}

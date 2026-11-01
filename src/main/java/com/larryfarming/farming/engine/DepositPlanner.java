@@ -1,24 +1,14 @@
 package com.larryfarming.farming.engine;
 
-import com.larryfarming.engine.ItemCounts;
-import com.larryfarming.engine.RunePouch;
-import com.larryfarming.engine.SeedBox;
+import com.larryfarming.engine.*;
 import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.farming.catalogue.CarryItems;
 import com.larryfarming.farming.catalogue.CropData;
-import com.larryfarming.farming.detection.RingEnergyCharges;
 import com.larryfarming.model.ItemStack;
 import com.larryfarming.model.PlayerState;
-import com.larryfarming.snapshot.FarmingAdvice;
-import com.larryfarming.snapshot.FarmingCarryItem;
-import com.larryfarming.snapshot.FarmingStopAdvice;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import com.larryfarming.snapshot.*;
+import java.util.*;
+import lombok.*;
 import net.runelite.api.gameval.ItemID;
 
 /**
@@ -40,43 +30,23 @@ public final class DepositPlanner {
     private DepositPlanner() {
     }
 
-    private static final int COINS = 995;
-
     /** What the trip has packed so far, and the bag it was packed from. */
+    @Getter
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static final class TripRecord {
 
         /** Nothing seen yet. */
         public static final TripRecord EMPTY = new TripRecord(Set.of(), Map.of(), true);
 
+        /** The item ids Larry asked for that the player fetched for this trip. */
         private final Set<Integer> packed;
+        /** The fewest of each item the bag held while packing, by item id. */
         private final Map<Integer, Integer> lowest;
+        /** Whether the advice this record last read was underway. */
         private final boolean underway;
 
-        private TripRecord(Set<Integer> packed, Map<Integer, Integer> lowest,
-                boolean underway) {
-            this.packed = packed;
-            this.lowest = lowest;
-            this.underway = underway;
-        }
-
-        /** The item ids Larry asked for that the player fetched for this trip. */
-        public Set<Integer> getPacked() {
-            return packed;
-        }
-
-        /** The fewest of each item the bag held while packing, by item id. */
-        public Map<Integer, Integer> getLowest() {
-            return lowest;
-        }
-
-        /** Whether the advice this record last read was underway. */
-        public boolean isUnderway() {
-            return underway;
-        }
-
         /** A record as {@link #getPacked}, {@link #getLowest} and {@link #isUnderway} read it. */
-        public static TripRecord of(Set<Integer> packed, Map<Integer, Integer> lowest,
-                boolean underway) {
+        public static TripRecord of(Set<Integer> packed, Map<Integer, Integer> lowest, boolean underway) {
             return new TripRecord(Set.copyOf(packed), Map.copyOf(lowest), underway);
         }
     }
@@ -119,12 +89,11 @@ public final class DepositPlanner {
         Set<Integer> packed = built.isUnderway() ? new HashSet<>(before.packed) : new HashSet<>();
         for (Map.Entry<Integer, Integer> held : counts.entrySet()) {
             int itemId = held.getKey();
-            if (itemId != COINS && asked.contains(itemId)
-                    && held.getValue() > lowest.getOrDefault(itemId, 0)) {
+            if (itemId != ItemID.COINS && asked.contains(itemId) && held.getValue() > lowest.getOrDefault(itemId, 0)) {
                 packed.add(itemId);
             }
         }
-        return new TripRecord(Set.copyOf(packed), Map.copyOf(lowest), built.isUnderway());
+        return TripRecord.of(packed, lowest, built.isUnderway());
     }
 
     /** Every form of everything the packing list and the bank rows name. */
@@ -132,8 +101,7 @@ public final class DepositPlanner {
         Set<Integer> asked = new HashSet<>();
         List<List<FarmingCarryItem>> lists = new ArrayList<>();
         lists.add(built.getCarry() == null ? List.of() : built.getCarry());
-        for (FarmingStopAdvice stop : built.getStops() == null
-                ? List.<FarmingStopAdvice>of() : built.getStops()) {
+        for (FarmingStopAdvice stop : built.getStops() == null ? List.<FarmingStopAdvice>of() : built.getStops()) {
             if (stop.getWithdraw() != null) {
                 lists.add(stop.getWithdraw());
             }
@@ -155,12 +123,9 @@ public final class DepositPlanner {
      * the patch never gives.
      */
     private static final Set<Integer> GRIMY_HERBS = Set.of(ItemID.UNIDENTIFIED_GUAM,
-            ItemID.UNIDENTIFIED_MARENTILL, ItemID.UNIDENTIFIED_TARROMIN,
-            ItemID.UNIDENTIFIED_HARRALANDER, ItemID.UNIDENTIFIED_RANARR,
-            ItemID.UNIDENTIFIED_TOADFLAX, ItemID.UNIDENTIFIED_IRIT,
-            ItemID.UNIDENTIFIED_AVANTOE, ItemID.UNIDENTIFIED_KWUARM,
-            ItemID.UNIDENTIFIED_SNAPDRAGON, ItemID.UNIDENTIFIED_HUASCA,
-            ItemID.UNIDENTIFIED_CADANTINE, ItemID.UNIDENTIFIED_LANTADYME,
+            ItemID.UNIDENTIFIED_MARENTILL, ItemID.UNIDENTIFIED_TARROMIN, ItemID.UNIDENTIFIED_HARRALANDER, ItemID.UNIDENTIFIED_RANARR,
+            ItemID.UNIDENTIFIED_TOADFLAX, ItemID.UNIDENTIFIED_IRIT, ItemID.UNIDENTIFIED_AVANTOE, ItemID.UNIDENTIFIED_KWUARM,
+            ItemID.UNIDENTIFIED_SNAPDRAGON, ItemID.UNIDENTIFIED_HUASCA, ItemID.UNIDENTIFIED_CADANTINE, ItemID.UNIDENTIFIED_LANTADYME,
             ItemID.UNIDENTIFIED_DWARF_WEED, ItemID.UNIDENTIFIED_TORSTOL);
 
     /** What farming hands back: each produce id, the logs of a felled tree among them. */
@@ -195,15 +160,6 @@ public final class DepositPlanner {
         for (FarmingCarryItem line : neededLater) {
             keep.addAll(CarryPlanner.formsOf(line.getItemId()));
         }
-        // The Explorer's ring stays while it has a restore left today. The bar recovers after
-        // a restore and drains again before the trip ends, so the ring's own line comes and
-        // goes; banking it in between would leave the next restore at the bank. Spent, it goes.
-        RingEnergyCharges.Charges ring = RingEnergyCharges.of(state);
-        if (ring != null && ring.getRestoresLeft() > 0) {
-            for (int id : RingEnergyCharges.ringItemIds()) {
-                keep.add(id);
-            }
-        }
 
         Map<Integer, Integer> counts = new LinkedHashMap<>();
         Map<Integer, String> names = new LinkedHashMap<>();
@@ -235,31 +191,28 @@ public final class DepositPlanner {
             }
             // No count on the tile: the whole stack goes back, and a count that ticks up with
             // every herb picked would redraw the route mid-harvest.
-            deposits.add(new FarmingCarryItem(
-                    travel ? FarmingCarryItem.Kind.TRAVEL : FarmingCarryItem.Kind.TOOL,
-                    itemId, names.get(itemId), 0,
-                    FarmingCarryItem.Availability.CARRIED, "", "", held.getValue()));
+            deposits.add(new FarmingCarryItem(travel ? FarmingCarryItem.Kind.TRAVEL : FarmingCarryItem.Kind.TOOL,
+                    itemId, names.get(itemId), 0, FarmingCarryItem.Availability.CARRIED, "", "", held.getValue()));
         }
         return deposits;
     }
 
     /** What the run itself leaves in the bag: pots, buckets, produce and roots. */
     static boolean leftBehind(int itemId) {
-        return itemId == ItemID.PLANTPOT_EMPTY || itemId == ItemID.BUCKET_EMPTY
-                || ROOTS.contains(itemId) || PRODUCE.contains(itemId)
+        return itemId == ItemID.PLANTPOT_EMPTY || itemId == ItemID.BUCKET_EMPTY || ROOTS.contains(itemId) || PRODUCE.contains(itemId)
                 || GRIMY_HERBS.contains(itemId);
     }
 
     /** Items that take a slot each however many: compost buckets and plant cure. */
-    private static final Set<Integer> ONE_SLOT_EACH = Set.of(6032, 6034, 21483, 6036);
+    private static final Set<Integer> ONE_SLOT_EACH = Set.of(ItemID.BUCKET_COMPOST,
+            ItemID.BUCKET_SUPERCOMPOST, ItemID.BUCKET_ULTRACOMPOST, ItemID.PLANT_CURE);
 
     /**
      * The inventory slots a bank's withdrawals take. A seed going into a carried box takes
      * none, nor do runes in an owned pouch or a seed-box check; a compost bucket or a
      * sapling takes one each; anything else stacks into one.
      */
-    static int slotsFor(List<FarmingCarryItem> withdrawals, PlayerState state,
-            boolean ownsRunePouch) {
+    static int slotsFor(List<FarmingCarryItem> withdrawals, PlayerState state, boolean ownsRunePouch) {
         int slots = 0;
         for (FarmingCarryItem line : withdrawals) {
             if (line.getAvailability() == FarmingCarryItem.Availability.IN_SEED_BOX
@@ -270,8 +223,7 @@ public final class DepositPlanner {
             }
             // A seed the box does not take is a sapling or a tree seed: counted one each,
             // which over-counts the tree seeds, the safe way.
-            boolean eachTakesOne = ONE_SLOT_EACH.contains(line.getItemId())
-                    || (line.getKind() == FarmingCarryItem.Kind.SEED
+            boolean eachTakesOne = ONE_SLOT_EACH.contains(line.getItemId()) || (line.getKind() == FarmingCarryItem.Kind.SEED
                             && !CropData.boxesAsAseed(line.getItemId()));
             slots += eachTakesOne ? Math.max(1, line.getQuantity()) : 1;
         }
@@ -284,10 +236,7 @@ public final class DepositPlanner {
      * player may skip.
      */
     static boolean bagWouldFill(PlayerState state, List<FarmingCarryItem> withdrawals) {
-        boolean pouch = false;
-        for (int id : RunePouch.POUCH_ITEM_IDS) {
-            pouch |= state != null && ItemCounts.countOwned(state, id, null) > 0;
-        }
+        boolean pouch = state != null && RunePouch.POUCH_ITEM_IDS.stream().anyMatch(id -> ItemCounts.countOwned(state, id, null) > 0);
         return bagWouldFill(state, slotsFor(withdrawals, state, pouch));
     }
 

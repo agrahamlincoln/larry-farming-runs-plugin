@@ -1,0 +1,918 @@
+# Every farm run's places: the approaches onto the travel networks, the arrivals
+# in the order a trip visits them, and each site with the stop each spellbook
+# works it by. Each line is a verb and its cells, split on tabs; - is empty.
+#
+# approach NAME, then leg REQUIREMENT WALK COST: a way onto a network, cited as @NAME.
+# arrival ARRIVAL, then the rungs of its combined chain, if it has one.
+# site KEY FAMILY, with switch CONFIG_KEY LABEL, attributes IMMUNE DIARY TIER
+#   QUEST EASY RESERVED, yieldTier and xpTier DIARY TIER PERCENT, and claim DIARY
+#   TIER PATCH CROP. Then stop BOOKS PATCHES and one line for each change to the
+#   stop (at, accessGate, gate, plants, skipIfUnreachable, ...).
+# A rung is via REQUIREMENT TEXT, to DESTINATION [REQUIREMENT] TEXT,
+#   swapTo DESTINATION TEXT, and the lines after it change it
+#   (walks TILES COST, banks TILES BANK, banksUpstairs, fare COINS, floor,
+#   onlyWhenCertain, onlyFromAstart).
+# A requirement is a capability, reach:DESTINATION, swap:DESTINATION, patch:KEY,
+#   zone:ZONE, @APPROACH, or all(...) and any(...) of those.
+
+# --- Approaches ---
+approach	RING
+leg	POH_FAIRY_RING	5	FREE
+leg	QUEST_CAPE	12	FREE
+leg	SLAYER_RING	16	CHARGE
+leg	DIARY_CAPE	20	FREE
+leg	reach:SALVE_GRAVEYARD	22	CONSUMABLE
+leg	reach:ARCEUUS_LIBRARY	34	CONSUMABLE
+leg	NECKLACE_OF_PASSAGE	39	CHARGE
+leg	ARDOUGNE_CLOAK_1	51	FREE
+approach	SPIRIT_TREE_DEPARTURE
+leg	POH_SPIRIT_TREE	0	FREE
+leg	all(VARROCK_DIARY_MEDIUM,reach:GRAND_EXCHANGE)	30	CONSUMABLE
+leg	reach:VARROCK	87	CONSUMABLE
+approach	STRONGHOLD_TREE
+leg	DIARY_CAPE	17	FREE
+leg	ROYAL_SEED_POD	53	FREE
+leg	SLAYER_RING	38	CHARGE
+approach	STRONGHOLD_TREE_BY_POD_OR_RING
+leg	ROYAL_SEED_POD	53	FREE
+leg	SLAYER_RING	38	CHARGE
+
+# --- Arrivals, in circuit order ---
+arrival	FARMING_GUILD
+arrival	HOSIDIUS
+arrival	LOCUS_OASIS
+arrival	ORTUS_FARM
+arrival	KASTORI
+via	all(PENDANT_OF_ATES,ATES_STATUE_KASTORI)	Pendant of Ates to the statue north of Kastori, then run south-west
+walks	60	CHARGE
+via	all(QUETZAL_WHISTLE,QUETZAL_SITE_KASTORI)	Quetzal whistle to the Kastori landing site, then run north-east. If you have a pendant of Ates, activate the statue north of the patch.
+walks	46	CHARGE
+to	CIVITAS_ILLA_FORTIS	all(RENU,QUETZAL_SITE_KASTORI)	then run east to the quetzal landing site and ride Renu to Kastori, then run north-east
+walks	61	CONSUMABLE
+via	QUETZAL_WHISTLE	Quetzal whistle to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	115	CHARGE
+to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	130	CONSUMABLE
+via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn Valley, then run south along the River Varla to the Gloomthorn Trail jetty and Achilka's boat
+walks	173	FREE
+via	MOKHAIOTL_WAYSTONE	Mokhaiotl waystone to the Ruins of Mokhaiotl, then climb out and run south-east
+walks	89	CONSUMABLE
+via	VARLAMORE_ACCESS	Take Primio from the Varrock east gate to Civitas illa Fortis. Run north-west to Quetzacalli Gorge and take the mountain guide to Auburn Valley, then run south to Achilka's boat.
+floor
+arrival	NEMUS_RETREAT
+arrival	AUBURNVALE
+arrival	LLETYA
+arrival	GNOME_STRONGHOLD
+via	DIARY_CAPE	Achievement diary cape to the Elder Gnome child, then run south-east to the fruit tree and south-west across the Stronghold to the tree patch
+walks	57	FREE
+via	SLAYER_RING	Slayer ring to the Stronghold Slayer Cave, then run south to the tree patch and north-east across the Stronghold to the fruit tree
+walks	51	CHARGE
+via	ROYAL_SEED_POD	Royal seed pod to the Grand Tree, then run south to the fruit tree and south-west across the Stronghold to the tree patch
+walks	92	FREE
+via	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	House spirit tree to the Grand Tree. The fruit tree is just east and the tree patch is south-west.
+walks	57	FREE
+to	GRAND_EXCHANGE	all(VARROCK_DIARY_MEDIUM,SPIRIT_TREE_NETWORK)	choosing the Grand Exchange, then run north-east to its spirit tree and ride it to the Grand Tree. The fruit tree is just east and the tree patch is south-west.
+walks	87	CONSUMABLE
+to	VARROCK	SPIRIT_TREE_NETWORK	then run north to the Grand Exchange spirit tree and ride it to the Grand Tree. The fruit tree is just east and the tree patch is south-west.
+walks	144	CONSUMABLE
+via	all(RING_OF_THE_ELEMENTS,BALLOON_STATION_VARROCK,BALLOON_STATION_GRAND_TREE)	Ring of the elements to the earth altar, then the Varrock balloon to the Grand Tree. The flight costs one magic log. The fruit tree is south and the tree patch is south-west.
+walks	69	CONSUMABLE
+via	all(RING_OF_DUELING,GNOME_GLIDER)	Ring of dueling to Al Kharid, then the glider. Climb down from the top of the Grand Tree to the fruit tree, then run south-west to the tree patch.
+arrival	TREE_GNOME_VILLAGE
+arrival	ARDOUGNE_MONASTERY
+arrival	ARDOUGNE_FARM
+arrival	CATHERBY
+arrival	BRIMHAVEN
+arrival	TAI_BWO_WANNAI
+arrival	TAVERLEY
+arrival	FALADOR_PARK
+arrival	FALADOR_FARM
+arrival	DRAYNOR_MANOR
+arrival	LUMBRIDGE
+arrival	VARROCK_PARK
+arrival	AL_KHARID
+arrival	MORT_MYRE
+arrival	CANIFIS
+arrival	HARMONY_ISLAND
+arrival	FOSSIL_ISLAND_HARDWOOD
+arrival	FOSSIL_ISLAND_SEAWEED
+arrival	WEISS
+arrival	TROLL_STRONGHOLD
+arrival	GREAT_CONCH
+
+# --- Sites ---
+
+site	WEISS	HERB
+switch	visitWeiss	Weiss
+attributes	-	-	-	Making Friends with My Arm	-	-
+stop	ARCEUUS	WEISS_HERB
+at	WEISS
+accessGate	WEISS_HERB_PATCH
+via	ICY_BASALT	Icy basalt to Weiss
+walks	4	CONSUMABLE
+to	HOUSE	POH_PORTAL_WEISS	then the Weiss portal
+walks	4	CONSUMABLE
+to	HOUSE	POH_NEXUS_WEISS	then Weiss from the Portal Nexus
+walks	4	CONSUMABLE
+skipIfUnreachable
+stop	LUNAR	WEISS_HERB
+at	WEISS
+accessGate	WEISS_HERB_PATCH
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_WEISS)	Construction cape to your house, then the Weiss portal
+walks	4	FREE
+via	ICY_BASALT	Icy basalt to Weiss
+walks	4	CONSUMABLE
+noFallbackGiven
+
+site	TROLLHEIM	HERB
+switch	visitTrollheim	Trollheim
+attributes	-	-	-	My Arm's Big Adventure	-	-
+stop	ARCEUUS	TROLLHEIM_HERB
+at	TROLL_STRONGHOLD
+accessGate	TROLL_STRONGHOLD_HERB_PATCH
+via	STONY_BASALT	Stony basalt to the Troll Stronghold
+walks	9	CONSUMABLE
+to	HOUSE	POH_PORTAL_TROLL_STRONGHOLD	then the Troll Stronghold portal
+walks	9	CONSUMABLE
+to	HOUSE	POH_NEXUS_TROLL_STRONGHOLD	then the Troll Stronghold from the Portal Nexus
+walks	9	CONSUMABLE
+skipIfUnreachable
+stop	LUNAR	TROLLHEIM_HERB
+at	TROLL_STRONGHOLD
+accessGate	TROLL_STRONGHOLD_HERB_PATCH
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold portal
+walks	9	FREE
+via	STONY_BASALT	Stony basalt to the Troll Stronghold
+walks	9	CONSUMABLE
+noFallbackGiven
+
+site	MORYTANIA	HERB
+switch	visitMorytania	Morytania
+stop	ARCEUUS	MORYTANIA_HERB
+at	CANIFIS
+accessGate	MORYTANIA_ACCESS
+to	FENKENSTRAINS_CASTLE	-
+banks	157	CANIFIS
+walks	56	CONSUMABLE
+via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west to the patch
+banks	272	CANIFIS
+walks	60	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north to the patch
+banks	216	CANIFIS
+walks	40	FREE
+noAlternative
+stop	LUNAR	MORYTANIA_HERB
+at	CANIFIS
+accessGate	MORYTANIA_ACCESS
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	56	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north to the patch
+banks	216	CANIFIS
+walks	40	FREE
+onlyFromAstart
+to	FENKENSTRAINS_CASTLE	-
+banks	157	CANIFIS
+walks	56	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north to the patch
+banks	216	CANIFIS
+walks	40	FREE
+swapTo	FENKENSTRAINS_CASTLE	-
+banks	157	CANIFIS
+walks	56	CONSUMABLE
+via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west to the patch
+banks	272	CANIFIS
+walks	60	FREE
+noAlternative
+
+site	FALADOR_HERB	HERB
+switch	visitFaladorHerb	Falador
+attributes	-	-	-	-	-	-
+xpTier	Falador	Medium	10
+stop	ARCEUUS	FALADOR_HERB
+at	FALADOR_FARM
+via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
+walks	20	CHARGE
+via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Spirit tree to the Grand Tree, then on to Port Sarim
+walks	55	FREE
+to	FALADOR	then run south-east to the farm
+banks	22	FALADOR_EAST
+walks	129	CONSUMABLE
+skipIfUnreachable
+stop	LUNAR	FALADOR_HERB
+at	FALADOR_FARM
+via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
+walks	20	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Construction cape to your house spirit tree, then Port Sarim
+walks	55	FREE
+to	FALADOR	then run south-east to the farm
+banks	22	FALADOR_EAST
+walks	129	CONSUMABLE
+skipIfUnreachable
+
+site	CATHERBY_HERB	HERB
+switch	visitCatherbyHerb	Catherby
+attributes	-	-	-	-	-	-
+yieldTier	Kandarin	Medium	5
+yieldTier	Kandarin	Hard	10
+yieldTier	Kandarin	Elite	15
+stop	ARCEUUS,LUNAR	CATHERBY_HERB
+at	CATHERBY
+to	CATHERBY	-
+banks	40	CATHERBY
+walks	20	CONSUMABLE
+via	all(RESPAWN_TELEPORT,RESPAWN_AVAILABLE_CAMELOT)	Respawn Teleport to Camelot, then run south-east
+banks	40	CATHERBY
+walks	58	CONSUMABLE
+to	CAMELOT	then run south-east
+banks	40	CATHERBY
+walks	58	CONSUMABLE
+noFallbackGiven
+
+site	ARDOUGNE_HERB	HERB
+switch	visitArdougneHerb	Ardougne
+stop	ARCEUUS,LUNAR	ARDOUGNE_HERB
+at	ARDOUGNE_FARM
+via	ARDOUGNE_CLOAK_4	Ardougne cloak 4 to the farm patch
+banks	175	ARDOUGNE_NORTH
+walks	5	FREE
+via	ARDOUGNE_CLOAK_3	Ardougne cloak 3 to the farm patch
+banks	175	ARDOUGNE_NORTH
+walks	5	CHARGE
+via	ARDOUGNE_CLOAK_2	Ardougne cloak 2 to the farm patch
+banks	173	ARDOUGNE_NORTH
+walks	5	CHARGE
+via	SKILLS_NECKLACE	Skills necklace to the Fishing Guild, then run east
+banks	63	ARDOUGNE_NORTH
+walks	61	CHARGE
+to	FISHING_GUILD	then run east
+banks	64	ARDOUGNE_NORTH
+walks	59	CONSUMABLE
+via	FISHING_CAPE	Fishing cape to the Fishing Guild, then run east
+banks	35	ARDOUGNE_NORTH
+walks	74	FREE
+via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run west
+banks	160	ARDOUGNE_NORTH
+walks	62	FREE
+to	ARDOUGNE	then run north
+banks	52	ARDOUGNE_NORTH
+walks	97	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run west
+banks	161	ARDOUGNE_NORTH
+walks	72	FREE
+skipIfUnreachable
+
+site	HOSIDIUS_HERB	HERB
+switch	visitHosidiusHerb	Hosidius
+attributes	-	Kourend	Easy	-	-	-
+yieldTier	Kourend	Hard	5
+stop	ARCEUUS	HOSIDIUS_HERB
+at	HOSIDIUS
+via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	23	CHARGE
+to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
+walks	33	CONSUMABLE
+onlyWhenCertain
+via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	74	CHARGE
+via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	74	CHARGE
+skipIfUnreachable
+stop	LUNAR	HOSIDIUS_HERB
+at	HOSIDIUS
+via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	23	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KOUREND)	Construction cape to your house, then the Kourend portal
+walks	185	FREE
+to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
+walks	33	CONSUMABLE
+onlyWhenCertain
+via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	74	CHARGE
+via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	74	CHARGE
+skipIfUnreachable
+
+site	HARMONY_HERB	HERB
+switch	visitHarmony	Harmony
+attributes	-	Morytania	Elite	-	-	-
+stop	LUNAR	HARMONY_HERB
+at	HARMONY_ISLAND
+accessGate	HARMONY_ISLAND_ACCESS
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_HARMONY)	Construction cape to your house, then the Harmony Island portal
+walks	27	FREE
+via	all(CONSTRUCTION_CAPE,POH_NEXUS_HARMONY)	Construction cape to your house, then Harmony Island from the Portal Nexus
+walks	27	FREE
+to	HARMONY_ISLAND	-
+walks	28	CONSUMABLE
+swapTo	HARMONY_ISLAND	-
+walks	27	CONSUMABLE
+skipIfUnreachable
+gate	-	0	0	0	Morytania	Elite
+
+site	SNAPE_GRASS	HERB
+stop	ARCEUUS,LUNAR	CATHERBY_NORTH_ALLOTMENT
+at	CATHERBY
+to	CATHERBY	-
+banks	40	CATHERBY
+walks	17	CONSUMABLE
+via	all(RESPAWN_TELEPORT,RESPAWN_AVAILABLE_CAMELOT)	Respawn Teleport to Camelot, then run south-east
+banks	40	CATHERBY
+walks	49	CONSUMABLE
+to	CAMELOT	then run south-east
+banks	40	CATHERBY
+walks	49	CONSUMABLE
+noFallbackGiven
+plants	SNAPE_GRASS
+optional	Harvested over several runs alongside the Catherby herb patch
+
+site	WHITE_LILY	HERB
+stop	ARCEUUS,LUNAR	CATHERBY_FLOWER
+at	CATHERBY
+to	CATHERBY	-
+banks	40	CATHERBY
+walks	18	CONSUMABLE
+via	all(RESPAWN_TELEPORT,RESPAWN_AVAILABLE_CAMELOT)	Respawn Teleport to Camelot, then run south-east
+banks	40	CATHERBY
+walks	54	CONSUMABLE
+to	CAMELOT	then run south-east
+banks	40	CATHERBY
+walks	54	CONSUMABLE
+noFallbackGiven
+plants	WHITE_LILY
+optional	Protects the Catherby allotments from disease
+standingCrop
+
+site	LIMPWURT	HERB
+stop	ARCEUUS	HOSIDIUS_FLOWER
+at	HOSIDIUS
+via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	26	CHARGE
+to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
+walks	39	CONSUMABLE
+onlyWhenCertain
+via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	68	CHARGE
+via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	68	CHARGE
+skipIfUnreachable
+actions	HARVEST,PLANT
+plants	LIMPWURT
+optional	One seed a run, no compost needed
+stop	LUNAR	HOSIDIUS_FLOWER
+at	HOSIDIUS
+via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	26	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KOUREND)	Construction cape to your house, then the Kourend portal
+walks	179	FREE
+to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
+walks	39	CONSUMABLE
+onlyWhenCertain
+via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	68	CHARGE
+via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	68	CHARGE
+skipIfUnreachable
+actions	HARVEST,PLANT
+plants	LIMPWURT
+optional	One seed a run, no compost needed
+
+site	POTATO_CACTUS	HERB
+stop	ARCEUUS,LUNAR	AL_KHARID_CACTUS
+at	AL_KHARID
+via	RING_OF_DUELING	Ring of dueling to Emir's Arena
+banks	105	AL_KHARID
+walks	34	CHARGE
+noFallbackGiven
+plants	POTATO_CACTUS
+optional	Replanted each visit for its health check
+
+site	WHITEBERRIES	HERB
+stop	ARCEUUS,LUNAR	ARDOUGNE_MONASTERY_BUSH
+at	ARDOUGNE_MONASTERY
+via	ARDOUGNE_CLOAK_1	Ardougne cloak to the Monastery
+banks	142	ARDOUGNE_SOUTH
+walks	9	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring DJP, then run west past the Tower of Life
+banks	98	ARDOUGNE_SOUTH
+walks	39	FREE
+noFallbackGiven
+plants	WHITEBERRIES
+optional	Grows more slowly than a herb run comes round
+everyNthRun	2
+
+site	MUSHROOMS	HERB
+stop	ARCEUUS,LUNAR	MORT_MYRE_MUSHROOM
+at	MORT_MYRE
+accessGate	MORYTANIA_ACCESS
+to	SALVE_GRAVEYARD	then run north-east to the patch
+walks	19	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring CKS, then run east
+walks	2	FREE
+skipIfUnreachable
+plants	MUSHROOM
+optional	Grows more slowly than a herb run comes round
+everyNthRun	3
+
+site	BELLADONNA	HERB
+stop	ARCEUUS,LUNAR	DRAYNOR_MANOR_BELLADONNA
+at	DRAYNOR_MANOR
+to	DRAYNOR_MANOR	then run west to the patch
+walks	49	CONSUMABLE
+via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch, then run east
+walks	115	CHARGE
+via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch, then run east
+walks	115	CHARGE
+via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch, then run east
+walks	115	CHARGE
+skipIfUnreachable
+plants	BELLADONNA
+optional	Grows more slowly than a herb run comes round
+everyNthRun	4
+
+site	AUBURNVALE_BELLADONNA	HERB
+stop	ARCEUUS,LUNAR	AUBURNVALE_BELLADONNA
+at	AUBURNVALE
+accessGate	VARLAMORE_ACCESS
+via	QUETZAL_WHISTLE	Quetzal whistle to Auburnvale, then run east
+walks	36	CHARGE
+to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to Auburnvale, then run east
+walks	51	CONSUMABLE
+via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn Valley, then run north-east
+walks	44	FREE
+via	all(PENDANT_OF_ATES,ATES_STATUE_NEMUS_RETREAT)	Pendant of Ates to Nemus Retreat, then run north-east
+walks	121	CHARGE
+skipIfUnreachable
+plants	BELLADONNA
+optional	Grows more slowly than a herb run comes round
+everyNthRun	4
+
+site	ORTUS_FARM	HERB
+switch	visitOrtusFarm	Ortus Farm
+stop	ARCEUUS,LUNAR	ORTUS_HERB
+at	ORTUS_FARM
+via	QUETZAL_WHISTLE	Quetzal whistle to the Hunter Guild landing site, then run north
+banks	87	HUNTER_GUILD
+walks	47	CHARGE
+to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+banks	87	HUNTER_GUILD
+walks	62	CONSUMABLE
+via	HUNTER_CAPE	Hunter cape to the Hunter Guild, then run north
+banks	36	HUNTER_GUILD
+walks	74	FREE
+via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AJP to the Avium Savannah, then run north-west
+banks	106	CIVITAS_ILLA_FORTIS_WEST
+walks	91	FREE
+to	CIVITAS_ILLA_FORTIS	then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	114	CONSUMABLE
+noFallbackGiven
+optional	No fixed place in the run; weave it in
+
+site	FOSSIL_ISLAND	HARDWOOD
+switch	visitFossilIsland	Fossil Island
+stop	ANY	FOSSIL_ISLAND_HARDWOOD_EAST,FOSSIL_ISLAND_HARDWOOD_MIDDLE,FOSSIL_ISLAND_HARDWOOD_WEST
+at	FOSSIL_ISLAND_HARDWOOD
+accessGate	CANAL_BARGE
+via	all(DIGSITE_PENDANT,CANAL_BARGE)	Digsite pendant to the Digsite, then the barge and the shortcut
+banks	10	MUSEUM_CAMP
+walks	72	CHARGE
+noAlternative
+
+site	LOCUS_OASIS	HARDWOOD
+switch	visitLocusOasis	Locus Oasis
+stop	ANY	LOCUS_OASIS_HARDWOOD
+at	LOCUS_OASIS
+accessGate	LOCUS_OASIS_PATCH
+via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AJP to the Avium Savannah, then run south-east
+walks	42	FREE
+noFallbackGiven
+
+site	TAI_BWO_WANNAI_CALQUAT	CALQUAT
+switch	visitTaiBwoWannaiCalquat	Tai Bwo Wannai
+stop	ANY	TAI_BWO_WANNAI_CALQUAT
+at	TAI_BWO_WANNAI
+to	HOUSE	POH_IN_BRIMHAVEN	with your house in Brimhaven
+walks	74	CONSUMABLE
+onlyWhenCertain
+to	SALVE_GRAVEYARD	FAIRY_RINGS	then fairy ring CKR
+walks	129	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring CKR, south of Tai Bwo Wannai, then run north
+walks	107	FREE
+noFallbackGiven
+
+site	KASTORI_CALQUAT	CALQUAT
+switch	visitKastoriCalquat	Kastori
+stop	ANY	KASTORI_CALQUAT
+at	KASTORI
+accessGate	VARLAMORE_ACCESS
+via	all(PENDANT_OF_ATES,ATES_STATUE_KASTORI)	Pendant of Ates to the statue north of Kastori, then run south-west
+walks	56	CHARGE
+via	all(QUETZAL_WHISTLE,QUETZAL_SITE_KASTORI)	Quetzal whistle to the Kastori landing site, then run north-east. If you have a pendant of Ates, activate the statue north of the patch.
+walks	20	CHARGE
+to	CIVITAS_ILLA_FORTIS	all(RENU,QUETZAL_SITE_KASTORI)	then run east to the quetzal landing site and ride Renu to Kastori, then run north-east
+walks	35	CONSUMABLE
+via	QUETZAL_WHISTLE	Quetzal whistle to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	104	CHARGE
+to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	119	CONSUMABLE
+via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn Valley, then run south along the River Varla to the Gloomthorn Trail jetty and Achilka's boat
+walks	162	FREE
+via	MOKHAIOTL_WAYSTONE	Mokhaiotl waystone to the Ruins of Mokhaiotl, then climb out and run south-east
+walks	90	CONSUMABLE
+via	VARLAMORE_ACCESS	Take Primio from the Varrock east gate to Civitas illa Fortis. Run north-west to Quetzacalli Gorge and take the mountain guide to Auburn Valley, then run south to Achilka's boat.
+floor
+skipIfUnreachable
+
+site	GREAT_CONCH_CALQUAT	CALQUAT
+switch	visitGreatConchCalquat	Great Conch
+stop	ANY	GREAT_CONCH_CALQUAT
+at	GREAT_CONCH
+accessGate	GREAT_CONCH_ACCESS
+via	all(@RING,FAIRY_RINGS)	Fairy ring CJQ to the Great Conch
+walks	104	FREE
+via	all(SAILORS_AMULET,CHARTER_SHIP)	Sailors' amulet to Deepfin Point, then charter to the Summer Shore. On your first visit, inspect the dock marker at Deepfin Point.
+fare	1800
+skipIfUnreachable
+
+site	VARROCK_TREE	REGULAR_TREE
+switch	visitVarrockTree	Varrock
+stop	ANY	VARROCK_TREE
+at	VARROCK_PARK
+to	VARROCK	-
+banks	62	VARROCK_EAST
+walks	37	CONSUMABLE
+to	HOUSE	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	then the spirit tree to Varrock
+walks	81	CONSUMABLE
+via	CHRONICLE	Chronicle to the Champions' Guild
+banks	42	VARROCK_EAST
+walks	110	CHARGE
+skipIfUnreachable
+
+site	LUMBRIDGE_TREE	REGULAR_TREE
+switch	visitLumbridgeTree	Lumbridge
+stop	ANY	LUMBRIDGE_TREE
+at	LUMBRIDGE
+to	LUMBRIDGE	-
+banksUpstairs	5	LUMBRIDGE_CASTLE
+walks	46	CONSUMABLE
+via	RING_OF_THE_ELEMENTS	Ring of the elements to the water altar
+banksUpstairs	47	LUMBRIDGE_CASTLE
+walks	109	CHARGE
+skipIfUnreachable
+
+site	FALADOR_TREE	REGULAR_TREE
+switch	visitFaladorTree	Falador
+claim	Falador	Elite	FALADOR_TREE	MAGIC
+stop	ANY	FALADOR_TREE
+at	FALADOR_PARK
+via	RING_OF_WEALTH	Ring of wealth to Falador Park
+banks	49	FALADOR_EAST
+walks	6	CHARGE
+to	FALADOR	then run east into the park
+banks	41	FALADOR_EAST
+walks	39	CONSUMABLE
+via	all(RESPAWN_TELEPORT,RESPAWN_AVAILABLE_FALADOR)	Respawn Teleport, with Falador set as your respawn point
+banks	41	FALADOR_EAST
+walks	61	CONSUMABLE
+via	SKILLS_NECKLACE	Skills necklace to the Mining Guild
+banks	1	FALADOR_EAST
+walks	104	CHARGE
+via	patch:TAVERLEY_TREE	Run south-east from the Taverley tree patch
+banks	50	FALADOR_EAST
+walks	114	FREE
+via	EXPLORERS_RING_2	Explorer's ring to the cabbage patch, then run north
+banks	14	FALADOR_EAST
+walks	129	CHARGE
+skipIfUnreachable
+
+site	TAVERLEY_TREE	REGULAR_TREE
+switch	visitTaverleyTree	Taverley
+stop	ANY	TAVERLEY_TREE
+at	TAVERLEY
+via	all(RING_OF_DUELING,BALLOON_STATION_CASTLE_WARS,BALLOON_STATION_TAVERLEY)	Ring of dueling to Castle Wars, then the balloon to Taverley
+walks	48	CONSUMABLE
+to	HOUSE	POH_IN_TAVERLEY	with your house in Taverley
+walks	49	CONSUMABLE
+onlyWhenCertain
+to	FALADOR	then run north-west to Taverley
+walks	91	CONSUMABLE
+to	FALADOR	TAVERLEY_CLIMBING_ROCKS	then run north and climb the rocks into Taverley
+walks	68	CONSUMABLE
+via	all(RING_OF_WEALTH,TAVERLEY_CLIMBING_ROCKS)	Ring of wealth to Falador Park, then run north and climb the rocks into Taverley
+walks	85	CHARGE
+via	RING_OF_WEALTH	Ring of wealth to Falador Park, then run north-west to Taverley
+walks	108	CHARGE
+via	patch:FALADOR_TREE	Run north-west from the Falador tree patch
+walks	114	FREE
+via	COMBAT_BRACELET	Combat bracelet to the Warriors' Guild, then run south to Taverley
+walks	117	CHARGE
+via	GAMES_NECKLACE	Games necklace to Burthorpe, then run south to Taverley
+walks	119	CHARGE
+skipIfUnreachable
+
+site	GRAND_TREE	REGULAR_TREE
+switch	visitGnomeStrongholdTree	Stronghold
+stop	ANY	GRAND_TREE_TREE
+at	GNOME_STRONGHOLD
+via	SLAYER_RING	Slayer ring to the Stronghold Slayer Cave, then run south
+banks	18	GNOME_STRONGHOLD_SOUTH
+walks	7	CHARGE
+via	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	House spirit tree to the Grand Tree, then run south-west
+banks	0	GNOME_STRONGHOLD_SOUTH
+walks	36	FREE
+via	DIARY_CAPE	Achievement diary cape to the Elder Gnome child, then run south-west
+banks	0	GNOME_STRONGHOLD_SOUTH
+walks	48	FREE
+to	GRAND_EXCHANGE	all(VARROCK_DIARY_MEDIUM,SPIRIT_TREE_NETWORK)	choosing the Grand Exchange, then run north-east to its spirit tree and ride it to the Grand Tree
+banks	0	GNOME_STRONGHOLD_SOUTH
+walks	66	CONSUMABLE
+to	VARROCK	SPIRIT_TREE_NETWORK	then run north to the Grand Exchange spirit tree and ride it to the Grand Tree
+banks	0	GNOME_STRONGHOLD_SOUTH
+walks	123	CONSUMABLE
+via	ROYAL_SEED_POD	Royal seed pod to the Grand Tree, then out of the tree and run south-west
+banks	3	GNOME_STRONGHOLD_NORTH
+walks	79	FREE
+via	all(RING_OF_DUELING,GNOME_GLIDER)	Ring of dueling to Al Kharid, then the glider
+skipIfUnreachable
+
+site	NEMUS_RETREAT_TREE	REGULAR_TREE
+switch	visitNemusRetreatTree	Nemus Retreat
+stop	ANY	NEMUS_RETREAT_TREE
+at	NEMUS_RETREAT
+accessGate	VARLAMORE_ACCESS
+via	all(PENDANT_OF_ATES,ATES_STATUE_NEMUS_RETREAT)	Pendant of Ates to Nemus Retreat
+walks	57	CHARGE
+via	all(QUETZAL_WHISTLE,MOUNTAIN_GUIDE)	Quetzal whistle to Quetzacalli Gorge, then the mountain guide. On your first visit, activate the statue.
+walks	44	CHARGE
+skipIfUnreachable
+
+site	BRIMHAVEN_FRUIT	FRUIT_TREE
+switch	visitBrimhavenFruit	Brimhaven
+stop	ANY	BRIMHAVEN_FRUIT_TREE
+at	BRIMHAVEN
+via	CONSTRUCTION_CAPE	Construction cape to the Brimhaven house portal, then run north
+walks	34	FREE
+via	DIARY_CAPE	Achievement diary cape to Pirate Jackie the Fruit, then run west
+walks	63	FREE
+to	HOUSE	POH_IN_BRIMHAVEN	with your house in Brimhaven, then run north from the portal
+walks	33	CONSUMABLE
+onlyWhenCertain
+via	BRIMHAVEN_TABLET	Brimhaven teleport tablet, then run north
+walks	32	CONSUMABLE
+via	all(all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK),SPIRIT_TREE_GROWN_BRIMHAVEN)	Ride a spirit tree to Brimhaven from your house or the Grand Exchange, then run west
+walks	35	FREE
+to	ARDOUGNE	then Captain Barnaby's ferry to Brimhaven, and run north-west
+fare	30
+walks	65	CONSUMABLE
+skipIfUnreachable
+
+site	CATHERBY_FRUIT	FRUIT_TREE
+switch	visitCatherbyFruit	Catherby
+stop	ANY	CATHERBY_FRUIT_TREE
+at	CATHERBY
+to	CATHERBY	-
+banks	11	CATHERBY
+walks	63	CONSUMABLE
+via	all(RESPAWN_TELEPORT,RESPAWN_AVAILABLE_CAMELOT)	Respawn Teleport to Camelot, then run south-east
+banks	11	CATHERBY
+walks	112	CONSUMABLE
+to	CAMELOT	then run south-east
+banks	11	CATHERBY
+walks	112	CONSUMABLE
+noFallbackGiven
+
+site	GRAND_TREE_FRUIT	FRUIT_TREE
+switch	visitGnomeStrongholdFruit	Stronghold
+stop	ANY	GRAND_TREE_FRUIT_TREE
+at	GNOME_STRONGHOLD
+via	DIARY_CAPE	Achievement diary cape to the Elder Gnome child, then run south-east
+banks	65	GNOME_STRONGHOLD_SOUTH
+walks	13	FREE
+via	ROYAL_SEED_POD	Royal seed pod to the Grand Tree
+banks	65	GNOME_STRONGHOLD_SOUTH
+walks	48	FREE
+via	SLAYER_RING	Slayer ring to the Stronghold Slayer Cave, then run north-east
+banks	3	GNOME_STRONGHOLD_SOUTH
+walks	46	CHARGE
+via	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	House spirit tree to the Grand Tree
+banks	65	GNOME_STRONGHOLD_SOUTH
+walks	13	FREE
+to	VARROCK	SPIRIT_TREE_NETWORK	then run north to the Grand Exchange spirit tree and ride it to the Grand Tree
+banks	65	GNOME_STRONGHOLD_SOUTH
+walks	100	CONSUMABLE
+via	all(RING_OF_THE_ELEMENTS,BALLOON_STATION_VARROCK,BALLOON_STATION_GRAND_TREE)	Ring of the elements to the earth altar, then the Varrock balloon to the Grand Tree. The flight costs one magic log.
+banks	65	GNOME_STRONGHOLD_SOUTH
+walks	25	CONSUMABLE
+via	all(RING_OF_DUELING,GNOME_GLIDER)	Ring of dueling to Al Kharid, then the glider
+banks	65	GNOME_STRONGHOLD_SOUTH
+noFallbackGiven
+
+site	TREE_GNOME_VILLAGE_FRUIT	FRUIT_TREE
+switch	visitTreeGnomeVillageFruit	Gnome Village
+stop	ANY	TREE_GNOME_VILLAGE_FRUIT_TREE
+at	TREE_GNOME_VILLAGE
+via	all(patch:GRAND_TREE_FRUIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_STRONGHOLD)	Run west to the Stronghold spirit tree and ride it to the Tree Gnome Village, then ask Elkoy to lead you out of the maze and run north-west
+walks	61	FREE
+via	all(patch:GRAND_TREE_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_STRONGHOLD)	Run north-east to the Stronghold spirit tree and ride it to the Tree Gnome Village, then ask Elkoy to lead you out of the maze and run north-west
+walks	84	FREE
+via	all(zone:GNOME_STRONGHOLD,SPIRIT_TREE_NETWORK,SPIRIT_TREE_STRONGHOLD)	Run to the Stronghold spirit tree and ride it to the Tree Gnome Village, then ask Elkoy to lead you out of the maze and run north-west
+via	all(@RING,FAIRY_RINGS)	Fairy ring CIQ, north-west of Yanille, then run north-west
+walks	81	FREE
+via	RING_OF_DUELING	Ring of dueling to Castle Wars, then run north
+walks	155	CHARGE
+via	all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK)	Ride a spirit tree to the Tree Gnome Village from your house or the Grand Exchange, then ask Elkoy to lead you out of the maze and run north-west
+walks	48	FREE
+via	NECKLACE_OF_PASSAGE	Necklace of passage to the Outpost, then run south
+walks	300	CHARGE
+noFallbackGiven
+
+site	LLETYA_FRUIT	FRUIT_TREE
+switch	visitLletyaFruit	Lletya
+stop	ANY	LLETYA_FRUIT_TREE
+at	LLETYA
+accessGate	LLETYA_ACCESS
+via	all(LLETYA_ACCESS,TELEPORT_CRYSTAL)	Teleport crystal to Lletya, then run east
+banks	41	LLETYA
+walks	16	CHARGE
+skipIfUnreachable
+
+site	KASTORI_FRUIT	FRUIT_TREE
+switch	visitKastoriFruit	Kastori
+stop	ANY	KASTORI_FRUIT_TREE
+at	KASTORI
+accessGate	VARLAMORE_ACCESS
+via	all(PENDANT_OF_ATES,ATES_STATUE_KASTORI)	Pendant of Ates to the statue north of Kastori, then run south-west
+walks	34	CHARGE
+via	all(QUETZAL_WHISTLE,QUETZAL_SITE_KASTORI)	Quetzal whistle to the Kastori landing site, then run north-east. If you have a pendant of Ates, activate the statue north of the patch.
+walks	33	CHARGE
+to	CIVITAS_ILLA_FORTIS	all(RENU,QUETZAL_SITE_KASTORI)	then run east to the quetzal landing site and ride Renu to Kastori, then run north-east
+walks	48	CONSUMABLE
+via	QUETZAL_WHISTLE	Quetzal whistle to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	89	CHARGE
+to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	104	CONSUMABLE
+via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn Valley, then run south along the River Varla to the Gloomthorn Trail jetty and Achilka's boat
+walks	147	FREE
+via	MOKHAIOTL_WAYSTONE	Mokhaiotl waystone to the Ruins of Mokhaiotl, then climb out and run south-east
+walks	63	CONSUMABLE
+via	VARLAMORE_ACCESS	Take Primio from the Varrock east gate to Civitas illa Fortis. Run north-west to Quetzacalli Gorge and take the mountain guide to Auburn Valley, then run south to Achilka's boat.
+floor
+skipIfUnreachable
+
+site	HESPORI	HESPORI
+stop	ANY	HESPORI
+at	FARMING_GUILD
+via	FARMING_CAPE	Farming cape to the Farming Guild
+banks	25	FARMING_GUILD
+walks	19	FREE
+via	SKILLS_NECKLACE	Skills necklace to the Farming Guild
+banks	25	FARMING_GUILD
+walks	19	CHARGE
+via	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	House spirit tree, then the Farming Guild tree
+banks	4	FARMING_GUILD
+walks	35	FREE
+via	all(@STRONGHOLD_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	Reach the Gnome Stronghold, then its spirit tree to the Farming Guild
+banks	4	FARMING_GUILD
+walks	35	FREE
+to	GRAND_EXCHANGE	all(VARROCK_DIARY_MEDIUM,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	choosing the Grand Exchange, then run north-east to its spirit tree and ride it to the Farming Guild
+banks	4	FARMING_GUILD
+walks	65	CONSUMABLE
+to	VARROCK	all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	then run north to the Grand Exchange spirit tree and ride it to the Farming Guild
+banks	4	FARMING_GUILD
+walks	122	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring CIR, south of Mount Karuulm, then run south-west
+banks	25	FARMING_GUILD
+walks	93	FREE
+to	ARCEUUS_LIBRARY	LOVAKENGJ_MINECART	then the minecart
+banks	25	FARMING_GUILD
+walks	102	CONSUMABLE
+via	all(GAMES_NECKLACE,LOVAKENGJ_MINECART)	Games necklace to Wintertodt, then the minecart
+banks	25	FARMING_GUILD
+walks	100	CHARGE
+via	LOVAKENGJ_MINECART	Minecart to the Farming Guild stop, beside the gate
+banks	25	FARMING_GUILD
+floor
+noFallbackGiven
+plants	HESPORI
+
+site	ANIMA	ANIMA
+stop	ANY	ANIMA
+at	FARMING_GUILD
+via	FARMING_CAPE	Farming cape to the Farming Guild
+banks	25	FARMING_GUILD
+walks	18	FREE
+via	SKILLS_NECKLACE	Skills necklace to the Farming Guild
+banks	25	FARMING_GUILD
+walks	18	CHARGE
+via	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	House spirit tree, then the Farming Guild tree
+banks	4	FARMING_GUILD
+walks	34	FREE
+via	all(@STRONGHOLD_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	Reach the Gnome Stronghold, then its spirit tree to the Farming Guild
+banks	4	FARMING_GUILD
+walks	34	FREE
+to	GRAND_EXCHANGE	all(VARROCK_DIARY_MEDIUM,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	choosing the Grand Exchange, then run north-east to its spirit tree and ride it to the Farming Guild
+banks	4	FARMING_GUILD
+walks	64	CONSUMABLE
+to	VARROCK	all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	then run north to the Grand Exchange spirit tree and ride it to the Farming Guild
+banks	4	FARMING_GUILD
+walks	121	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring CIR, south of Mount Karuulm, then run south-west
+banks	25	FARMING_GUILD
+walks	92	FREE
+to	ARCEUUS_LIBRARY	LOVAKENGJ_MINECART	then the minecart
+banks	25	FARMING_GUILD
+walks	101	CONSUMABLE
+via	all(GAMES_NECKLACE,LOVAKENGJ_MINECART)	Games necklace to Wintertodt, then the minecart
+banks	25	FARMING_GUILD
+walks	99	CHARGE
+via	LOVAKENGJ_MINECART	Minecart to the Farming Guild stop, beside the gate
+banks	25	FARMING_GUILD
+floor
+noFallbackGiven
+plants	ATTAS
+
+site	SEAWEED	SEAWEED
+stop	ANY	SEAWEED_NORTH,SEAWEED_SOUTH
+at	FOSSIL_ISLAND_SEAWEED
+via	all(DIGSITE_PENDANT,FOSSIL_ISLAND_ZIPLINE)	Digsite pendant to the House on the Hill, then the zipline down
+via	all(DIGSITE_PENDANT,CANAL_BARGE)	Digsite pendant to the Digsite, barge to the Museum Camp, then row out and dive
+noFallbackGiven
+actions	HARVEST,COMPOST,PLANT,PAY_PROTECTION
+plants	SEAWEED
+
+site	GUILD_CONTRACT	CONTRACT
+attributes	-	-	-	-	-	reserved
+yieldTier	Kourend	Hard	5
+stop	ANY	FARMING_GUILD_HERB
+at	FARMING_GUILD
+via	FARMING_CAPE	Farming cape to the Farming Guild
+banks	25	FARMING_GUILD
+walks	11	FREE
+via	SKILLS_NECKLACE	Skills necklace to the Farming Guild
+banks	25	FARMING_GUILD
+walks	11	CHARGE
+via	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	House spirit tree, then the Farming Guild tree
+banks	4	FARMING_GUILD
+walks	27	FREE
+via	all(@STRONGHOLD_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	Reach the Gnome Stronghold, then its spirit tree to the Farming Guild
+banks	4	FARMING_GUILD
+walks	27	FREE
+to	GRAND_EXCHANGE	all(VARROCK_DIARY_MEDIUM,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	choosing the Grand Exchange, then run north-east to its spirit tree and ride it to the Farming Guild
+banks	4	FARMING_GUILD
+walks	57	CONSUMABLE
+to	VARROCK	all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	then run north to the Grand Exchange spirit tree and ride it to the Farming Guild
+banks	4	FARMING_GUILD
+walks	114	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring CIR, south of Mount Karuulm, then run south-west
+banks	25	FARMING_GUILD
+walks	85	FREE
+to	ARCEUUS_LIBRARY	LOVAKENGJ_MINECART	then the minecart
+banks	25	FARMING_GUILD
+walks	94	CONSUMABLE
+via	all(GAMES_NECKLACE,LOVAKENGJ_MINECART)	Games necklace to Wintertodt, then the minecart
+banks	25	FARMING_GUILD
+walks	92	CHARGE
+via	LOVAKENGJ_MINECART	Minecart to the Farming Guild stop, beside the gate
+banks	25	FARMING_GUILD
+floor
+noFallbackGiven
+errand	The contract is Guildmaster Jane's errand, not the herb patch's crop
+
+# --- The guild patches a contract can name ---
+contract	FARMING_GUILD_HERB
+contract	FARMING_GUILD_TREE
+contract	FARMING_GUILD_BUSH
+contract	FARMING_GUILD_FLOWER
+contract	FARMING_GUILD_ALLOTMENT_NORTH
+contract	FARMING_GUILD_ALLOTMENT_SOUTH
+contract	FARMING_GUILD_CACTUS
+contract	FARMING_GUILD_FRUIT_TREE
+contract	FARMING_GUILD_CELASTRUS
+contract	FARMING_GUILD_REDWOOD
+
+# --- Capabilities a patch's state settles ---
+patchFor	SPIRIT_TREE_GROWN_BRIMHAVEN	BRIMHAVEN_SPIRIT_TREE
+patchFor	SPIRIT_TREE_GROWN_FARMING_GUILD	FARMING_GUILD_SPIRIT_TREE
+patchFor	SPIRIT_TREE_GROWN_PORT_SARIM	PORT_SARIM_SPIRIT_TREE
+patchFor	WEISS_HERB_PATCH	WEISS_HERB

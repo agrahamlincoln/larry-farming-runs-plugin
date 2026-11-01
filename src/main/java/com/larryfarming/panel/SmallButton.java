@@ -6,8 +6,8 @@ import javax.swing.JButton;
 import net.runelite.client.ui.FontManager;
 
 /**
- * The farming tab's one button style: a compact RuneLite button in the small font. Every
- * button on the tab is one of these, so their look cannot drift apart.
+ * The side panel's one button style: a compact RuneLite button in the small font. Every
+ * button in the panel is one of these, so their look cannot drift apart.
  */
 class SmallButton extends JButton
 {

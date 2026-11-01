@@ -25,12 +25,8 @@
  */
 package com.larryfarming.engine.farming;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
 
 /**
  * Tracks every observed farming patch (herbs, trees, bushes, and the other timed
@@ -122,13 +118,7 @@ public class FarmingTracker {
          */
         final long plantedAtEpochSec;
 
-        Observation(int varbitValue, long observedAtEpochSec, DecodedPatch decoded,
-                long firstSeenAtEpochSec) {
-            this(varbitValue, observedAtEpochSec, decoded, firstSeenAtEpochSec, 0L);
-        }
-
-        Observation(int varbitValue, long observedAtEpochSec, DecodedPatch decoded,
-                long firstSeenAtEpochSec, long plantedAtEpochSec) {
+        Observation(int varbitValue, long observedAtEpochSec, DecodedPatch decoded, long firstSeenAtEpochSec, long plantedAtEpochSec) {
             this.varbitValue = varbitValue;
             this.observedAtEpochSec = observedAtEpochSec;
             this.decoded = decoded;
@@ -142,36 +132,20 @@ public class FarmingTracker {
      * one scan, a crop at its first stage the next), the old stamp while the same crop grows
      * on, and 0 otherwise.
      */
-    private static long plantedAt(Observation old, DecodedPatch now, boolean held,
-            long nowEpochSec) {
+    private static long plantedAt(Observation old, DecodedPatch now, boolean held, long nowEpochSec) {
         if (old == null || now.getCrop() == null || now.getCrop() == Crop.WEEDS) {
             return 0L;
         }
         if (old.decoded.getCrop() == now.getCrop()) {
             return old.plantedAtEpochSec;
         }
-        boolean seenGoingIn = !held && old.decoded.getCrop() == Crop.WEEDS
-                && now.getState() == CropState.GROWING && now.getStage() == 0;
+        boolean seenGoingIn = !held && old.decoded.getCrop() == Crop.WEEDS && now.getState() == CropState.GROWING && now.getStage() == 0;
         return seenGoingIn ? nowEpochSec : 0L;
     }
 
     // PatchDefs are singletons, so identity-keyed. ConcurrentHashMap: the client
     // thread writes via observeRegion while the EDT (panel) and render thread read.
     private final Map<FarmingWorldMap.PatchDef, Observation> data = new ConcurrentHashMap<>();
-
-    /** Patches the player has switched off in the settings, or null while none are. */
-    private volatile Predicate<FarmingWorldMap.PatchDef> hidden;
-
-    /** Tell the tracker which patches the player has switched off. Null clears it. */
-    public void setHidden(Predicate<FarmingWorldMap.PatchDef> hidden) {
-        this.hidden = hidden;
-    }
-
-    /** Whether the player switched this patch off, leaving it out of every aggregate. Any thread. */
-    public boolean isHidden(FarmingWorldMap.PatchDef patch) {
-        Predicate<FarmingWorldMap.PatchDef> off = hidden;
-        return off != null && off.test(patch);
-    }
 
     // When each patch was last read in range, refreshed every game tick the player
     // spends nearby; `data` re-stamps only on change or staleness. See anchorFor for
@@ -181,8 +155,7 @@ public class FarmingTracker {
 
     // Patches holding a crop whose scan read 0, and when: the next scan confirms or replaces
     // it. A hold older than a couple of seconds is stale, and a fresh 0 is held again.
-    private final Map<FarmingWorldMap.PatchDef, Long> overgrowthHeldAt =
-            new ConcurrentHashMap<>();
+    private final Map<FarmingWorldMap.PatchDef, Long> overgrowthHeldAt = new ConcurrentHashMap<>();
 
     /** How long a held 0 waits for the scan that confirms it. Scans come every tick. */
     private static final long HOLD_CONFIRM_SECONDS = 2;
@@ -238,8 +211,7 @@ public class FarmingTracker {
             Long heldAt = overgrowthHeldAt.remove(patch);
             boolean held = heldAt != null && nowEpochSec - heldAt <= HOLD_CONFIRM_SECONDS;
             if (raw == 0 && decoded.getCrop() == Crop.WEEDS && old != null
-                    && old.decoded.getCrop() != null && old.decoded.getCrop() != Crop.WEEDS
-                    && !held) {
+                    && old.decoded.getCrop() != null && old.decoded.getCrop() != Crop.WEEDS && !held) {
                 overgrowthHeldAt.put(patch, nowEpochSec);
                 continue;
             }
@@ -249,13 +221,11 @@ public class FarmingTracker {
             if (old != null && old.varbitValue == raw) {
                 // Same value: keep the old entry while it is fresh; otherwise re-stamp.
                 long storedTime = old.observedAtEpochSec;
-                if (storedTime + STORE_STALE_SECONDS > nowEpochSec
-                        && nowEpochSec + STORE_FUTURE_GRACE_SECONDS > storedTime) {
+                if (storedTime + STORE_STALE_SECONDS > nowEpochSec && nowEpochSec + STORE_FUTURE_GRACE_SECONDS > storedTime) {
                     continue;
                 }
                 // Re-stamp, carrying the first sighting and the planting over.
-                data.put(patch, new Observation(raw, nowEpochSec, decoded,
-                        old.firstSeenAtEpochSec, old.plantedAtEpochSec));
+                data.put(patch, new Observation(raw, nowEpochSec, decoded, old.firstSeenAtEpochSec, old.plantedAtEpochSec));
                 changed = true;
                 continue;
             }
@@ -266,8 +236,7 @@ public class FarmingTracker {
             if (old != null && allowOffsetLearning && !held) {
                 learnOffset(old.decoded, decoded, patch.getType(), nowEpochSec);
             }
-            data.put(patch, new Observation(raw, nowEpochSec, decoded, nowEpochSec,
-                    plantedAt(old, decoded, held, nowEpochSec)));
+            data.put(patch, new Observation(raw, nowEpochSec, decoded, nowEpochSec, plantedAt(old, decoded, held, nowEpochSec)));
             changed = true;
             changes++;
         }
@@ -306,8 +275,7 @@ public class FarmingTracker {
         // A shorter tick rate must not replace the stored offset, since it covers fewer
         // crops. It can still refine a minute-granular offset: every farming beat shares
         // one phase, so this tick's sub-minute part is the part the stored offset lacks.
-        if (tickOffsetResolutionSeconds > OFFSET_RESOLUTION_SECONDS
-                && tickOffsetSeconds != OFFSET_UNKNOWN) {
+        if (tickOffsetResolutionSeconds > OFFSET_RESOLUTION_SECONDS && tickOffsetSeconds != OFFSET_UNKNOWN) {
             tickOffsetSeconds -= Math.floorMod(tickOffsetSeconds - offsetSeconds, 60);
             tickOffsetResolutionSeconds = OFFSET_RESOLUTION_SECONDS;
             offsetDirty = true;
@@ -322,9 +290,7 @@ public class FarmingTracker {
      */
     private boolean isObservedGrowthTick(DecodedPatch prev, DecodedPatch cur, PatchType type) {
         int prevTickRate = prev.tickRateMinutes();
-        if (prev.getCrop() == Crop.WEEDS || cur.getCrop() == Crop.WEEDS
-                || cur.getCrop() != prev.getCrop()
-                || prevTickRate <= 0) {
+        if (prev.getCrop() == Crop.WEEDS || cur.getCrop() == Crop.WEEDS || cur.getCrop() != prev.getCrop() || prevTickRate <= 0) {
             return false;
         }
 
@@ -332,8 +298,7 @@ public class FarmingTracker {
         CropState curState = cur.getState();
 
         if (prevState == CropState.GROWING) {
-            if ((curState == CropState.GROWING && cur.getStage() - prev.getStage() == 1)
-                    || curState == CropState.DISEASED) {
+            if ((curState == CropState.GROWING && cur.getStage() - prev.getStage() == 1) || curState == CropState.DISEASED) {
                 return true;
             }
             if (curState == CropState.HARVESTABLE && !type.isHealthCheckRequired()) {
@@ -356,10 +321,6 @@ public class FarmingTracker {
             return null;
         }
         DecodedPatch decoded = obs.decoded;
-        if (decoded == null) {
-            return null;
-        }
-
         Crop crop = decoded.getCrop();
         CropState state = decoded.getState();
         int stage = decoded.getStage();
@@ -387,7 +348,7 @@ public class FarmingTracker {
         }
 
         return new PatchPrediction(crop, state, stage, stages, earliestDone, doneEstimate,
-                observedAt, decoded.isFellable()).withPlantedAt(obs.plantedAtEpochSec);
+                observedAt, decoded.isFellable(), obs.plantedAtEpochSec);
     }
 
     /**
@@ -406,10 +367,6 @@ public class FarmingTracker {
      *
      * <p>While the player stands at such a patch the anchor advances a second per second,
      * so the panel's countdown holds steady.
-     *
-     * <p>Returns a bare second so that {@link #readiness} can share it without allocating
-     * per frame. The overlay and the panel must agree, so neither keeps its own copy of
-     * this logic.
      */
     private long finishWindowEnd(FarmingWorldMap.PatchDef patch, Observation obs) {
         long latest = latestDone(obs);
@@ -455,7 +412,14 @@ public class FarmingTracker {
         return Math.min(getTickTime(tickRate, remaining, origin), byOrigin);
     }
 
-    /** The near edge measured from a given origin, the width {@link #earliestDone} uses. */
+    /**
+     * The near edge measured from a given origin, on the arithmetic alone. Callers want
+     * {@link #finishWindowStart}, which also folds in what a later sighting proves.
+     *
+     * <p>With the farming beat pinned down this is the estimate itself. Without it, all
+     * that is known is that the next tick falls somewhere in the tick-length window before
+     * the far edge, which puts the finish anywhere in there.
+     */
     private long earliestFrom(Observation obs, long origin) {
         int tickRate = obs.decoded.tickRateMinutes();
         if (tickRate <= 0) {
@@ -463,6 +427,8 @@ public class FarmingTracker {
         }
         long latest = doneFrom(obs, origin);
         if (offsetCovers(tickRate)) {
+            // A minute-granular offset sits up to a minute ahead of the true beat,
+            // which biases the estimate early by exactly that much and no more.
             return latest - (tickOffsetResolutionSeconds - 1L);
         }
         return latest - (long) tickRate * 60L + 1L;
@@ -488,7 +454,7 @@ public class FarmingTracker {
         if (outlived > 0) {
             return Math.min(earliestFrom(obs, outlived), doneFrom(obs, outlived));
         }
-        return Math.min(Math.max(earliestDone(obs), anchorFor(patch, obs)), latest);
+        return Math.min(Math.max(earliestFrom(obs, obs.firstSeenAtEpochSec), anchorFor(patch, obs)), latest);
     }
 
     /**
@@ -499,8 +465,7 @@ public class FarmingTracker {
      */
     private static boolean stagesRemain(DecodedPatch decoded) {
         CropState state = decoded.getState();
-        return (state == CropState.GROWING || state == CropState.HARVESTABLE)
-                && decoded.getStage() < decoded.getStages() - 1;
+        return (state == CropState.GROWING || state == CropState.HARVESTABLE) && decoded.getStage() < decoded.getStages() - 1;
     }
 
     /**
@@ -520,29 +485,6 @@ public class FarmingTracker {
     }
 
     /**
-     * Earliest wall-clock second the patch's pending timer could have elapsed on the
-     * arithmetic alone, or 0 when it carries no timer. Callers want
-     * {@link #finishWindowStart}, which also folds in what a later sighting proves.
-     *
-     * <p>With the farming beat pinned down this is the estimate itself. Without it,
-     * all that is known is that the next tick falls somewhere in the tick-length
-     * window before {@link #latestDone}, which puts the finish anywhere in there.
-     */
-    private long earliestDone(Observation obs) {
-        int tickRate = obs.decoded.tickRateMinutes();
-        if (tickRate <= 0) {
-            return 0;
-        }
-        long latest = latestDone(obs);
-        if (offsetCovers(tickRate)) {
-            // A minute-granular offset sits up to a minute ahead of the true beat,
-            // which biases the estimate early by exactly that much and no more.
-            return latest - (tickOffsetResolutionSeconds - 1L);
-        }
-        return latest - (long) tickRate * 60L + 1L;
-    }
-
-    /**
      * Latest wall-clock second the patch's pending timer can still be running, or 0
      * when it carries no timer. Bounded by the first sighting regardless of where the
      * beat falls: the crop cannot need more than one full tick per remaining stage.
@@ -552,25 +494,13 @@ public class FarmingTracker {
      * {@link #sightingPastTheEstimate} supplies one.
      */
     private long latestDone(Observation obs) {
-        DecodedPatch decoded = obs.decoded;
-        int tickRate = decoded.tickRateMinutes();
-        if (tickRate <= 0) {
-            return 0;
-        }
-        int remaining = decoded.getStages() - 1 - decoded.getStage();
-        long firstSeen = obs.firstSeenAtEpochSec;
-        long byFirstSeen = firstSeen + (long) remaining * tickRate * 60L;
-        if (!offsetCovers(tickRate)) {
-            return byFirstSeen;
-        }
-        return Math.min(getTickTime(tickRate, remaining, firstSeen), byFirstSeen);
+        return doneFrom(obs, obs.firstSeenAtEpochSec);
     }
 
     /** True when the learned offset is precise enough to align this tick rate's grid. */
     private boolean offsetCovers(int tickRateMinutes) {
         return tickOffsetSeconds != OFFSET_UNKNOWN && tickOffsetPrecisionMins != OFFSET_UNKNOWN
-                && (tickOffsetPrecisionMins >= tickRateMinutes
-                    || tickOffsetPrecisionMins >= OFFSET_UNIVERSAL_PRECISION_MINS);
+                && (tickOffsetPrecisionMins >= tickRateMinutes || tickOffsetPrecisionMins >= OFFSET_UNIVERSAL_PRECISION_MINS);
     }
 
     /**
@@ -593,140 +523,6 @@ public class FarmingTracker {
         return timeOfGoalTick - offsetSeconds;
     }
 
-    // --- Render-loop queries (allocate no PatchPrediction) ---
-
-    /**
-     * Count of observed patches of {@code type} provably ready to harvest. A patch
-     * still inside its finish window is not counted — see
-     * {@link #countLikelyReadyOfType} for those.
-     */
-    public int countReadyOfType(PatchType type, long nowEpochSec) {
-        return countReadiness(type, nowEpochSec, PatchPrediction.Readiness.READY);
-    }
-
-    /**
-     * Count of observed patches of {@code type} that may or may not have finished —
-     * past their earliest possible finish but not yet past their latest. Always zero
-     * once a growth tick has been witnessed at a precision covering {@code type}.
-     */
-    public int countLikelyReadyOfType(PatchType type, long nowEpochSec) {
-        return countReadiness(type, nowEpochSec, PatchPrediction.Readiness.LIKELY_READY);
-    }
-
-    private int countReadiness(PatchType type, long nowEpochSec,
-            PatchPrediction.Readiness wanted) {
-        int count = 0;
-        for (Map.Entry<FarmingWorldMap.PatchDef, Observation> e : data.entrySet()) {
-            if (e.getKey().getType() == type && !isHidden(e.getKey())
-                    && readiness(e.getKey(), e.getValue(), nowEpochSec) == wanted) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    /** Count of observed patches of {@code type} with something in progress (any live state). */
-    public int countPlantedOfType(PatchType type) {
-        int count = 0;
-        for (Map.Entry<FarmingWorldMap.PatchDef, Observation> e : data.entrySet()) {
-            if (e.getKey().getType() == type && !isHidden(e.getKey())
-                    && !e.getValue().decoded.isIdle()) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    /** Count of patches of {@code type} last observed DISEASED. */
-    public int countDiseasedOfType(PatchType type) {
-        return countState(type, CropState.DISEASED);
-    }
-
-    /** Count of patches of {@code type} last observed DEAD. */
-    public int countDeadOfType(PatchType type) {
-        return countState(type, CropState.DEAD);
-    }
-
-    public boolean hasAnyReady(long nowEpochSec) {
-        for (Map.Entry<FarmingWorldMap.PatchDef, Observation> e : data.entrySet()) {
-            if (!isHidden(e.getKey())
-                    && readiness(e.getKey(), e.getValue(), nowEpochSec)
-                        == PatchPrediction.Readiness.READY) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public boolean hasAnyDiseasedOrDead() {
-        for (Map.Entry<FarmingWorldMap.PatchDef, Observation> e : data.entrySet()) {
-            Observation obs = e.getValue();
-            if (obs.decoded.isIdle() || isHidden(e.getKey())) {
-                continue;
-            }
-            CropState state = obs.decoded.getState();
-            if (state == CropState.DISEASED || state == CropState.DEAD) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private int countState(PatchType type, CropState wanted) {
-        int count = 0;
-        for (Map.Entry<FarmingWorldMap.PatchDef, Observation> e : data.entrySet()) {
-            Observation obs = e.getValue();
-            if (e.getKey().getType() == type
-                    && !isHidden(e.getKey())
-                    && !obs.decoded.isIdle()
-                    && obs.decoded.getState() == wanted) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    /**
-     * The allocation-free equivalent of {@link PatchPrediction#readinessAt}: weeds
-     * never count; harvestable is ready when terminal (no regrow) or fully
-     * restocked; and a growing crop is placed against its finish window.
-     *
-     * <p>The two must agree: this backs the in-game overlay while {@code readinessAt}
-     * backs the farming tab. Both take the window from {@link #finishWindowEnd} and
-     * {@link #finishWindowStart}. This runs per observed patch per rendered frame, so it
-     * must not build a {@link PatchPrediction}.
-     */
-    private PatchPrediction.Readiness readiness(FarmingWorldMap.PatchDef patch, Observation obs,
-            long nowEpochSec) {
-        DecodedPatch decoded = obs.decoded;
-        if (decoded.isIdle()) {
-            return PatchPrediction.Readiness.GROWING;
-        }
-        CropState state = decoded.getState();
-        int tickRate = decoded.tickRateMinutes();
-        if (state == CropState.HARVESTABLE) {
-            // Observed harvestable is ground truth, not a prediction: terminal
-            // harvests carry no regrow timer, and a restocking crop that has run
-            // out of stages is already full.
-            if (tickRate <= 0 || decoded.getStages() - 1 - decoded.getStage() <= 0) {
-                return PatchPrediction.Readiness.READY;
-            }
-        } else if (state != CropState.GROWING || tickRate <= 0) {
-            return PatchPrediction.Readiness.GROWING;
-        }
-        long latest = finishWindowEnd(patch, obs);
-        if (latest <= 0) {
-            return PatchPrediction.Readiness.GROWING;
-        }
-        if (nowEpochSec >= latest) {
-            return PatchPrediction.Readiness.READY;
-        }
-        return nowEpochSec >= finishWindowStart(patch, obs)
-                ? PatchPrediction.Readiness.LIKELY_READY
-                : PatchPrediction.Readiness.GROWING;
-    }
-
-
     // --- Persistence ---
 
     /**
@@ -740,27 +536,31 @@ public class FarmingTracker {
      *     anything above one second leaves a finish window open that wide until a
      *     growth tick is witnessed again.
      */
-    public void loadPersisted(Collection<PersistedEntry> entries,
-            int offsetSeconds, int offsetPrecisionMins, int offsetResolutionSeconds) {
+    public void loadPersisted(Collection<PersistedEntry> entries, int offsetSeconds, int offsetPrecisionMins, int offsetResolutionSeconds) {
         clear();
         tickOffsetSeconds = offsetSeconds;
         tickOffsetPrecisionMins = offsetPrecisionMins;
         tickOffsetResolutionSeconds = Math.max(OFFSET_RESOLUTION_SECONDS, offsetResolutionSeconds);
         if (entries != null) {
             for (PersistedEntry e : entries) {
-                FarmingWorldMap.PatchDef patch = FarmingWorldMap.byConfigKey(e.getConfigKey());
-                if (patch == null) {
-                    continue;
-                }
-                DecodedPatch decoded = patch.getType().decode(e.getVarbitValue());
-                if (decoded == null) {
-                    continue;
-                }
-                // The first sighting is not persisted, so the stored stamp stands in for
-                // it. That errs late, never early.
-                data.put(patch, new Observation(e.getVarbitValue(), e.getObservedAtEpochSec(),
-                        decoded, e.getObservedAtEpochSec()));
+                restore(e);
             }
+        }
+    }
+
+    /**
+     * Store one patch read back from saved state, or nothing when its key is unknown or its
+     * value does not decode.
+     */
+    private void restore(PersistedEntry entry) {
+        FarmingWorldMap.PatchDef patch = FarmingWorldMap.byConfigKey(entry.getConfigKey());
+        int value = entry.getVarbitValue();
+        DecodedPatch decoded = patch == null ? null : patch.getType().decode(value);
+        if (decoded != null) {
+            // The first sighting is not persisted, so the stored stamp stands in for it.
+            // That errs late, never early. No planting was seen.
+            long observedAt = entry.getObservedAtEpochSec();
+            data.put(patch, new Observation(value, observedAt, decoded, observedAt, 0L));
         }
     }
 
@@ -768,110 +568,9 @@ public class FarmingTracker {
     public Collection<PersistedEntry> exportForPersist() {
         List<PersistedEntry> out = new ArrayList<>();
         for (Map.Entry<FarmingWorldMap.PatchDef, Observation> e : data.entrySet()) {
-            out.add(new PersistedEntry(e.getKey().configKey(), e.getValue().varbitValue,
-                    e.getValue().observedAtEpochSec));
+            out.add(new PersistedEntry(e.getKey().configKey(), e.getValue().varbitValue, e.getValue().observedAtEpochSec));
         }
         return out;
-    }
-
-    /**
-     * One patch as the tracker holds it this session, beyond what is saved: when its value
-     * was first seen, and when the patch was last read in range. A bug report holds it, so
-     * the patch can be predicted from the report as the session predicted it.
-     */
-    public static final class LiveEntry {
-        private final String configKey;
-        private final int varbitValue;
-        private final long observedAtEpochSec;
-        private final long firstSeenAtEpochSec;
-        /** Zero when the patch has not been read in range this session. */
-        private final long lastSeenEpochSec;
-        /** Zero when no planting was seen; see {@link PatchPrediction#getPlantedAtEpochSec}. */
-        private final long plantedAtEpochSec;
-
-        public LiveEntry(String configKey, int varbitValue, long observedAtEpochSec,
-                long firstSeenAtEpochSec, long lastSeenEpochSec) {
-            this(configKey, varbitValue, observedAtEpochSec, firstSeenAtEpochSec,
-                    lastSeenEpochSec, 0L);
-        }
-
-        public LiveEntry(String configKey, int varbitValue, long observedAtEpochSec,
-                long firstSeenAtEpochSec, long lastSeenEpochSec, long plantedAtEpochSec) {
-            this.configKey = configKey;
-            this.varbitValue = varbitValue;
-            this.observedAtEpochSec = observedAtEpochSec;
-            this.firstSeenAtEpochSec = firstSeenAtEpochSec;
-            this.lastSeenEpochSec = lastSeenEpochSec;
-            this.plantedAtEpochSec = plantedAtEpochSec;
-        }
-
-        public long getPlantedAtEpochSec() {
-            return plantedAtEpochSec;
-        }
-
-        public String getConfigKey() {
-            return configKey;
-        }
-
-        public int getVarbitValue() {
-            return varbitValue;
-        }
-
-        public long getObservedAtEpochSec() {
-            return observedAtEpochSec;
-        }
-
-        public long getFirstSeenAtEpochSec() {
-            return firstSeenAtEpochSec;
-        }
-
-        public long getLastSeenEpochSec() {
-            return lastSeenEpochSec;
-        }
-    }
-
-    /** The raw value held for a patch, or null when it has none. */
-    public Integer rawValue(FarmingWorldMap.PatchDef patch) {
-        Observation held = data.get(patch);
-        return held != null ? held.varbitValue : null;
-    }
-
-    /** Every patch held, with its in-session stamps. */
-    public List<LiveEntry> exportLive() {
-        List<LiveEntry> out = new ArrayList<>();
-        for (Map.Entry<FarmingWorldMap.PatchDef, Observation> e : data.entrySet()) {
-            Long seen = lastSeen.get(e.getKey());
-            out.add(new LiveEntry(e.getKey().configKey(), e.getValue().varbitValue,
-                    e.getValue().observedAtEpochSec, e.getValue().firstSeenAtEpochSec,
-                    seen != null ? seen : 0L, e.getValue().plantedAtEpochSec));
-        }
-        return out;
-    }
-
-    /**
-     * Replaces every patch with the entries given, stamps included, keeping the learned
-     * offset. The inverse of {@link #exportLive}. Unknown keys and undecodable values are
-     * dropped, as on a load.
-     */
-    public void restoreLive(Collection<LiveEntry> entries) {
-        data.clear();
-        lastSeen.clear();
-        overgrowthHeldAt.clear();
-        for (LiveEntry e : entries) {
-            FarmingWorldMap.PatchDef patch = FarmingWorldMap.byConfigKey(e.getConfigKey());
-            if (patch == null) {
-                continue;
-            }
-            DecodedPatch decoded = patch.getType().decode(e.getVarbitValue());
-            if (decoded == null) {
-                continue;
-            }
-            data.put(patch, new Observation(e.getVarbitValue(), e.getObservedAtEpochSec(),
-                    decoded, e.getFirstSeenAtEpochSec(), e.getPlantedAtEpochSec()));
-            if (e.getLastSeenEpochSec() > 0) {
-                lastSeen.put(patch, e.getLastSeenEpochSec());
-            }
-        }
     }
 
     /** How many patch values have changed so far, re-stamps of an unchanged value aside. */

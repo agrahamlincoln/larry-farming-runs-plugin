@@ -34,8 +34,7 @@ final class TripOrder {
         // belong early.
         boolean[] movesToItsPatch = new boolean[plans.size()];
         for (int i = 0; i < plans.size(); i++) {
-            movesToItsPatch[i] = plans.get(i).getStop().isOptional()
-                    && sharesAnArrival(plans, arrivalOf(plans.get(i)));
+            movesToItsPatch[i] = plans.get(i).getStop().isOptional() && sharesAnArrival(plans, arrivalOf(plans.get(i)));
         }
 
         List<Integer> ordered = new ArrayList<>(plans.size());
@@ -50,8 +49,7 @@ final class TripOrder {
             }
             Arrival arrival = arrivalOf(plans.get(i));
             for (int extra = 0; extra < plans.size(); extra++) {
-                if (movesToItsPatch[extra] && !placed[extra]
-                        && arrivalOf(plans.get(extra)) == arrival) {
+                if (movesToItsPatch[extra] && !placed[extra] && arrivalOf(plans.get(extra)) == arrival) {
                     ordered.add(extra);
                     placed[extra] = true;
                 }

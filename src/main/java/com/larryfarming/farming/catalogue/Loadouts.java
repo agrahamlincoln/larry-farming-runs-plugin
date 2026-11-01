@@ -1,13 +1,14 @@
 package com.larryfarming.farming.catalogue;
 
+import com.larryfarming.data.Tables;
 import com.larryfarming.farming.model.GearPick;
 import com.larryfarming.farming.model.LoadoutSlot;
 import com.larryfarming.model.EquipmentSlot;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import net.runelite.api.gameval.ItemID;
 
 /**
- * What to wear on a farm run.
+ * What to wear on a farm run, read from {@code loadouts.tsv}.
  *
  * <p>Gear comes as ordered fallbacks ("Max cape → Farming cape → Ardougne cloak"), plus
  * magic secateurs and the farmer's outfit. Encoded as tiers, not a fixed kit.
@@ -31,133 +32,91 @@ public final class Loadouts {
     private Loadouts() {
     }
 
-    /** The four outfit slots answer to one name in the upgrade list. */
-    public static final String FARMERS_OUTFIT = "Farmer's outfit";
-    private static final String OUTFIT_PURPOSE = "2.5% more Farming experience as a set";
-
     /** Magic secateurs, which raise yield from the inventory as well as the hand. */
-    public static final int MAGIC_SECATEURS = 7409;
+    public static final int MAGIC_SECATEURS = ItemID.FAIRY_ENCHANTED_SECATEURS;
     public static final int DRAMEN_STAFF = 772;
     public static final int LUNAR_STAFF = 9084;
 
-    /**
-     * Wiki "Magic secateurs": herbs, allotments, bushes and more, but not seaweed or cacti.
-     * The sentence names the three a farm run sees most.
-     */
-    private static final LoadoutSlot SECATEURS = LoadoutSlot.builder(EquipmentSlot.WEAPON,
-                    "More herbs, allotment crops and berries")
-            .tier("Magic secateurs", "more herbs, allotment crops and berries",
-                    MAGIC_SECATEURS)
-            .tip("Bring your %s. They give more herbs, allotment crops and berries.")
-            .build();
+    /** The one sentence for an outfit owned but not all worn. */
+    public static final String OUTFIT_TIP = "Wear the Farmer's outfit for 2.5% more Farming experience.";
 
-    private static final GearPick DRAMEN = GearPick.of("Dramen staff", "fairy rings",
-            DRAMEN_STAFF);
+    /** The weapon and log-basket slots, which {@link #forRun} chooses between; the rest always show. */
+    private static final Set<String> CHOSEN = Set.of("SECATEURS", "STAFF", "LOG_BASKET");
 
-    /**
-     * One tier, not two: the staves open a ring alike, so a ladder would ask a lunar-staff
-     * wielder to swap to a dramen staff for nothing. The goal names the dramen staff, which
-     * Lost City makes and which comes long before Lunar Diplomacy.
-     */
-    private static final LoadoutSlot STAFF = LoadoutSlot.builder(EquipmentSlot.WEAPON,
-                    "Opens fairy rings")
-            .tier(GearPick.anyOf("Dramen or lunar staff", "fairy rings", DRAMEN,
-                    GearPick.of("Lunar staff", "fairy rings", LUNAR_STAFF)))
-            .goal(DRAMEN, "Make a dramen staff in Lost City to use fairy rings.")
-            .mustWear()
-            .tip("Wield your %s to use fairy rings.")
-            .build();
+    /** Every slot by its key, in the table's order, which is the order the panel shows. */
+    private static final Map<String, LoadoutSlot> SLOTS = read(Tables.read("/com/larryfarming/loadouts.tsv"));
 
-    private static final List<LoadoutSlot> THE_REST = List.of(
-            // Best first.
-            LoadoutSlot.builder(EquipmentSlot.CAPE, "A teleport to a farming patch")
-                    // Not every max cape variant is listed. An unlisted variant falls
-                    // through to the Farming cape, which the player must own.
-                    .tier("Max cape", "the Farming cape teleport",
-                            13280, 13342, 13329, 20447, 24134, 13337, 13331, 13333, 13335,
-                            20760, 21285, 21289, 24133, 21776, 24232, 24238, 24242)
-                    .tier("Farming cape", "unlimited teleports to the Farming Guild",
-                            9810, 9811)
-                    .tier("Ardougne cloak 4", "unlimited teleports to the Ardougne patch",
-                            13124)
-                    .tier("Ardougne cloak 3", "five teleports a day to the Ardougne patch",
-                            13123)
-                    .tier("Ardougne cloak 2", "three teleports a day to the Ardougne patch",
-                            13122)
-                    .build(),
-
-            // Ring 1 has no teleport but restores run energy, which earns the slot. Every
-            // tier restores energy from the inventory too (wiki), so wearing saves a slot.
-            // LoadoutPlanner drops the slot on a run the ring cannot help.
-            LoadoutSlot.builder(EquipmentSlot.RING,
-                            "Falador farm teleports and run energy restores")
-                    .tier("Explorer's ring 4", "unlimited Falador teleports", 13128)
-                    .tier("Explorer's ring 3", "unlimited Falador teleports", 13127)
-                    .tier("Explorer's ring 2", "three Falador teleports a day", 13126)
-                    .tier("Explorer's ring 1", "run energy restores", 13125)
-                    .tip("Wear your %s to save a slot.")
-                    .build(),
-
-            LoadoutSlot.builder(EquipmentSlot.AMULET, "A teleport towards the Farming Guild")
-                    // Excludes the uncharged necklace (11113), which teleports nowhere.
-                    .tier("Skills necklace", "teleports to the Farming Guild",
-                            11105, 11107, 11109, 11111, 11968, 11970)
-                    .tier("Xeric's talisman", "teleports into Kourend", 13393)
-                    .niceToHave()
-                    .build(),
-
-            // Four slots, one decision: partOf groups them under one name in the panel.
-            outfitPiece(EquipmentSlot.HEAD, "Farmer's strawhat", 13646, 13647),
-            // The farmer's shirt counts the same as the jacket.
-            outfitPiece(EquipmentSlot.BODY, "Farmer's jacket", 13642, 13643),
-            outfitPiece(EquipmentSlot.LEGS, "Farmer's boro trousers", 13640, 13641),
-            outfitPiece(EquipmentSlot.BOOTS, "Farmer's boots", 13644, 13645));
-
-    private static LoadoutSlot outfitPiece(EquipmentSlot slot, String name, int... itemIds) {
-        return LoadoutSlot.builder(slot, OUTFIT_PURPOSE)
-                .tier(name, "Farming experience", itemIds)
-                .niceToHave()
-                .mustWear()
-                .partOf(FARMERS_OUTFIT)
-                .tip("Wear your %s for more Farming experience.")
-                .build();
+    private static Map<String, LoadoutSlot> read(List<Tables.Row> rows) {
+        Map<String, List<Tables.Row>> byKey = new LinkedHashMap<>();
+        for (Tables.Row row : rows) {
+            byKey.computeIfAbsent(row.text(1), k -> new ArrayList<>()).add(row);
+        }
+        Map<String, LoadoutSlot> slots = new LinkedHashMap<>();
+        byKey.forEach((key, group) -> slots.put(key, slot(group)));
+        if (!slots.keySet().containsAll(CHOSEN)) {
+            throw new IllegalStateException("loadouts.tsv: needs a slot for each of " + CHOSEN);
+        }
+        return Collections.unmodifiableMap(slots);
     }
 
-    /** The one sentence for an outfit owned but not all worn. */
-    public static final String OUTFIT_TIP =
-            "Wear the Farmer's outfit for 2.5% more Farming experience.";
+    /** One slot from its rows: the slot row first, then its forms, tiers and goal. */
+    private static LoadoutSlot slot(List<Tables.Row> rows) {
+        Tables.Row head = rows.get(0);
+        if (!head.text(0).equals("slot")) {
+            throw head.error("a slot's rows start with its slot row");
+        }
+        head.requireWidth(8);
+        List<GearPick> tiers = new ArrayList<>();
+        List<GearPick> forms = new ArrayList<>();
+        GearPick goal = null;
+        String sentence = null;
+        for (Tables.Row row : rows.subList(1, rows.size())) {
+            switch (row.text(0)) {
+                case "form":
+                    forms.add(pick(row));
+                    break;
+                case "tier":
+                    tiers.add(row.requireWidth(6).integers(4).length > 0 ? pick(row)
+                            : GearPick.anyOf(row.text(2), row.text(3), forms.toArray(new GearPick[0])));
+                    break;
+                case "goal":
+                    goal = forms.stream().filter(f -> f.getDisplayName().equals(row.text(2))).findFirst()
+                            .orElseThrow(() -> row.error("no form " + row.text(2)));
+                    sentence = row.requireWidth(4).text(3);
+                    break;
+                default:
+                    throw row.error("no row kind " + row.text(0) + " within a slot");
+            }
+        }
+        if (tiers.isEmpty()) {
+            throw head.error("nothing to put in the slot");
+        }
+        // Without a goal row, the goal is the cheapest tier, the one within reach.
+        GearPick target = goal != null ? goal : tiers.get(tiers.size() - 1);
+        return new LoadoutSlot(head.constant(EquipmentSlot.class, 2), List.copyOf(tiers), head.text(3), head.flag(5, "yes"),
+                head.text(7).isEmpty() ? null : head.text(7), head.flag(6, "yes"), head.text(4), target,
+                sentence != null ? sentence : "Earn " + target.getDisplayName() + " for " + target.getBenefit() + ".");
+    }
 
-    /**
-     * The log basket, worn in the cape slot (wiki infobox: slot cape). Worn, it costs no
-     * inventory slot; carried, it costs the one slot that wearing it frees, so only wearing
-     * it counts here.
-     */
-    private static final LoadoutSlot LOG_BASKET = LoadoutSlot.builder(EquipmentSlot.CAPE,
-                    "Holds the logs you cut without an inventory slot")
-            .tier("Log basket", "28 logs without an inventory slot",
-                    28140, 28142, 28143, 28145)
-            .niceToHave()
-            .mustWear()
-            .tip("Wear your %s to save an inventory slot.")
-            .build();
+    private static GearPick pick(Tables.Row row) {
+        return GearPick.of(row.requireWidth(6).text(2), row.text(3), row.integers(4));
+    }
 
     /**
      * The slots worth filling on a run, in the order the panel shows them.
      *
      * @param staffWielded whether the run uses a fairy ring that needs a staff in hand,
      *     which then takes the weapon slot from the secateurs
+     * @param basketWorn whether the log basket takes the cape slot
      */
-    public static List<LoadoutSlot> forRun(boolean staffWielded) {
-        return forRun(staffWielded, false);
-    }
-
-    /** The same slots, with the log basket in the cape slot when {@code basketWorn}. */
     public static List<LoadoutSlot> forRun(boolean staffWielded, boolean basketWorn) {
-        List<LoadoutSlot> slots = new ArrayList<>(THE_REST.size() + 1);
-        slots.add(staffWielded ? STAFF : SECATEURS);
-        for (LoadoutSlot slot : THE_REST) {
-            slots.add(basketWorn && slot.getSlot() == EquipmentSlot.CAPE ? LOG_BASKET : slot);
-        }
+        List<LoadoutSlot> slots = new ArrayList<>(SLOTS.size());
+        slots.add(SLOTS.get(staffWielded ? "STAFF" : "SECATEURS"));
+        SLOTS.forEach((key, slot) -> {
+            if (!CHOSEN.contains(key)) {
+                slots.add(basketWorn && slot.getSlot() == EquipmentSlot.CAPE ? SLOTS.get("LOG_BASKET") : slot);
+            }
+        });
         return slots;
     }
 }

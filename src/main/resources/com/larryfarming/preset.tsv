@@ -1,0 +1,53 @@
+# The default route's opinions, which an untouched install runs on: one row per Preset
+# field, then its value. Crops, runs, travel methods and capabilities are written as their
+# constant names, a list separated by single spaces; a switch is yes or -; - is none.
+#
+# field	value
+
+# Every herb, best first. Ranked by experience per seed including the time to gather
+# secondaries, so it disagrees with level order: snapdragon sits below irit.
+herbRanking	TORSTOL TOADFLAX LANTADYME CADANTINE KWUARM AVANTOE IRIT SNAPDRAGON RANARR DWARF_WEED HARRALANDER TARROMIN MARRENTILL GUAM
+# Torstol tops the ranking but is hard to gather in bulk, so it is kept for hard contracts.
+herbsKeptForContracts	TORSTOL
+# The worst herb worth planting: it and every herb ranked above it start ticked.
+herbCutoff	IRIT
+goodSeedsPerRun	2
+guildHerbPatchReserved	yes
+magicAtFaladorWithEliteDiary	yes
+# Yew and up among regular trees, papaya and up among fruit trees. Mahogany, which gives
+# more experience per day and per minute, with teak for when the mahogany seeds run out.
+treesOn	MAGIC YEW DRAGONFRUIT PALM PAPAYA MAHOGANY TEAK
+# Off: mushrooms and belladonna, which earn little per trip, and watermelon, poison ivy and
+# cactus, the alternatives to snape grass, whiteberries and potato cactus. Attas alone of
+# the anima plants: it makes the most of a limited seed supply.
+switchedOn	SNAPE_GRASS WHITE_LILY LIMPWURT POTATO_CACTUS WHITEBERRIES CALQUAT SEAWEED HESPORI ATTAS
+picksFruitInPassing	-
+# Every travel method on: the route ranks them itself.
+travelOff	-
+# Every site on. Harmony needs no default per book: only the Lunar run lists it, so its one
+# switch is on that run alone.
+sitesOff	-
+# Nothing declared: a house counts what Larry has seen in it.
+houseDeclared	-
+# Hardwood leads: the most Farming experience of any run here, on the longest cadence, so an
+# idle patch costs the most. The anima plant follows Hespori in the same guild, and its
+# effect reaches every patch planted after it. Regular trees ride along with fruit trees, so
+# they rank low.
+runPriority	HARDWOOD CONTRACT HESPORI ANIMA CALQUAT FRUIT_TREE HERB REGULAR_TREE SEAWEED
+# The ranking above as it stands: no favourite herb, good seeds only where the yield bonus
+# is, hardwood first, and a run due on its first patch.
+favouriteHerb	-
+goodSeedsInEveryPatch	-
+herbRunFirst	-
+waitsForEveryPatch	-
+# A fruit tree run goes only once there are saplings for every patch, so one sapling never
+# sends the player round them all.
+fruitTreesWaitForSaplings	yes
+# On: a grown tree is chopped down and replanted when a sapling at least as good is in hand,
+# so the new tree's health check pays again.
+replantsGrownTrees	yes
+# Off: herb runs are optional below 82, not ruled out. A player who would rather level on
+# tree runs first, as yield grows with level, ticks it.
+herbRunsWaitForLevel	-
+# Off: the spell needs the Ash covered tome, which the game does not show.
+compostsWithFertileSoil	-

@@ -3,29 +3,11 @@ package com.larryfarming.farming.engine;
 import com.larryfarming.engine.farming.FarmingWorldMap;
 import com.larryfarming.engine.farming.PatchType;
 import com.larryfarming.farming.catalogue.FarmingCatalogue;
-import com.larryfarming.farming.detection.CapabilityResolver;
-import com.larryfarming.farming.detection.CapabilitySources;
-import com.larryfarming.farming.detection.CapabilityState;
-import com.larryfarming.farming.detection.CapabilityVerdict;
-import com.larryfarming.farming.detection.TeleportPlanner;
-import com.larryfarming.farming.model.Approach;
-import com.larryfarming.farming.model.Arrival;
-import com.larryfarming.farming.model.Capability;
-import com.larryfarming.farming.model.Destination;
-import com.larryfarming.farming.model.FarmingRun;
-import com.larryfarming.farming.model.PatchRef;
-import com.larryfarming.farming.model.Requirement;
-import com.larryfarming.farming.model.RunStop;
-import com.larryfarming.farming.model.RungOrder;
-import com.larryfarming.farming.model.TeleportMeans;
-import com.larryfarming.farming.model.TravelOption;
+import com.larryfarming.farming.detection.*;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingSkipReason;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import lombok.Value;
 
 /**
@@ -92,20 +74,6 @@ public final class RunPlanner {
     }
 
     /**
-     * Whether the stop after this one may still be answered from where the player stands.
-     *
-     * <p>Only a visit spends position. A skipped stop leaves the player where they were, so
-     * the allowance passes to the next stop.
-     *
-     * <p>Each pass over the stops recomputes this instead of recording it on the plan. A
-     * stop dropped later for what is in its ground then hands the allowance to whichever
-     * stop inherits the walk.
-     */
-    public static boolean positionStillAvailable(boolean mayStandHere, StopPlan plan) {
-        return mayStandHere && !plan.isVisit();
-    }
-
-    /**
      * Which stops may be routed from where the player is standing, over one walk of the
      * stops.
      *
@@ -115,7 +83,9 @@ public final class RunPlanner {
      * at the first arrival the player travels to gets the allowance, and every stop after
      * that arrival does not.
      *
-     * <p>Rebuilt per walk, for the reason given on {@link #positionStillAvailable}.
+     * <p>Only a visit spends position: a skipped stop leaves the player where they were.
+     * Rebuilt per walk instead of recorded on the plan, so a stop dropped later for what is
+     * in its ground hands the allowance to whichever stop inherits the walk.
      */
     public static final class Allowance {
 
@@ -150,8 +120,7 @@ public final class RunPlanner {
             return;
         }
         for (PatchRef patch : plan.getStop().getPatches()) {
-            reached.merge(patch, plan.getConfidence(),
-                    (already, now) -> CapabilityState.any(List.of(already, now)));
+            reached.merge(patch, plan.getConfidence(), (already, now) -> CapabilityState.any(List.of(already, now)));
         }
     }
 
@@ -161,8 +130,7 @@ public final class RunPlanner {
      * <p>Package-private because it grants position: a caller outside this package must
      * use the overload that names the allowance.
      */
-    StopPlan planStop(RunStop stop, PlayerState state,
-            Map<PatchRef, CapabilityState> reached) {
+    StopPlan planStop(RunStop stop, PlayerState state, Map<PatchRef, CapabilityState> reached) {
         return planStop(stop, state, reached, true);
     }
 
@@ -183,8 +151,7 @@ public final class RunPlanner {
      * @param mayStandHere true for the stop the player is travelling to, so a route free
      *     from where they stand is offered; false for every later stop
      */
-    public StopPlan planStop(RunStop stop, PlayerState state,
-            Map<PatchRef, CapabilityState> reached, boolean mayStandHere) {
+    public StopPlan planStop(RunStop stop, PlayerState state, Map<PatchRef, CapabilityState> reached, boolean mayStandHere) {
         return planStop(stop, state, reached, mayStandHere, null);
     }
 
@@ -193,8 +160,7 @@ public final class RunPlanner {
      *
      * @param start what the previous stop already gives this one, or null for nothing
      */
-    StopPlan planStop(RunStop stop, PlayerState state,
-            Map<PatchRef, CapabilityState> reached, boolean mayStandHere, Start start) {
+    StopPlan planStop(RunStop stop, PlayerState state, Map<PatchRef, CapabilityState> reached, boolean mayStandHere, Start start) {
         StopPlan shutOut = shutOut(stop, state);
         if (shutOut != null) {
             return shutOut;
@@ -223,12 +189,10 @@ public final class RunPlanner {
     private static StopPlan waitingOnAfact(RunStop stop, PlayerState state,
             Map<PatchRef, CapabilityState> reached, CapabilityResolver asked) {
         for (TravelOption option : stop.getTravel()) {
-            if (!option.isCertainOnly() || asked.evaluate(option.getRequires(), state,
-                    reached) != CapabilityState.UNKNOWN) {
+            if (!option.isCertainOnly() || asked.evaluate(option.getRequires(), state, reached) != CapabilityState.UNKNOWN) {
                 continue;
             }
-            return new StopPlan(stop, StopPlan.Outcome.UNROUTED, null,
-                    CapabilityState.UNKNOWN, unreadFact(option, state, asked),
+            return new StopPlan(stop, StopPlan.Outcome.UNROUTED, null, CapabilityState.UNKNOWN, unreadFact(option, state, asked),
                     FarmingSkipReason.NO_ROUTE_LISTED, 0L, Collections.emptySet(), null);
         }
         return null;
@@ -238,8 +202,7 @@ public final class RunPlanner {
      * Plans an arrival with position allowed. Package-private for the reason the matching
      * {@link #planStop} overload is.
      */
-    StopPlan planArrival(RunStop lead, PlayerState state,
-            Map<PatchRef, CapabilityState> reached) {
+    StopPlan planArrival(RunStop lead, PlayerState state, Map<PatchRef, CapabilityState> reached) {
         return planArrival(lead, state, reached, true);
     }
 
@@ -257,24 +220,20 @@ public final class RunPlanner {
      *
      * @param mayStandHere as on {@link #planStop(RunStop, PlayerState, Map, boolean)}
      */
-    public StopPlan planArrival(RunStop lead, PlayerState state,
-            Map<PatchRef, CapabilityState> reached, boolean mayStandHere) {
+    public StopPlan planArrival(RunStop lead, PlayerState state, Map<PatchRef, CapabilityState> reached, boolean mayStandHere) {
         return planArrival(lead, state, reached, mayStandHere, null);
     }
 
     /** The same, with what the previous stop gives this one, as on {@link #planStop}. */
-    StopPlan planArrival(RunStop lead, PlayerState state,
-            Map<PatchRef, CapabilityState> reached, boolean mayStandHere, Start start) {
+    StopPlan planArrival(RunStop lead, PlayerState state, Map<PatchRef, CapabilityState> reached, boolean mayStandHere, Start start) {
         CapabilityResolver asked = resolverFor(mayStandHere);
-        List<TravelOption> combined = ladderFor(
-                FarmingCatalogue.combinedRoute(lead.getArrival()), start, state, reached, asked);
+        List<TravelOption> combined = ladderFor(FarmingCatalogue.combinedRoute(lead.getArrival()), start, state, reached, asked);
         TravelOption certain = firstCertain(combined, state, reached, asked);
         if (certain != null) {
             return visit(lead, certain, CapabilityState.HAVE, state, reached, asked);
         }
         TravelOption guess = bestGuess(combined, state, reached, asked);
-        return guess == null ? null
-                : visit(lead, guess, CapabilityState.UNKNOWN, state, reached, asked);
+        return guess == null ? null : visit(lead, guess, CapabilityState.UNKNOWN, state, reached, asked);
     }
 
     /**
@@ -301,8 +260,7 @@ public final class RunPlanner {
         // Planning runs on every snapshot. With no start and no approach, every figure is the
         // catalogue's own, so its ranking stands and ranking again would change nothing.
         // A started rung has a walk the catalogue could not know, so a start always re-ranks.
-        return start == null && !asksForAnApproach(from) ? from
-                : ranked(from, state, reached, asked);
+        return start == null && !asksForAnApproach(from) ? from : ranked(from, state, reached, asked);
     }
 
     /** Whether any rung leaves out an approach whose walk this account decides. */
@@ -328,8 +286,7 @@ public final class RunPlanner {
     private static List<TravelOption> ladderFrom(List<TravelOption> ladder, Start start) {
         List<TravelOption> from = new ArrayList<>(ladder.size());
         for (TravelOption rung : ladder) {
-            TravelOption started = start == null ? rung
-                    : rung.startingFrom(start.getGranted(), start.getWalk(), start.getTiles());
+            TravelOption started = start == null ? rung : rung.startingFrom(start.getGranted(), start.getWalk(), start.getTiles());
             if (!started.isStartOnly()) {
                 from.add(started);
             }
@@ -366,8 +323,7 @@ public final class RunPlanner {
                 if (!rung.getRequires().contains(approach.getWay())) {
                     continue;
                 }
-                Approach.Leg leg = approach.legFor(
-                        asked.takenBranch(approach.getWay(), state, reached));
+                Approach.Leg leg = approach.legFor(asked.takenBranch(approach.getWay(), state, reached));
                 if (leg == null) {
                     walks[i] = TravelOption.UNMEASURED;
                     break;
@@ -398,8 +354,7 @@ public final class RunPlanner {
     private TravelOption firstCertain(List<TravelOption> ladder, PlayerState state,
             Map<PatchRef, CapabilityState> reached, CapabilityResolver asked) {
         for (TravelOption option : ladder) {
-            if (asked.evaluate(option.getRequires(), state, reached)
-                    == CapabilityState.HAVE) {
+            if (asked.evaluate(option.getRequires(), state, reached) == CapabilityState.HAVE) {
                 return option;
             }
         }
@@ -410,8 +365,7 @@ public final class RunPlanner {
      * The detector's own words for the unread fact, such as "not sure where your house is",
      * rather than the resolver's generic "not sure whether you have".
      */
-    private static String unreadFact(TravelOption option, PlayerState state,
-            CapabilityResolver asked) {
+    private static String unreadFact(TravelOption option, PlayerState state, CapabilityResolver asked) {
         for (Capability capability : option.getRequires().leafCapabilities()) {
             if (asked.resolve(capability, state).getState() != CapabilityState.UNKNOWN) {
                 continue;
@@ -447,12 +401,10 @@ public final class RunPlanner {
             if (option.isCertainOnly()) {
                 continue;
             }
-            if (asked.evaluate(option.getRequires(), state, reached)
-                    != CapabilityState.UNKNOWN) {
+            if (asked.evaluate(option.getRequires(), state, reached) != CapabilityState.UNKNOWN) {
                 continue;
             }
-            if (asked.evaluate(option.getRequires(), state, asIfSettled)
-                    == CapabilityState.HAVE) {
+            if (asked.evaluate(option.getRequires(), state, asIfSettled) == CapabilityState.HAVE) {
                 // Certain but for the guess it inherited, so there is nothing else to ask.
                 return option;
             }
@@ -468,14 +420,12 @@ public final class RunPlanner {
      * separate a doubt a rung inherited from one it owns. Absent patches stay absent: a
      * stop the run is not making is a {@code LACK}, not a maybe.
      */
-    private static Map<PatchRef, CapabilityState> asIfThoseVisitsHold(
-            Map<PatchRef, CapabilityState> reached) {
+    private static Map<PatchRef, CapabilityState> asIfThoseVisitsHold(Map<PatchRef, CapabilityState> reached) {
         if (reached == null || reached.isEmpty()) {
             return reached;
         }
         Map<PatchRef, CapabilityState> settled = new LinkedHashMap<>(reached);
-        settled.replaceAll((patch, held) ->
-                held == CapabilityState.UNKNOWN ? CapabilityState.HAVE : held);
+        settled.replaceAll((patch, held) -> held == CapabilityState.UNKNOWN ? CapabilityState.HAVE : held);
         return settled;
     }
 
@@ -497,8 +447,7 @@ public final class RunPlanner {
             return null;
         }
         // The gate's own words, unprefixed: the heading already says "no way in".
-        return new StopPlan(stop, StopPlan.Outcome.UNREACHABLE, null, CapabilityState.LACK,
-                access.getBecause(),
+        return new StopPlan(stop, StopPlan.Outcome.UNREACHABLE, null, CapabilityState.LACK, access.getBecause(),
                 FarmingSkipReason.NO_ROUTE, 0L, Collections.emptySet(), null);
     }
 
@@ -514,22 +463,17 @@ public final class RunPlanner {
      * the means here cannot rewrite the sentence.
      */
     private StopPlan visit(RunStop stop, TravelOption option, CapabilityState confidence,
-            PlayerState state, Map<PatchRef, CapabilityState> reached,
-            CapabilityResolver asked) {
-        Destination arriveAt = option.getDestination() != null
-                ? option.getDestination()
+            PlayerState state, Map<PatchRef, CapabilityState> reached, CapabilityResolver asked) {
+        Destination arriveAt = option.getDestination() != null ? option.getDestination()
                 : asked.reliedOnDestination(option.getRequires(), state, reached);
-        TeleportPlanner.Choice arriving = arriveAt == null
-                ? null
-                : asked.teleportFor(option.getRequires(), arriveAt, state);
+        TeleportPlanner.Choice arriving = arriveAt == null ? null : asked.teleportFor(option.getRequires(), arriveAt, state);
         // Null for a player already standing there. CarryPlanner counts runes and tablets
         // from this, so null keeps the teleport off the packing list.
         TeleportMeans means = arriving == null ? null : arriving.getMeans();
         // Only a certainty with no means says "you are there". An unread bank also returns
         // no means while its rung is still the best guess, so a null means alone must not
         // read as arrival.
-        boolean alreadyThere = arriving != null && means == null
-                && arriving.getState() == CapabilityState.HAVE;
+        boolean alreadyThere = arriving != null && means == null && arriving.getState() == CapabilityState.HAVE;
         return new StopPlan(stop, StopPlan.Outcome.VISIT, option, confidence,
                 sayWhatItLeansOn(option.instructionFor(means, alreadyThere), option, reached),
                 null, 0L, asked.reliedOn(option.getRequires(), state, reached), means);
@@ -544,8 +488,7 @@ public final class RunPlanner {
      * Grand Tree visit it assumes. The sentence states the dependency; it does not ask the
      * player whether that stop will happen.
      */
-    private static String sayWhatItLeansOn(String because, TravelOption option,
-            Map<PatchRef, CapabilityState> reached) {
+    private static String sayWhatItLeansOn(String because, TravelOption option, Map<PatchRef, CapabilityState> reached) {
         if (reached == null || because == null) {
             return because;
         }
@@ -560,9 +503,7 @@ public final class RunPlanner {
             if (because.endsWith(".")) {
                 return because + " This assumes you stopped at the " + name + " patch.";
             }
-            return because.contains(name)
-                    ? because + ", if you stopped there"
-                    : because + ", if you stopped at the " + name + " patch";
+            return because.contains(name) ? because + ", if you stopped there" : because + ", if you stopped at the " + name + " patch";
         }
         return because;
     }
@@ -578,8 +519,7 @@ public final class RunPlanner {
             return patch.getLabel();
         }
         // Hespori is a name, so it keeps its capital.
-        String kind = def.getType() == PatchType.HESPORI
-                ? def.getType().getDisplayName()
+        String kind = def.getType() == PatchType.HESPORI ? def.getType().getDisplayName()
                 : def.getType().name().toLowerCase().replace('_', ' ');
         return def.getLocation() + " " + kind;
     }
@@ -595,47 +535,39 @@ public final class RunPlanner {
     private StopPlan giveUp(RunStop stop, PlayerState state, CapabilityResolver asked) {
         boolean noRing = lostForWantOfAring(stop, state, asked);
         String shortfall = noRing ? NO_RING_BECAUSE : shortfallOf(stop, state, asked);
+        StopPlan.Outcome outcome;
+        FarmingSkipReason reason;
         switch (stop.getTerminal()) {
             case SKIP_PATCH:
-                return new StopPlan(stop, StopPlan.Outcome.SKIP, null, CapabilityState.LACK,
-                        shortfall,
-                        noRing ? FarmingSkipReason.NO_FAIRY_RING_ROUTE
-                                : FarmingSkipReason.NOT_WORTH_TRIP, 0L,
-                        Collections.emptySet(), null);
+                outcome = StopPlan.Outcome.SKIP;
+                reason = FarmingSkipReason.NOT_WORTH_TRIP;
+                break;
             case NO_ALTERNATIVE:
-                return new StopPlan(stop, StopPlan.Outcome.UNREACHABLE, null,
-                        CapabilityState.LACK,
-                        shortfall,
-                        noRing ? FarmingSkipReason.NO_FAIRY_RING_ROUTE
-                                : FarmingSkipReason.NO_ROUTE, 0L,
-                        Collections.emptySet(), null);
+                outcome = StopPlan.Outcome.UNREACHABLE;
+                reason = FarmingSkipReason.NO_ROUTE;
+                break;
             default:
-                return new StopPlan(stop, StopPlan.Outcome.UNROUTED, null,
-                        CapabilityState.LACK, shortfall,
-                        noRing ? FarmingSkipReason.NO_FAIRY_RING_ROUTE
-                                : FarmingSkipReason.NO_ROUTE_LISTED, 0L,
-                        Collections.emptySet(), null);
+                outcome = StopPlan.Outcome.UNROUTED;
+                reason = FarmingSkipReason.NO_ROUTE_LISTED;
         }
+        return new StopPlan(stop, outcome, null, CapabilityState.LACK, shortfall,
+                noRing ? FarmingSkipReason.NO_FAIRY_RING_ROUTE : reason, 0L, Collections.emptySet(), null);
     }
 
-    private static final String NO_RING_BECAUSE =
-            "nothing you own and have switched on reaches a fairy ring. "
-                    + "See Travel";
+    private static final String NO_RING_BECAUSE = "nothing you own and have switched on reaches a fairy ring. " + "See Travel";
 
     /**
      * Whether a fairy ring rung would have reached this stop but for a way to stand at a
      * ring. Not when the network itself is shut (Fairytale II, or no staff): that rung reads
      * LACK even with the approach granted, so its own reason stands.
      */
-    private static boolean lostForWantOfAring(RunStop stop, PlayerState state,
-            CapabilityResolver asked) {
+    private static boolean lostForWantOfAring(RunStop stop, PlayerState state, CapabilityResolver asked) {
         Requirement approach = FarmingCatalogue.toAfairyRing();
         for (TravelOption option : stop.getTravel()) {
             if (option.isCertainOnly() || !option.getRequires().contains(approach)) {
                 continue;
             }
-            if (asked.evaluateGranting(option.getRequires(), approach, state,
-                    Collections.emptyMap()) != CapabilityState.LACK) {
+            if (asked.evaluateGranting(option.getRequires(), approach, state, Collections.emptyMap()) != CapabilityState.LACK) {
                 return true;
             }
         }
@@ -663,14 +595,12 @@ public final class RunPlanner {
                 continue;
             }
             CapabilityResolver.Gap gap = asked.gapTo(option.getRequires(), state);
-            if (gap != CapabilityResolver.Gap.NONE
-                    && (nearest == null || gap.compareTo(nearestGap) < 0)) {
+            if (gap != CapabilityResolver.Gap.NONE && (nearest == null || gap.compareTo(nearestGap) < 0)) {
                 nearest = option;
                 nearestGap = gap;
             }
         }
-        String shortfall = nearest == null ? ""
-                : asked.explainShortfall(nearest.getRequires(), state);
+        String shortfall = nearest == null ? "" : asked.explainShortfall(nearest.getRequires(), state);
         return shortfall.isEmpty() ? "no route you can use right now" : shortfall;
     }
 }

@@ -1,0 +1,72 @@
+# Every way of reaching a destination by teleport, spells before tablets, and what the
+# spells cast with no destination cost.
+#
+# spell	destination	name	spellbook	Magic level	quest	sprite	SpriteID	runes
+# tablet	destination	name	item	ItemID	quest
+# same	destination	the destination whose means it shares
+# swap	-	and the columns of a spell, for Spellbook Swap
+# runes	capability	what one cast costs
+#
+# The quest is the one the spell or tablet is locked behind. A sprite is the spell's icon
+# in the game's spellbook, with RuneLite's SpriteID constant beside it; an item has its
+# ItemID constant beside it. Runes come in pairs of rune and count.
+
+# Spellbook Swap: Lunar, 96 Magic, Dream Mentor. It opens another book the player has
+# unlocked for one cast within two minutes, then returns them to Lunar.
+swap	-	Spellbook Swap	LUNAR	96	Dream Mentor	582	LunarMagicOn.SPELLBOOK_SWAP	ASTRAL 3 COSMIC 2 LAW 1
+
+spell	CATHERBY	Catherby Teleport	LUNAR	87	Lunar Diplomacy	556	LunarMagicOn.CATHERBY_TELEPORT	WATER 10 LAW 3 ASTRAL 3
+tablet	CATHERBY	Catherby teleport tablet	24961	LUNAR_TABLET_CATHERBY_TELEPORT	-
+
+spell	CAMELOT	Camelot Teleport	STANDARD	45	-	37	Magicon.CAMELOT_TELEPORT	AIR 5 LAW 1
+tablet	CAMELOT	Camelot teleport tablet	8010	POH_TABLET_CAMELOTTELEPORT	-
+
+spell	VARROCK	Varrock Teleport	STANDARD	25	-	27	Magicon.VARROCK_TELEPORT	AIR 3 FIRE 1 LAW 1
+tablet	VARROCK	Varrock teleport tablet	8007	POH_TABLET_VARROCKTELEPORT	-
+# The medium Varrock diary adds the Grand Exchange to the same spell and tablet: the
+# spell's destination is switched by right-click, and the tablet gains a Grand Exchange
+# option. The diary gate sits on the rungs, since neither means names it.
+same	GRAND_EXCHANGE	VARROCK
+
+spell	LUMBRIDGE	Lumbridge Teleport	STANDARD	31	-	30	Magicon.LUMBRIDGE_TELEPORT	AIR 3 EARTH 1 LAW 1
+tablet	LUMBRIDGE	Lumbridge teleport tablet	8008	POH_TABLET_LUMBRIDGETELEPORT	-
+
+# The Falador chains are all jewellery; this is the fallback for a player holding none of it.
+spell	FALADOR	Falador Teleport	STANDARD	37	-	33	Magicon.FALADOR_TELEPORT	AIR 3 WATER 1 LAW 1
+tablet	FALADOR	Falador teleport tablet	8009	POH_TABLET_FALADORTELEPORT	-
+
+# The fallback for an account with no diary cloak. Plague City gates the spell, the tablet
+# and the house portal alike.
+spell	ARDOUGNE	Ardougne Teleport	STANDARD	51	Plague City	54	Magicon.ARDOUGNE_TELEPORT	WATER 2 LAW 2
+tablet	ARDOUGNE	Ardougne teleport tablet	8011	POH_TABLET_ARDOUGNETELEPORT	Plague City
+
+spell	HOUSE	Teleport to House	STANDARD	40	-	355	Magicon2.TELEPORT_TO_HOUSE	AIR 1 EARTH 1 LAW 1
+tablet	HOUSE	Teleport to house tablet	8013	POH_TABLET_TELEPORTTOHOUSE	-
+
+spell	FISHING_GUILD	Fishing Guild Teleport	LUNAR	85	Lunar Diplomacy	555	LunarMagicOn.FISHING_GUILD_TELEPORT	WATER 10 LAW 3 ASTRAL 3
+tablet	FISHING_GUILD	Fishing Guild teleport tablet	24959	LUNAR_TABLET_FISHING_GUILD_TELEPORT	-
+
+# Arceuus arrivals. Each tablet here is made at the Arceuus lectern and works on any book,
+# but breaks only once the spell's quest is finished. Fenkenstrain's tablet lands where the
+# spell does (3548,3529).
+spell	FENKENSTRAINS_CASTLE	Fenkenstrain's Castle Teleport	ARCEUUS	48	Priest in Peril	1259	MagicNecroOn.FENKENSTRAINS_CASTLE_TELEPORT	EARTH 1 LAW 1 SOUL 1
+tablet	FENKENSTRAINS_CASTLE	Fenkenstrain's castle teleport	19621	TELETAB_FENK	Priest in Peril
+# The tablet lets players off the Arceuus book reach fairy ring CKS this way.
+spell	SALVE_GRAVEYARD	Salve Graveyard Teleport	ARCEUUS	40	Priest in Peril	1254	MagicNecroOn.SALVE_GRAVEYARD_TELEPORT	LAW 1 SOUL 2
+tablet	SALVE_GRAVEYARD	Salve graveyard teleport	19619	TELETAB_SALVE	Priest in Peril
+# Both land at the manor's front doors. Neither asks for a quest.
+spell	DRAYNOR_MANOR	Draynor Manor Teleport	ARCEUUS	17	-	1253	MagicNecroOn.DRAYNOR_MANOR_TELEPORT	WATER 1 EARTH 1 LAW 1
+tablet	DRAYNOR_MANOR	Draynor manor teleport	19615	TELETAB_DRAYNOR	-
+# The only direct way to the island: every other route ends in Brother Tranquility's boat
+# from Mos Le'Harmless. Both need The Great Brain Robbery finished. The spell lands at
+# 3797,2866 and the tablet one tile north.
+spell	HARMONY_ISLAND	Harmony Island Teleport	ARCEUUS	65	The Great Brain Robbery	1261	MagicNecroOn.HARMONY_ISLAND_TELEPORT	LAW 1 SOUL 1 NATURE 1
+tablet	HARMONY_ISLAND	Harmony island teleport	19625	TELETAB_HARMONY	The Great Brain Robbery
+spell	ARCEUUS_LIBRARY	Arceuus Library Teleport	ARCEUUS	6	-	1252	MagicNecroOn.ARCEUUS_LIBRARY_TELEPORT	EARTH 2 LAW 1
+
+spell	CIVITAS_ILLA_FORTIS	Civitas illa Fortis Teleport	STANDARD	54	Twilight's Promise	367	Magicon2.CIVITAS_ILLA_FORTIS_TELEPORT	EARTH 1 FIRE 1 LAW 2
+
+# The spells with no destination: Fertile Soil, cast at a patch, and the respawn teleport,
+# which lands wherever the player set it.
+runes	RESPAWN_TELEPORT	LAW 1 SOUL 1
+runes	FERTILE_SOIL	EARTH 15 ASTRAL 3 NATURE 2

@@ -13,7 +13,8 @@ https://github.com/runelite/runelite
 Larry's farming patch decoding, crop table, farming regions and growth-tick timing are derived
 from RuneLite's Time Tracking plugin code. Its farming item tags come from the Item
 Identification plugin, and its achievement diary varbit ids from the Varbits table. The Java
-files derived from that code keep their upstream notices. Those source files carry these:
+files and data tables derived from that code keep their upstream notices. Those files carry
+these:
 
   Copyright (c) 2018 Abex
   Copyright (c) 2019 Abex
@@ -95,8 +96,6 @@ Other references
 ----------------
 - Shortest Path plugin (https://github.com/Skretzo/shortest-path): its transport tables helped
   locate teleport landing tiles and the requirements that gate them.
-- Item Charges Improved plugin (tictac7x): the bottomless bucket's chat wordings.
-- Dude, Where's My Stuff? plugin: the stored bucket's compost-type varbit values.
 
 
 Old School RuneScape and RuneScape are trademarks of Jagex Ltd. Larry: Farming Runs is not

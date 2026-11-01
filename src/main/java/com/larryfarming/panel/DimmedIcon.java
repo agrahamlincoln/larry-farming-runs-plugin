@@ -1,9 +1,6 @@
 package com.larryfarming.panel;
 
-import java.awt.AlphaComposite;
-import java.awt.Component;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
+import java.awt.*;
 import javax.swing.Icon;
 
 /**
@@ -14,10 +11,6 @@ import javax.swing.Icon;
  */
 final class DimmedIcon implements Icon
 {
-	/** The same strength as {@link SettingSquare}'s unticked sprite. */
-	private static final AlphaComposite DIM =
-		AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.35f);
-
 	private final Icon icon;
 
 	DimmedIcon(Icon icon)
@@ -37,7 +30,8 @@ final class DimmedIcon implements Icon
 		Graphics2D g2 = (Graphics2D) g.create();
 		try
 		{
-			g2.setComposite(DIM);
+			// The same strength as an unticked setting square's sprite.
+			g2.setComposite(SettingSquare.DIM);
 			icon.paintIcon(c, g2, x, y);
 		}
 		finally

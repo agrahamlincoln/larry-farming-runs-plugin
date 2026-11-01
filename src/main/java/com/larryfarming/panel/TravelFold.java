@@ -1,14 +1,12 @@
 package com.larryfarming.panel;
 
 import com.larryfarming.snapshot.FarmingAdvice;
-import com.larryfarming.snapshot.FarmingSettingChoice;
 import com.larryfarming.snapshot.FarmingSettingGroup;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 
 /**
- * The farming tab's travel fold: one on/off square per travel method, in a fixed order,
+ * The side panel's travel fold: one on/off square per travel method, in a fixed order,
  * under captions such as "Jewellery". Off means never use it, on any route. A method the
  * player has nothing for draws grey and still switches.
  *
@@ -27,8 +25,8 @@ class TravelFold extends Fold
 	 */
 	private static final String BLOCKED = ": no fairy ring access";
 
+	private final BiConsumer<String, String> send;
 	private boolean blocked;
-	private BiConsumer<String, String> settingCallback;
 
 	/** The groups the squares were last built from. */
 	private List<FarmingSettingGroup> shown = List.of();
@@ -36,21 +34,18 @@ class TravelFold extends Fold
 	/** The icons the squares were last drawn with, so a provider arriving later redraws them. */
 	private IconProvider shownIcons;
 
-	TravelFold()
+	/** @param send receives each switched square as its config key and new value */
+	TravelFold(BiConsumer<String, String> send)
 	{
 		super("Travel");
+		this.send = send;
 		setVisible(false);
-	}
-
-	void setSettingCallback(BiConsumer<String, String> callback)
-	{
-		this.settingCallback = callback;
 	}
 
 	/** Draws the fold's squares from the advice. Hidden for advice without them. */
 	void show(FarmingAdvice advice, IconProvider icons)
 	{
-		List<FarmingSettingGroup> groups = listOf(advice.getTravelGroups());
+		List<FarmingSettingGroup> groups = PanelText.listOf(advice.getTravelGroups());
 		setVisible(!groups.isEmpty());
 		if (groups.isEmpty())
 		{
@@ -60,8 +55,7 @@ class TravelFold extends Fold
 		if (blocked != advice.isFairyRingBlocked())
 		{
 			blocked = advice.isFairyRingBlocked();
-			setHeader(blocked ? BLOCKED : "",
-				blocked ? FarmingPanel.COLOR_DUE : PanelColors.HEADER);
+			setHeader(blocked ? BLOCKED : "", blocked ? FarmingPanel.COLOR_DUE : PanelColors.HEADER);
 		}
 		if (groups.equals(shown) && icons == shownIcons)
 		{
@@ -73,29 +67,11 @@ class TravelFold extends Fold
 		content().removeAll();
 		for (FarmingSettingGroup group : groups)
 		{
-			List<SettingSquare> squares = new ArrayList<>(group.getChoices().size());
-			for (FarmingSettingChoice item : group.getChoices())
-			{
-				squares.add(SettingGrid.toggle(item, icons, this::send));
-			}
 			int gapAbove = content().getComponentCount() == 0 ? 0 : 6;
 			content().add(SiteList.caption(group.getLabel(), gapAbove));
-			content().add(SettingGrid.grid(squares, icons));
+			content().add(SettingGrid.toggles(group.getChoices(), icons, send));
 		}
 		content().revalidate();
 		content().repaint();
-	}
-
-	private void send(String key, String value)
-	{
-		if (settingCallback != null && key != null)
-		{
-			settingCallback.accept(key, value);
-		}
-	}
-
-	private static <T> List<T> listOf(List<T> list)
-	{
-		return list != null ? list : List.of();
 	}
 }

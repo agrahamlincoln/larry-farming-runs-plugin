@@ -22,12 +22,4 @@ public enum EquipmentSlot {
     public String getDisplayName() {
         return displayName;
     }
-
-    public static EquipmentSlot fromString(String name) {
-        try {
-            return valueOf(name.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
 }

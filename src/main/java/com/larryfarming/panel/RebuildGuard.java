@@ -26,8 +26,9 @@ import java.util.Objects;
  * }
  * }</pre>
  *
- * <p>A signature is typically a {@code List<String>} with one delimited string
- * per row. See {@code FarmingPanel.signatureOf}.
+ * <p>A signature is typically a list of value objects compared by equals: the
+ * snapshot's own values with their ticking fields taken out. See
+ * {@code FarmingPanel.signatureOf}.
  *
  * <p>Not thread-safe. Use only on the Swing EDT.
  */

@@ -1,0 +1,38 @@
+# Every travel method's attributes, one row per TravelMethod constant: the config key that
+# switches it (true while it may be used), the caption its square sits under in the side
+# panel, its name for a player, how a sentence names it ("you switched off the slayer
+# ring"), and the capabilities it covers, the one drawn on its square first. A method that covers a place's tablet or spell rather
+# than an item covers none.
+#
+# method	config key	group	name	in a sentence	capabilities
+RING_OF_WEALTH	useRingOfWealth	JEWELLERY	Ring of wealth	the ring of wealth	RING_OF_WEALTH
+GAMES_NECKLACE	useGamesNecklace	JEWELLERY	Games necklace	the games necklace	GAMES_NECKLACE
+COMBAT_BRACELET	useCombatBracelet	JEWELLERY	Combat bracelet	the combat bracelet	COMBAT_BRACELET
+SKILLS_NECKLACE	useSkillsNecklace	JEWELLERY	Skills necklace	the skills necklace	SKILLS_NECKLACE
+RING_OF_DUELING	useRingOfDueling	JEWELLERY	Ring of dueling	the ring of dueling	RING_OF_DUELING
+RING_OF_THE_ELEMENTS	useRingOfTheElements	JEWELLERY	Ring of the elements	the ring of the elements	RING_OF_THE_ELEMENTS
+DIGSITE_PENDANT	useDigsitePendant	JEWELLERY	Digsite pendant	the digsite pendant	DIGSITE_PENDANT
+NECKLACE_OF_PASSAGE	useNecklaceOfPassageTeleports	JEWELLERY	Necklace of passage	the necklace of passage	NECKLACE_OF_PASSAGE
+SLAYER_RING	useSlayerRing	JEWELLERY	Slayer ring	the slayer ring	SLAYER_RING
+XERICS_TALISMAN	useXericsTalisman	JEWELLERY	Xeric's talisman	Xeric's talisman	XERICS_TALISMAN
+KHAREDSTS_MEMOIRS	useKharedstsMemoirs	ITEMS	Kharedst's memoirs	Kharedst's memoirs	KHAREDSTS_MEMOIRS BOOK_OF_THE_DEAD
+PENDANT_OF_ATES	usePendantOfAtes	JEWELLERY	Pendant of Ates	the pendant of Ates	PENDANT_OF_ATES
+SAILORS_AMULET	useSailorsAmulet	JEWELLERY	Sailors' amulet	the Sailors' amulet	SAILORS_AMULET
+TELEPORT_CRYSTAL	useTeleportCrystal	ITEMS	Teleport crystal	the teleport crystal	TELEPORT_CRYSTAL
+CHRONICLE	useChronicle	ITEMS	Chronicle	the Chronicle	CHRONICLE
+QUETZAL_WHISTLE	useQuetzalWhistle	ITEMS	Quetzal whistle	the quetzal whistle	QUETZAL_WHISTLE
+ROYAL_SEED_POD	useRoyalSeedPod	ITEMS	Royal seed pod	the royal seed pod	ROYAL_SEED_POD
+ECTOPHIAL	useEctophial	ITEMS	Ectophial	the ectophial	ECTOPHIAL
+BASALT	useBasalt	ITEMS	Basalt	basalt	STONY_BASALT ICY_BASALT
+MOKHAIOTL_WAYSTONE	useMokhaiotlWaystone	ITEMS	Mokhaiotl waystone	the Mokhaiotl waystone	MOKHAIOTL_WAYSTONE
+EXPLORERS_RING	useExplorersRing	REWARDS	Explorer's ring	the Explorer's ring	EXPLORERS_RING_2 EXPLORERS_RING_3 EXPLORERS_RING_4
+ARDOUGNE_CLOAK	useArdougneCloak	REWARDS	Ardougne cloak	the Ardougne cloak	ARDOUGNE_CLOAK_1 ARDOUGNE_CLOAK_2 ARDOUGNE_CLOAK_3 ARDOUGNE_CLOAK_4
+DIARY_CAPE	useDiaryCape	REWARDS	Achievement diary cape	the Achievement diary cape	DIARY_CAPE
+QUEST_CAPE	useQuestCape	REWARDS	Quest point cape	the Quest point cape	QUEST_CAPE
+SKILL_CAPES	useSkillCapes	REWARDS	Skill capes	skill capes	FARMING_CAPE FISHING_CAPE HUNTER_CAPE
+CONSTRUCTION_CAPE	useConstructionCape	REWARDS	Construction cape	the Construction cape	CONSTRUCTION_CAPE
+TELEPORT_TABLETS	useTeleportTablets	SPELLS	Teleport tablets	teleport tablets	BRIMHAVEN_TABLET
+SALVE_GRAVEYARD_TABLETS	useSalveGraveyardTeleports	SPELLS	Salve graveyard tablets	Salve graveyard tablets	-
+SPELLBOOK_SWAP	useSpellbookSwap	SPELLS	Spellbook Swap	Spellbook Swap	-
+HOUSE_PORTALS	useHousePortals	HOUSE	House portals	house portals	POH_PORTAL_WEISS POH_PORTAL_TROLL_STRONGHOLD POH_PORTAL_KOUREND POH_PORTAL_FENKENSTRAIN POH_PORTAL_HARMONY POH_NEXUS_WEISS POH_NEXUS_HARMONY POH_NEXUS_TROLL_STRONGHOLD
+HOUSE_FAIRY_RING	useFairyRingInHouse	HOUSE	Fairy ring in your house	the fairy ring in your house	POH_FAIRY_RING

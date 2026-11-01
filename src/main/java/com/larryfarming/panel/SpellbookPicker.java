@@ -1,17 +1,11 @@
 package com.larryfarming.panel;
 
-import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.FlowLayout;
+import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Objects;
 import java.util.function.Consumer;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
+import javax.swing.*;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 
@@ -51,10 +45,7 @@ class SpellbookPicker extends JPanel
 
 	SpellbookPicker()
 	{
-		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		setOpaque(false);
-		setAlignmentX(LEFT_ALIGNMENT);
-
+		PanelText.stack(this);
 		books = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
 		books.setOpaque(false);
 		books.setAlignmentX(LEFT_ALIGNMENT);
@@ -80,8 +71,7 @@ class SpellbookPicker extends JPanel
 	void rebuild(String packedFor, String open, IconProvider icons)
 	{
 		// Identity on icons: the change that matters is null to loaded once sprites arrive.
-		if (Objects.equals(packedFor, drawnPackedFor) && Objects.equals(open, drawnOpen)
-			&& icons == drawnIcons)
+		if (Objects.equals(packedFor, drawnPackedFor) && Objects.equals(open, drawnOpen) && icons == drawnIcons)
 		{
 			return;
 		}
@@ -101,16 +91,11 @@ class SpellbookPicker extends JPanel
 			JLabel chip = sprite != null ? new JLabel(sprite) : new JLabel(BOOK_LABELS[i]);
 			chip.setFont(FontManager.getRunescapeSmallFont());
 			chip.setForeground(packed ? Color.WHITE : PanelColors.HEADER);
-			chip.setBorder(BorderFactory.createCompoundBorder(
-				BorderFactory.createLineBorder(packed
-					? (live ? COLOR_LIVE : COLOR_PREVIEW)
-					: PanelColors.CONTAINER_BORDER),
-				BorderFactory.createEmptyBorder(2, 3, 2, 3)));
-			chip.setToolTipText(live
-				? "Your spellbook: " + BOOK_LABELS[i]
+			chip.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(packed ? (live ? COLOR_LIVE : COLOR_PREVIEW)
+					: PanelColors.CONTAINER_BORDER), BorderFactory.createEmptyBorder(2, 3, 2, 3)));
+			chip.setToolTipText(live ? "Your spellbook: " + BOOK_LABELS[i]
 				// Mid-sentence, "standard" is lower case; Lunar and Arceuus are names.
-				: "Plan for the " + ("STANDARD".equals(book) ? "standard" : BOOK_LABELS[i])
-					+ " spellbook");
+				: "Plan for the " + ("STANDARD".equals(book) ? "standard" : BOOK_LABELS[i]) + " spellbook");
 			chip.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 			chip.addMouseListener(new MouseAdapter()
 			{

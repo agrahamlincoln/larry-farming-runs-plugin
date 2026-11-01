@@ -23,30 +23,24 @@ public enum HouseFeature {
      * The Troll Stronghold portal. Not the Trollheim portal
      * ({@code POH_PORTAL_*_TROLLHEIM}), which lands on the mountain far from the patch.
      */
-    PORTAL_TROLL_STRONGHOLD(ObjectID.POH_PORTAL_TEAK_STRONGHOLD,
-            ObjectID.POH_PORTAL_MAG_STRONGHOLD, ObjectID.POH_PORTAL_MARBLE_STRONGHOLD,
+    PORTAL_TROLL_STRONGHOLD(ObjectID.POH_PORTAL_TEAK_STRONGHOLD, ObjectID.POH_PORTAL_MAG_STRONGHOLD, ObjectID.POH_PORTAL_MARBLE_STRONGHOLD,
             ObjectID.POH_PORTAL_LEAGUE_5_STRONGHOLD),
     PORTAL_KOUREND(ObjectID.POH_PORTAL_TEAK_KOUREND, ObjectID.POH_PORTAL_MAG_KOUREND,
             ObjectID.POH_PORTAL_MARBLE_KOUREND, ObjectID.POH_PORTAL_LEAGUE_5_KOUREND),
     PORTAL_FENKENSTRAIN(ObjectID.POH_PORTAL_TEAK_FENKENSTRAIN,
-            ObjectID.POH_PORTAL_MAG_FENKENSTRAIN, ObjectID.POH_PORTAL_MARBLE_FENKENSTRAIN,
-            ObjectID.POH_PORTAL_LEAGUE_5_FENKENSTRAIN),
+            ObjectID.POH_PORTAL_MAG_FENKENSTRAIN, ObjectID.POH_PORTAL_MARBLE_FENKENSTRAIN, ObjectID.POH_PORTAL_LEAGUE_5_FENKENSTRAIN),
     PORTAL_HARMONY(ObjectID.POH_PORTAL_TEAK_HARMONY_ISLAND,
-            ObjectID.POH_PORTAL_MAG_HARMONY_ISLAND, ObjectID.POH_PORTAL_MARBLE_HARMONY_ISLAND,
-            ObjectID.POH_PORTAL_LEAGUE_5_HARMONY_ISLAND),
+            ObjectID.POH_PORTAL_MAG_HARMONY_ISLAND, ObjectID.POH_PORTAL_MARBLE_HARMONY_ISLAND, ObjectID.POH_PORTAL_LEAGUE_5_HARMONY_ISLAND),
     /**
      * A Portal Nexus of any tier. It proves the Nexus stands, not what it is attuned to,
      * which the slot varbits answer ({@link PortalNexus}).
      */
-    PORTAL_NEXUS(ObjectID.POH_NEXUS_PORTAL_1, ObjectID.POH_NEXUS_PORTAL_2,
-            ObjectID.POH_NEXUS_PORTAL_3, ObjectID.POH_NEXUS_PORTAL_LEAGUE_5),
+    PORTAL_NEXUS(ObjectID.POH_NEXUS_PORTAL_1, ObjectID.POH_NEXUS_PORTAL_2, ObjectID.POH_NEXUS_PORTAL_3, ObjectID.POH_NEXUS_PORTAL_LEAGUE_5),
     /** The spirit tree, alone or as the spiritual fairy tree, in every skin. */
-    SPIRIT_TREE(ObjectID.POH_SPIRIT_TREE, ObjectID.XMAS20_POH_SPIRIT_TREE,
-            ObjectID.LEAGUE_5_POH_SPIRIT_TREE, ObjectID.POH_SPIRIT_RING,
+    SPIRIT_TREE(ObjectID.POH_SPIRIT_TREE, ObjectID.XMAS20_POH_SPIRIT_TREE, ObjectID.LEAGUE_5_POH_SPIRIT_TREE, ObjectID.POH_SPIRIT_RING,
             ObjectID.XMAS20_POH_SPIRIT_RING, ObjectID.LEAGUE_5_POH_SPIRIT_RING),
     /** The fairy ring, alone or as the spiritual fairy tree, which is both. */
-    FAIRY_RING(ObjectID.POH_FAIRY_RING, ObjectID.POH_SPIRIT_RING,
-            ObjectID.XMAS20_POH_SPIRIT_RING, ObjectID.LEAGUE_5_POH_SPIRIT_RING);
+    FAIRY_RING(ObjectID.POH_FAIRY_RING, ObjectID.POH_SPIRIT_RING, ObjectID.XMAS20_POH_SPIRIT_RING, ObjectID.LEAGUE_5_POH_SPIRIT_RING);
 
     private static final HouseFeature[] ALL = values();
 
@@ -60,11 +54,7 @@ public enum HouseFeature {
     }
 
     private static int[] anyId() {
-        return Arrays.stream(values())
-                .flatMapToInt(feature -> Arrays.stream(feature.objectIds))
-                .distinct()
-                .sorted()
-                .toArray();
+        return Arrays.stream(values()).flatMapToInt(feature -> Arrays.stream(feature.objectIds)).distinct().sorted().toArray();
     }
 
     /**

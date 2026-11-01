@@ -1,11 +1,10 @@
 package com.larryfarming.snapshot;
 
-import com.google.gson.annotations.SerializedName;
 import java.util.List;
 import lombok.Value;
 
 /**
- * What the player's house holds, as the farming tab's house settings draw it: one row per
+ * What the player's house holds, as the side panel's house settings draw it: one row per
  * item a farm run can travel by, which the player may declare built until Larry sees it.
  */
 @Value
@@ -21,7 +20,7 @@ public class FarmingHouse {
         SEEN
     }
 
-    @SerializedName("sight") Sight sight;
+    Sight sight;
 
     /**
      * The items under their captions, in a fixed order. In each choice, on means built or
@@ -29,5 +28,5 @@ public class FarmingHouse {
      * means the house cannot hold it: seen without it, or short of a level or quest, with
      * the level in the choice's level where one is short.
      */
-    @SerializedName("groups") List<FarmingSettingGroup> groups;
+    List<FarmingSettingGroup> groups;
 }

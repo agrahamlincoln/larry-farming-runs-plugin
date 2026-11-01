@@ -103,8 +103,7 @@ public final class PatchPriority {
     private static int bestBonus(List<PatchAttributes.BonusTier> tiers, PlayerState state) {
         int best = 0;
         for (PatchAttributes.BonusTier tier : tiers) {
-            if (DiaryTiers.completed(tier.getDiaryArea(), tier.getDiaryTier(), state)
-                    == CapabilityState.HAVE) {
+            if (DiaryTiers.completed(tier.getDiaryArea(), tier.getDiaryTier(), state) == CapabilityState.HAVE) {
                 best = Math.max(best, tier.getPercent());
             }
         }
@@ -116,13 +115,11 @@ public final class PatchPriority {
         if (entry.isAlwaysDiseaseFree()) {
             return true;
         }
-        if (entry.getDiseaseFreeDiaryArea() != null
-                && DiaryTiers.completed(entry.getDiseaseFreeDiaryArea(),
+        if (entry.getDiseaseFreeDiaryArea() != null && DiaryTiers.completed(entry.getDiseaseFreeDiaryArea(),
                         entry.getDiseaseFreeDiaryTier(), state) == CapabilityState.HAVE) {
             return true;
         }
-        return entry.getDiseaseFreeQuest() != null
-                && state != null
+        return entry.getDiseaseFreeQuest() != null && state != null
                 && state.getQuests().get(entry.getDiseaseFreeQuest()) == QuestStatus.COMPLETED;
     }
 }

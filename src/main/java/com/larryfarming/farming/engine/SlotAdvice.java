@@ -82,8 +82,4 @@ public class SlotAdvice {
 
     /** The upgrade list's sentence for {@link #goal}. */
     String goalSentence;
-
-    public boolean needsAction() {
-        return verdict == Verdict.SWAP;
-    }
 }

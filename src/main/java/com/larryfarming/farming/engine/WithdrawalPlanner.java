@@ -8,16 +8,8 @@ import com.larryfarming.farming.model.Arrival;
 import com.larryfarming.model.ItemStack;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingCarryItem;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import lombok.*;
 
 /**
  * What to take out of the bank at each stop, for the stretch to the next one and no further.
@@ -52,52 +44,16 @@ public final class WithdrawalPlanner {
      * starting row has none, a prescribed bank knows which leg it opens, and an offered bank
      * knows which arrival it sits under.
      */
+    @AllArgsConstructor(access = AccessLevel.PACKAGE)
     public static final class Withdrawals {
 
-        private static final Withdrawals NONE =
-                new Withdrawals(List.of(), Map.of(), Map.of(), List.of(), List.of(), false);
+        private static final Withdrawals NONE = new Withdrawals(List.of(), Map.of(), Map.of(), List.of(), List.of(), false);
 
+        /** What to set off carrying, or empty where the packing list already says it. */
+        @Getter
         private final List<FarmingCarryItem> beforeSettingOff;
         private final Map<Integer, List<FarmingCarryItem>> atLeg;
         private final Map<Integer, List<FarmingCarryItem>> afterArrival;
-        private final List<FarmingCarryItem> firstStretch;
-        private final List<FarmingCarryItem> deposits;
-        private final boolean depositsUrgent;
-
-        /** Package-private so rows can be built without planning a trip. */
-        Withdrawals(List<FarmingCarryItem> beforeSettingOff,
-                Map<Integer, List<FarmingCarryItem>> atLeg,
-                Map<Integer, List<FarmingCarryItem>> afterArrival) {
-            this(beforeSettingOff, atLeg, afterArrival, List.of(), List.of(), false);
-        }
-
-        /** Package-private so a row with deposits can be built without planning a trip. */
-        Withdrawals(List<FarmingCarryItem> beforeSettingOff,
-                Map<Integer, List<FarmingCarryItem>> atLeg,
-                Map<Integer, List<FarmingCarryItem>> afterArrival,
-                List<FarmingCarryItem> firstStretch, List<FarmingCarryItem> deposits,
-                boolean depositsUrgent) {
-            this.beforeSettingOff = beforeSettingOff;
-            this.atLeg = atLeg;
-            this.afterArrival = afterArrival;
-            this.firstStretch = firstStretch;
-            this.deposits = deposits;
-            this.depositsUrgent = depositsUrgent;
-        }
-
-        /**
-         * What to put back next time the player banks, for the starting row, which partway
-         * round stands for that bank. Empty before setting off: nothing from this trip is in
-         * the bag yet.
-         */
-        public List<FarmingCarryItem> getDeposits() {
-            return deposits;
-        }
-
-        /** Whether the bag lacks room without those deposits. */
-        public boolean isDepositsUrgent() {
-            return depositsUrgent;
-        }
 
         /**
          * Everything the first stretch wants in the bag, carried or not, as packing-list
@@ -105,18 +61,24 @@ public final class WithdrawalPlanner {
          * quantity, since they all come out up front. Empty when no later bank splits the
          * trip, where the whole packing list is the first stretch, and once underway.
          */
-        public List<FarmingCarryItem> getFirstStretch() {
-            return firstStretch;
-        }
+        @Getter
+        private final List<FarmingCarryItem> firstStretch;
+
+        /**
+         * What to put back next time the player banks, for the starting row, which partway
+         * round stands for that bank. Empty before setting off: nothing from this trip is in
+         * the bag yet.
+         */
+        @Getter
+        private final List<FarmingCarryItem> deposits;
+
+        /** Whether the bag lacks room without those deposits. */
+        @Getter
+        private final boolean depositsUrgent;
 
         /** Nothing anywhere, for a caller that has not worked any of this out. */
         public static Withdrawals none() {
             return NONE;
-        }
-
-        /** What to set off carrying, or empty where the packing list already says it. */
-        public List<FarmingCarryItem> getBeforeSettingOff() {
-            return beforeSettingOff;
         }
 
         /** What to take out at the bank that opens this leg. */
@@ -144,8 +106,8 @@ public final class WithdrawalPlanner {
      */
     static Withdrawals forBankStops(InventorySim.Plan bag, List<List<Integer>> made,
             List<StopPlan> plans, List<List<Crop>> cropFor, List<SeedPlan> seeds,
-            PlayerState state, CapabilityResolver resolver, FarmingInputs inputs,
-            boolean underway) {
+            PlayerState state, CapabilityResolver resolver, FarmingInputs inputs, boolean underway) {
+        Trip trip = new Trip(made, plans, cropFor, seeds, state, resolver, inputs);
         List<Chance> chances = bankStopsIn(bag, !inputs.hidesOfferedBanks());
         // With only the starting bank, its list would repeat the packing list. With any later
         // bank, the starting row is drawn even if the later banks want nothing. Partway
@@ -159,8 +121,7 @@ public final class WithdrawalPlanner {
         Map<Integer, Integer> bagHolds = new HashMap<>();
         // Boxed seeds are recorded in bagHolds before the walk, so no stretch asks for them.
         List<FarmingCarryItem> boxedLines = new ArrayList<>();
-        List<FarmingCarryItem> boxed = seedsForTheWholeTripUpFront(made, plans, cropFor,
-                seeds, state, resolver, inputs, bagHolds, boxedLines);
+        List<FarmingCarryItem> boxed = seedsForTheWholeTripUpFront(trip, bagHolds, boxedLines);
         List<FarmingCarryItem> start = List.of();
         List<FarmingCarryItem> firstStretch = List.of();
         Map<Integer, List<FarmingCarryItem>> atLeg = new LinkedHashMap<>();
@@ -173,11 +134,9 @@ public final class WithdrawalPlanner {
             int lastArrival = next != null ? next.firstArrival - 1 : made.size() - 1;
             // A prescribed bank stands at the arrival that opens its leg, so the player
             // reaches it carrying the way there from this stretch.
-            List<FarmingCarryItem> needs = needsOf(chance.firstArrival, lastArrival,
-                    chance.leg >= 0, made, plans, cropFor, seeds, state, resolver, inputs);
+            List<FarmingCarryItem> needs = trip.needsOf(chance.firstArrival, lastArrival, chance.leg >= 0);
             if (next != null && next.leg >= 0) {
-                needs = withTravelOn(needs, CarryPlanner.travelFor(
-                        stopsAt(next.firstArrival, made, plans), state, resolver));
+                needs = withTravelOn(needs, CarryPlanner.travelFor(trip.stopsAt(next.firstArrival), state, resolver));
             }
             List<FarmingCarryItem> take = shortfallOn(needs, bagHolds);
             boolean starting = chance.leg < 0 && chance.arrival < 0;
@@ -207,10 +166,7 @@ public final class WithdrawalPlanner {
         if (underway) {
             // Which bank comes next is not known, so the whole remaining trip counts as after
             // it: an item a stop before that bank uses stays too, the safe way.
-            deposits = DepositPlanner.atNextBank(state, inputs.getPackedThisTrip(),
-                    needsOf(0, made.size() - 1, false, made, plans, cropFor, seeds, state,
-                            resolver, inputs),
-                    chances.size() < 2);
+            deposits = DepositPlanner.atNextBank(state, inputs.getPackedThisTrip(), trip.wholeTrip(), chances.size() < 2);
             urgent = !deposits.isEmpty() && DepositPlanner.bagWouldFill(state, start);
         }
         return new Withdrawals(start, atLeg, afterArrival, firstStretch, deposits, urgent);
@@ -220,8 +176,7 @@ public final class WithdrawalPlanner {
      * The first stretch's lines with each boxed seed at the whole trip's count, in place of
      * the stretch's own line for it.
      */
-    private static List<FarmingCarryItem> withBoxedSeeds(List<FarmingCarryItem> boxedLines,
-            List<FarmingCarryItem> needs) {
+    private static List<FarmingCarryItem> withBoxedSeeds(List<FarmingCarryItem> boxedLines, List<FarmingCarryItem> needs) {
         Set<Integer> boxedIds = new HashSet<>();
         for (FarmingCarryItem line : boxedLines) {
             boxedIds.add(line.getItemId());
@@ -262,24 +217,18 @@ public final class WithdrawalPlanner {
      * @return the lines to withdraw, empty when the box needs nothing taken out.
      *     {@code bagHolds} gets an entry for every boxed kind either way
      */
-    private static List<FarmingCarryItem> seedsForTheWholeTripUpFront(List<List<Integer>> made,
-            List<StopPlan> plans, List<List<Crop>> cropFor, List<SeedPlan> seeds,
-            PlayerState state, CapabilityResolver resolver, FarmingInputs inputs,
+    private static List<FarmingCarryItem> seedsForTheWholeTripUpFront(Trip trip,
             Map<Integer, Integer> bagHolds, List<FarmingCarryItem> boxedLines) {
+        PlayerState state = trip.state;
         if (!SeedBox.carried(state)) {
             return List.of();
         }
-        List<FarmingCarryItem> wholeTrip = needsOf(0, made.size() - 1, false, made, plans,
-                cropFor, seeds, state, resolver, inputs);
-
         List<FarmingCarryItem> boxable = new ArrayList<>();
         Set<Integer> types = new LinkedHashSet<>();
-        for (FarmingCarryItem line : wholeTrip) {
-            if (line.getKind() != FarmingCarryItem.Kind.SEED
-                    || !CropData.boxesAsAseed(line.getItemId())
+        for (FarmingCarryItem line : trip.wholeTrip()) {
+            if (line.getKind() != FarmingCarryItem.Kind.SEED || !CropData.boxesAsAseed(line.getItemId())
                     // Skipped as in shortfallOn: nothing to fetch for either.
-                    || line.getAvailability() == FarmingCarryItem.Availability.AT_LEPRECHAUN
-                    || line.getAvailability() == FarmingCarryItem.Availability.MISSING) {
+                    || cannotFetch(line)) {
                 continue;
             }
             boxable.add(line);
@@ -296,8 +245,7 @@ public final class WithdrawalPlanner {
                 }
             }
         }
-        Set<Integer> boxed = kindsToBox(types, held, made, plans, cropFor, seeds, state,
-                resolver, inputs);
+        Set<Integer> boxed = kindsToBox(types, held, trip);
 
         List<FarmingCarryItem> withdraw = new ArrayList<>();
         for (FarmingCarryItem line : boxable) {
@@ -309,7 +257,7 @@ public final class WithdrawalPlanner {
             int wants = line.getQuantity();
             int has = line.getCarriedCount();
             if (has < wants) {
-                withdraw.add(forShortfall(line, wants - has));
+                withdraw.add(line.withQuantity(wants - has));
             }
             // Nothing is deposited, so the bag holds the larger of the two.
             bagHolds.put(line.getItemId(), Math.max(has, wants));
@@ -332,10 +280,7 @@ public final class WithdrawalPlanner {
      * @param held  the boxable kinds the box was read to hold; each takes room whether or
      *     not the trip plants it
      */
-    private static Set<Integer> kindsToBox(Set<Integer> types, Set<Integer> held,
-            List<List<Integer>> made, List<StopPlan> plans, List<List<Crop>> cropFor,
-            List<SeedPlan> seeds, PlayerState state, CapabilityResolver resolver,
-            FarmingInputs inputs) {
+    private static Set<Integer> kindsToBox(Set<Integer> types, Set<Integer> held, Trip trip) {
         Set<Integer> boxed = new LinkedHashSet<>();
         List<Integer> loose = new ArrayList<>();
         for (int type : types) {
@@ -355,17 +300,15 @@ public final class WithdrawalPlanner {
         }
         // Read per arrival only on this path: a trip within the box's room never needs it.
         Map<Integer, Integer> lastPlanted = new HashMap<>();
-        for (int arrival = 0; arrival < made.size(); arrival++) {
-            for (FarmingCarryItem line : needsOf(arrival, arrival, false, made, plans,
-                    cropFor, seeds, state, resolver, inputs)) {
+        for (int arrival = 0; arrival < trip.made.size(); arrival++) {
+            for (FarmingCarryItem line : trip.needsOf(arrival, arrival, false)) {
                 if (line.getKind() == FarmingCarryItem.Kind.SEED) {
                     lastPlanted.put(line.getItemId(), arrival);
                 }
             }
         }
         // Stable, so equal arrivals keep the trip's order.
-        loose.sort((a, b) -> Integer.compare(lastPlanted.getOrDefault(b, -1),
-                lastPlanted.getOrDefault(a, -1)));
+        loose.sort((a, b) -> Integer.compare(lastPlanted.getOrDefault(b, -1), lastPlanted.getOrDefault(a, -1)));
         boxed.addAll(loose.subList(0, room));
         return boxed;
     }
@@ -374,17 +317,11 @@ public final class WithdrawalPlanner {
      * Somewhere the player can open a bank, and the first arrival it packs for. Prescribed
      * and offered banks share this one type so the walk sees them in one sequence.
      */
+    @AllArgsConstructor
     private static final class Chance {
-
         private final int firstArrival;
         private final int leg;
         private final int arrival;
-
-        private Chance(int firstArrival, int leg, int arrival) {
-            this.firstArrival = firstArrival;
-            this.leg = leg;
-            this.arrival = arrival;
-        }
     }
 
     /**
@@ -425,53 +362,65 @@ public final class WithdrawalPlanner {
         }
         // By where each starts packing, offers ahead of prescribed stops on a tie. The sort
         // is stable, so everything else keeps the sim's walk order.
-        Collections.sort(chances, (a, b) -> a.firstArrival != b.firstArrival
-                ? Integer.compare(a.firstArrival, b.firstArrival)
+        Collections.sort(chances, (a, b) -> a.firstArrival != b.firstArrival ? Integer.compare(a.firstArrival, b.firstArrival)
                 : Integer.compare(b.arrival, a.arrival));
         return chances;
     }
 
-    /**
-     * The packing list for one stretch alone, built by handing the planner only its stops.
-     *
-     * <p>Slicing works because the planner derives its seed tallies from the stops it is given
-     * ({@code SeedPlan.goingInTheGround}), and reads the run-wide allocation only where nothing
-     * says what is going in the ground. Travel lines dedupe per arrival within the slice.
-     *
-     * @param arrived whether the player is already standing at the first arrival, so its
-     *     travel was packed for by the stretch before
-     */
-    private static List<FarmingCarryItem> needsOf(int firstArrival, int lastArrival,
-            boolean arrived, List<List<Integer>> made, List<StopPlan> plans,
-            List<List<Crop>> cropFor, List<SeedPlan> seeds, PlayerState state,
-            CapabilityResolver resolver, FarmingInputs inputs) {
-        List<StopPlan> stretchPlans = new ArrayList<>();
-        List<List<Crop>> stretchCrops = new ArrayList<>();
-        for (int arrival = firstArrival; arrival <= lastArrival; arrival++) {
-            for (int index : made.get(arrival)) {
-                stretchPlans.add(arrived && arrival == firstArrival
-                        ? CarryPlanner.withoutTravel(plans.get(index))
-                        : plans.get(index));
-                // Unguarded, like InventoryDemands.forTrip: plans and cropFor are built
-                // aligned. An empty fallback would mean "nothing planted here" and drop
-                // the axe.
-                stretchCrops.add(cropFor.get(index));
-            }
-        }
-        if (stretchPlans.isEmpty()) {
-            return List.of();
-        }
-        return CarryPlanner.plan(stretchPlans, seeds, stretchCrops, state, resolver, inputs);
-    }
+    /** The trip being split into stretches, which every stretch's packing list reads. */
+    @AllArgsConstructor
+    private static final class Trip {
+        private final List<List<Integer>> made;
+        private final List<StopPlan> plans;
+        private final List<List<Crop>> cropFor;
+        private final List<SeedPlan> seeds;
+        private final PlayerState state;
+        private final CapabilityResolver resolver;
+        private final FarmingInputs inputs;
 
-    /** Every stop at one arrival. */
-    private static List<StopPlan> stopsAt(int arrival, List<List<Integer>> made,
-            List<StopPlan> plans) {
-        List<StopPlan> here = new ArrayList<>();
-        for (int index : made.get(arrival)) {
-            here.add(plans.get(index));
+        /**
+         * The packing list for one stretch alone, built by handing the planner only its
+         * stops.
+         *
+         * <p>Slicing works because the planner derives its seed tallies from the stops it is
+         * given ({@code SeedPlan.goingInTheGround}), and reads the run-wide allocation only
+         * where nothing says what is going in the ground. Travel lines dedupe per arrival
+         * within the slice.
+         *
+         * @param arrived whether the player is already standing at the first arrival, so its
+         *     travel was packed for by the stretch before
+         */
+        List<FarmingCarryItem> needsOf(int firstArrival, int lastArrival, boolean arrived) {
+            List<StopPlan> stretchPlans = new ArrayList<>();
+            List<List<Crop>> stretchCrops = new ArrayList<>();
+            for (int arrival = firstArrival; arrival <= lastArrival; arrival++) {
+                for (int index : made.get(arrival)) {
+                    stretchPlans.add(arrived && arrival == firstArrival ? CarryPlanner.withoutTravel(plans.get(index)) : plans.get(index));
+                    // Unguarded, like InventoryDemands.forTrip: plans and cropFor are built
+                    // aligned. An empty fallback would mean "nothing planted here" and drop
+                    // the axe.
+                    stretchCrops.add(cropFor.get(index));
+                }
+            }
+            if (stretchPlans.isEmpty()) {
+                return List.of();
+            }
+            return CarryPlanner.plan(stretchPlans, seeds, stretchCrops, state, resolver, inputs);
         }
-        return here;
+
+        /** The whole trip's packing list. */
+        List<FarmingCarryItem> wholeTrip() {
+            return needsOf(0, made.size() - 1, false);
+        }
+
+        /** Every stop at one arrival. */
+        List<StopPlan> stopsAt(int arrival) {
+            List<StopPlan> here = new ArrayList<>();
+            for (int index : made.get(arrival)) {
+                here.add(plans.get(index));
+            }
+            return here;
+        }
     }
 
     /**
@@ -481,8 +430,7 @@ public final class WithdrawalPlanner {
      * tablet used in the stretch and again to reach the bank would come out as two
      * withdrawals of one item. Stock counts add up; a tool stays one line.
      */
-    private static List<FarmingCarryItem> withTravelOn(List<FarmingCarryItem> needs,
-            List<FarmingCarryItem> travel) {
+    private static List<FarmingCarryItem> withTravelOn(List<FarmingCarryItem> needs, List<FarmingCarryItem> travel) {
         if (travel.isEmpty()) {
             return needs;
         }
@@ -500,10 +448,8 @@ public final class WithdrawalPlanner {
             } else {
                 // A note explains one half's count, so the sum keeps it only if both agree:
                 // a gardener's fee plus a fare is no longer "to have a tree cleared".
-                FarmingCarryItem summed = forShortfall(already,
-                        already.getQuantity() + line.getQuantity());
-                byItem.put(line.getItemId(), Objects.equals(already.getNote(), line.getNote())
-                        ? summed : withoutNote(summed));
+                byItem.put(line.getItemId(), already.withQuantity(already.getQuantity() + line.getQuantity())
+                        .withNote(Objects.equals(already.getNote(), line.getNote()) ? already.getNote() : ""));
             }
         }
         return new ArrayList<>(byItem.values());
@@ -515,8 +461,7 @@ public final class WithdrawalPlanner {
      *
      * <p>The {@code quantity} field splits two rules. A line with a count is stock: this
      * stretch spends it, so the next stretch fetches again. A line without one is a tool: it
-     * stays in the bag, so it is asked for once, at the last bank before it is needed. An
-     * energy potion carries a count, so it is offered at every bank while run energy is low.
+     * stays in the bag, so it is asked for once, at the last bank before it is needed.
      *
      * <p>Lines the player cannot act on at a bank are skipped: the leprechaun already holds
      * an {@code AT_LEPRECHAUN} line, and a {@code MISSING} one cannot be withdrawn. The
@@ -541,23 +486,19 @@ public final class WithdrawalPlanner {
      *                 walked. An item first met here is seeded from what is genuinely in the
      *                 bag now
      */
-    static List<FarmingCarryItem> shortfallOn(List<FarmingCarryItem> needs,
-            Map<Integer, Integer> bagHolds) {
+    static List<FarmingCarryItem> shortfallOn(List<FarmingCarryItem> needs, Map<Integer, Integer> bagHolds) {
         List<FarmingCarryItem> withdraw = new ArrayList<>();
         for (FarmingCarryItem line : needs) {
             // IN_SEED_BOX stays and counts as a shortfall; the panel words it as a check.
-            if (line.getAvailability() == FarmingCarryItem.Availability.AT_LEPRECHAUN
-                    || line.getAvailability() == FarmingCarryItem.Availability.MISSING) {
+            if (cannotFetch(line)) {
                 continue;
             }
             boolean stock = line.getQuantity() > 0;
             int wants = stock ? line.getQuantity() : 1;
-            int has = bagHolds.containsKey(line.getItemId())
-                    ? bagHolds.get(line.getItemId())
-                    : line.getCarriedCount();
+            int has = bagHolds.containsKey(line.getItemId()) ? bagHolds.get(line.getItemId()) : line.getCarriedCount();
             if (has < wants) {
                 // Ask for the shortfall, not the whole want.
-                withdraw.add(forShortfall(line, stock ? wants - has : 0));
+                withdraw.add(line.withQuantity(stock ? wants - has : 0));
                 has = wants;
             }
             bagHolds.put(line.getItemId(), stock ? has - wants : has);
@@ -565,16 +506,9 @@ public final class WithdrawalPlanner {
         return withdraw;
     }
 
-    private static FarmingCarryItem withoutNote(FarmingCarryItem line) {
-        return new FarmingCarryItem(line.getKind(), line.getItemId(), line.getName(),
-                line.getQuantity(), line.getAvailability(), line.getTag(), "",
-                line.getCarriedCount());
-    }
-
-    /** The same line, re-counted as what is missing rather than as what the stretch wants. */
-    private static FarmingCarryItem forShortfall(FarmingCarryItem line, int quantity) {
-        return new FarmingCarryItem(line.getKind(), line.getItemId(), line.getName(),
-                quantity, line.getAvailability(), line.getTag(), line.getNote(),
-                line.getCarriedCount());
+    /** Whether a bank cannot supply this line: the leprechaun holds it, or nobody owns it. */
+    private static boolean cannotFetch(FarmingCarryItem line) {
+        return line.getAvailability() == FarmingCarryItem.Availability.AT_LEPRECHAUN
+                || line.getAvailability() == FarmingCarryItem.Availability.MISSING;
     }
 }

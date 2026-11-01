@@ -2,25 +2,10 @@ package com.larryfarming.panel;
 
 import com.larryfarming.snapshot.FarmingSettingChoice;
 import com.larryfarming.snapshot.FarmingSettingGroup;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.FontMetrics;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
+import java.awt.*;
 import java.util.List;
 import java.util.function.BiConsumer;
-import javax.swing.BorderFactory;
-import javax.swing.Icon;
-import javax.swing.JCheckBox;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SwingConstants;
-import javax.swing.UIManager;
+import javax.swing.*;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 
@@ -94,7 +79,7 @@ final class SiteList extends JPanel
 		return list;
 	}
 
-	/** A caption over settings, as every settings block on the tab heads its groups. */
+	/** A caption over settings, as every settings block in the panel heads its groups. */
 	static JLabel caption(String text, int gapAbove)
 	{
 		JLabel caption = new JLabel(text);
@@ -105,8 +90,7 @@ final class SiteList extends JPanel
 		return caption;
 	}
 
-	private void addRow(FarmingSettingChoice choice, int column, int line,
-		BiConsumer<String, String> send)
+	private void addRow(FarmingSettingChoice choice, int column, int line, BiConsumer<String, String> send)
 	{
 		GridBagConstraints c = new GridBagConstraints();
 		c.gridx = column;
@@ -122,7 +106,7 @@ final class SiteList extends JPanel
 	}
 
 	/**
-	 * One setting: the tab's checkbox, or in the box's place an eye for a seen house item,
+	 * One setting: the panel's checkbox, or in the box's place an eye for a seen house item,
 	 * and for a locked one the level it needs or else a padlock.
 	 */
 	private static JComponent row(FarmingSettingChoice choice, BiConsumer<String, String> send)
@@ -131,13 +115,11 @@ final class SiteList extends JPanel
 		box.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 		if (choice.isSeen() && !choice.isLocked())
 		{
-			return marked(choice.getLabel(), box,
-				new Eye(PanelColors.HEADER, boxWidth(), boxHeight()), Color.WHITE);
+			return marked(choice.getLabel(), box, new Eye(PanelColors.HEADER, boxWidth(), boxHeight()), Color.WHITE);
 		}
 		if (choice.isLocked())
 		{
-			Icon mark = choice.getLevel() > 0
-				? new LevelMark(choice.getLevel(), boxWidth(), boxHeight())
+			Icon mark = choice.getLevel() > 0 ? new LevelMark(choice.getLevel(), boxWidth(), boxHeight())
 				: new Padlock(ColorScheme.MEDIUM_GRAY_COLOR, boxWidth(), boxHeight());
 			return marked(choice.getLabel(), box, mark, ColorScheme.MEDIUM_GRAY_COLOR);
 		}
@@ -172,19 +154,16 @@ final class SiteList extends JPanel
 	 * following the name, because two columns of names with a level after each are wider
 	 * than the sidebar.
 	 */
-	static final class LevelMark implements Icon
+	static final class LevelMark extends Mark
 	{
 		private static final Color SHADOW = Color.BLACK;
 
 		private final String level;
-		private final int width;
-		private final int height;
 
 		LevelMark(int level, int width, int height)
 		{
+			super(PanelColors.LEVEL, width, height, width, height);
 			this.level = String.valueOf(level);
-			this.width = width;
-			this.height = height;
 		}
 
 		/** The level drawn, for a reader that cannot see the pixels. */
@@ -194,36 +173,16 @@ final class SiteList extends JPanel
 		}
 
 		@Override
-		public void paintIcon(Component c, Graphics g, int x, int y)
+		void drawAt(Graphics2D g, int x, int y, Color colour)
 		{
-			Graphics2D g2 = (Graphics2D) g.create();
-			try
-			{
-				g2.setFont(FontManager.getRunescapeSmallFont());
-				FontMetrics metrics = g2.getFontMetrics();
-				int textX = x + (width - metrics.stringWidth(level)) / 2;
-				int baseline = y + (height + metrics.getAscent()) / 2 - 1;
-				g2.setColor(SHADOW);
-				g2.drawString(level, textX + 1, baseline + 1);
-				g2.setColor(PanelColors.LEVEL);
-				g2.drawString(level, textX, baseline);
-			}
-			finally
-			{
-				g2.dispose();
-			}
-		}
-
-		@Override
-		public int getIconWidth()
-		{
-			return width;
-		}
-
-		@Override
-		public int getIconHeight()
-		{
-			return height;
+			g.setFont(FontManager.getRunescapeSmallFont());
+			FontMetrics metrics = g.getFontMetrics();
+			int textX = x + (getIconWidth() - metrics.stringWidth(level)) / 2;
+			int baseline = y + (getIconHeight() + metrics.getAscent()) / 2 - 1;
+			g.setColor(SHADOW);
+			g.drawString(level, textX + 1, baseline + 1);
+			g.setColor(colour);
+			g.drawString(level, textX, baseline);
 		}
 	}
 

@@ -1,8 +1,6 @@
 package com.larryfarming.engine.farming;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Holds one tick's patch scan until the next tick shows the player still among the patch
@@ -29,8 +27,7 @@ public final class FarmingScanHold {
         private final boolean allowOffsetLearning;
         private final long observedAtEpochSec;
 
-        public Scan(FarmingWorldMap.RegionDef region, Map<Integer, Integer> values,
-                    boolean allowOffsetLearning, long observedAtEpochSec) {
+        public Scan(FarmingWorldMap.RegionDef region, Map<Integer, Integer> values, boolean allowOffsetLearning, long observedAtEpochSec) {
             this.region = region;
             this.values = values;
             this.allowOffsetLearning = allowOffsetLearning;

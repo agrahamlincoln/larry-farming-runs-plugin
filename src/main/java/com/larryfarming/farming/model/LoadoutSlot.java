@@ -1,7 +1,6 @@
 package com.larryfarming.farming.model;
 
 import com.larryfarming.model.EquipmentSlot;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.Value;
 
@@ -60,82 +59,4 @@ public class LoadoutSlot {
 
     /** The whole sentence for the goal row: "Earn Ardougne cloak 2 for …". */
     String goalSentence;
-
-    public static Builder builder(EquipmentSlot slot, String purpose) {
-        return new Builder(slot, purpose);
-    }
-
-    /** Hand-written so a slot's definition reads one tier per line. */
-    public static final class Builder {
-
-        private final EquipmentSlot slot;
-        private final String purpose;
-        private final List<GearPick> tiers = new ArrayList<>();
-        private boolean niceToHave;
-        private String group;
-        private boolean mustWear;
-        private String tip = "Wear your %s to save an inventory slot.";
-        private GearPick goal;
-        private String goalSentence;
-
-        private Builder(EquipmentSlot slot, String purpose) {
-            this.slot = slot;
-            this.purpose = purpose;
-        }
-
-        public Builder partOf(String group) {
-            this.group = group;
-            return this;
-        }
-
-        public Builder tier(String displayName, String benefit, int... itemIds) {
-            return tier(GearPick.of(displayName, benefit, itemIds));
-        }
-
-        /** A tier built elsewhere, such as one any of several named items fills. */
-        public Builder tier(GearPick pick) {
-            tiers.add(pick);
-            return this;
-        }
-
-        /** Replaces the default goal, the last tier with an "Earn …" sentence. */
-        public Builder goal(GearPick pick, String sentence) {
-            this.goal = pick;
-            this.goalSentence = sentence;
-            return this;
-        }
-
-        /** The item works only while worn; see {@link LoadoutSlot#mustWear}. */
-        public Builder mustWear() {
-            this.mustWear = true;
-            return this;
-        }
-
-        /**
-         * Replaces the default "Wear your %s to save an inventory slot.", which suits only an
-         * item that works from the inventory.
-         */
-        public Builder tip(String template) {
-            this.tip = template;
-            return this;
-        }
-
-        public Builder niceToHave() {
-            this.niceToHave = true;
-            return this;
-        }
-
-        public LoadoutSlot build() {
-            if (tiers.isEmpty()) {
-                throw new IllegalStateException(
-                        "nothing to put in the " + slot.getDisplayName() + " slot");
-            }
-            GearPick cheapest = tiers.get(tiers.size() - 1);
-            GearPick target = goal != null ? goal : cheapest;
-            String sentence = goalSentence != null ? goalSentence
-                    : "Earn " + target.getDisplayName() + " for " + target.getBenefit() + ".";
-            return new LoadoutSlot(slot, List.copyOf(tiers), purpose, niceToHave, group,
-                    mustWear, tip, target, sentence);
-        }
-    }
 }

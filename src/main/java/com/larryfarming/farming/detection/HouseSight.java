@@ -1,11 +1,8 @@
 package com.larryfarming.farming.detection;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 /**
  * What the player's own house was last seen to hold, for the rules that answer a house
@@ -18,21 +15,21 @@ import java.util.TreeSet;
  *
  * <p>Immutable. Each observation returns a new sight.
  */
+@EqualsAndHashCode
+@ToString
 public final class HouseSight {
 
     /** A stamp meaning "never". Real stamps are epoch seconds, so always above it. */
     private static final long NEVER = 0L;
 
-    private static final HouseSight UNSEEN = new HouseSight(
-            Collections.emptySet(), NEVER, Collections.emptySet(), NEVER);
+    private static final HouseSight UNSEEN = new HouseSight(Collections.emptySet(), NEVER, Collections.emptySet(), NEVER);
 
     private final Set<HouseFeature> built;
     private final long scannedAtEpochSec;
     private final Set<Integer> attuned;
     private final long nexusReadAtEpochSec;
 
-    private HouseSight(Set<HouseFeature> built, long scannedAtEpochSec, Set<Integer> attuned,
-            long nexusReadAtEpochSec) {
+    private HouseSight(Set<HouseFeature> built, long scannedAtEpochSec, Set<Integer> attuned, long nexusReadAtEpochSec) {
         this.built = built;
         this.scannedAtEpochSec = scannedAtEpochSec;
         this.attuned = attuned;
@@ -50,10 +47,8 @@ public final class HouseSight {
      * @param scannedAtEpochSec when the furniture was scanned, or 0 for never
      * @param nexusReadAtEpochSec when the Nexus was fully read, or 0 for never
      */
-    public static HouseSight of(Set<HouseFeature> built, long scannedAtEpochSec,
-            Set<Integer> attuned, long nexusReadAtEpochSec) {
-        return new HouseSight(copyOf(built), Math.max(NEVER, scannedAtEpochSec),
-                keysOf(attuned), Math.max(NEVER, nexusReadAtEpochSec));
+    public static HouseSight of(Set<HouseFeature> built, long scannedAtEpochSec, Set<Integer> attuned, long nexusReadAtEpochSec) {
+        return new HouseSight(copyOf(built), Math.max(NEVER, scannedAtEpochSec), keysOf(attuned), Math.max(NEVER, nexusReadAtEpochSec));
     }
 
     /**
@@ -67,8 +62,7 @@ public final class HouseSight {
 
     /** This house with the Nexus read in full. Replaces the attunement. */
     public HouseSight nexusRead(Set<Integer> destinations, long nowEpochSec) {
-        return new HouseSight(built, scannedAtEpochSec, keysOf(destinations),
-                stamp(nowEpochSec));
+        return new HouseSight(built, scannedAtEpochSec, keysOf(destinations), stamp(nowEpochSec));
     }
 
     /**
@@ -82,8 +76,7 @@ public final class HouseSight {
         }
         Set<Integer> more = new TreeSet<>(attuned);
         more.addAll(destinations);
-        return new HouseSight(built, scannedAtEpochSec, Collections.unmodifiableSet(more),
-                nexusReadAtEpochSec);
+        return new HouseSight(built, scannedAtEpochSec, Collections.unmodifiableSet(more), nexusReadAtEpochSec);
     }
 
     /** Whether the house has been scanned at least once. */
@@ -107,8 +100,7 @@ public final class HouseSight {
      * nothing.
      */
     public boolean isAttuned(int destination) {
-        return attuned.contains(destination)
-                && !(isScanned() && !built.contains(HouseFeature.PORTAL_NEXUS));
+        return attuned.contains(destination) && !(isScanned() && !built.contains(HouseFeature.PORTAL_NEXUS));
     }
 
     public Set<HouseFeature> getBuilt() {
@@ -136,40 +128,11 @@ public final class HouseSight {
     }
 
     private static Set<HouseFeature> copyOf(Set<HouseFeature> features) {
-        return features == null || features.isEmpty()
-                ? Collections.emptySet()
-                : Collections.unmodifiableSet(EnumSet.copyOf(features));
+        return features == null || features.isEmpty() ? Collections.emptySet() : Collections.unmodifiableSet(EnumSet.copyOf(features));
     }
 
     private static Set<Integer> keysOf(Collection<Integer> destinations) {
-        return destinations == null || destinations.isEmpty()
-                ? Collections.emptySet()
+        return destinations == null || destinations.isEmpty() ? Collections.emptySet()
                 : Collections.unmodifiableSet(new TreeSet<>(destinations));
-    }
-
-    @Override
-    public boolean equals(Object other) {
-        if (this == other) {
-            return true;
-        }
-        if (!(other instanceof HouseSight)) {
-            return false;
-        }
-        HouseSight that = (HouseSight) other;
-        return scannedAtEpochSec == that.scannedAtEpochSec
-                && nexusReadAtEpochSec == that.nexusReadAtEpochSec
-                && built.equals(that.built)
-                && attuned.equals(that.attuned);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(built, scannedAtEpochSec, attuned, nexusReadAtEpochSec);
-    }
-
-    @Override
-    public String toString() {
-        return "HouseSight{built=" + built + ", scannedAt=" + scannedAtEpochSec
-                + ", attuned=" + attuned + ", nexusReadAt=" + nexusReadAtEpochSec + "}";
     }
 }

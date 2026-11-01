@@ -2,10 +2,7 @@ package com.larryfarming.farming.model;
 
 import com.larryfarming.engine.farming.Crop;
 import java.util.List;
-import java.util.Set;
-import lombok.Builder;
-import lombok.Singular;
-import lombok.Value;
+import lombok.*;
 
 /**
  * How the herb rotation decides which herb seeds go in the ground.
@@ -39,19 +36,6 @@ public class SeedPolicy {
     /** Best to worst by experience. */
     @Singular("tier")
     List<Crop> herbTierList;
-
-    /**
-     * The worst herb worth farming by default.
-     *
-     * <p>Planning reads the player's floor from {@link FarmingPreferences}, not this field.
-     * Both come from {@link Preset#getHerbCutoff()}; the field keeps the cutoff beside the
-     * ranking it cuts.
-     */
-    Crop defaultCutoff;
-
-    /** Patches deliberately left out of herb runs. */
-    @Singular("excludePatch")
-    Set<PatchRef> excludedPatches;
 
     @Singular("override")
     List<DiaryOverride> diaryOverrides;

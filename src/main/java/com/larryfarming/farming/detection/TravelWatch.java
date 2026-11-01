@@ -3,20 +3,10 @@ package com.larryfarming.farming.detection;
 import com.larryfarming.engine.ItemCounts;
 import com.larryfarming.farming.catalogue.CarryItems;
 import com.larryfarming.farming.catalogue.Teleports;
-import com.larryfarming.farming.model.Capability;
-import com.larryfarming.farming.model.Destination;
-import com.larryfarming.farming.model.Rune;
-import com.larryfarming.farming.model.TeleportMeans;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.ItemStack;
 import com.larryfarming.model.PlayerState;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * Notices a teleport spent on the way to the next stop, so the plan stops asking for it.
@@ -50,8 +40,7 @@ public final class TravelWatch {
     /** Ten minutes. No stop is that far from the place its teleport lands. */
     static final int MAX_TICKS = 1000;
 
-    private static final Set<Rune> ELEMENTAL =
-            EnumSet.of(Rune.AIR, Rune.WATER, Rune.EARTH, Rune.FIRE);
+    private static final Set<Rune> ELEMENTAL = EnumSet.of(Rune.AIR, Rune.WATER, Rune.EARTH, Rune.FIRE);
 
     /**
      * The travel items a teleport can use up: jewellery crumbling on its last charge, a
@@ -62,8 +51,7 @@ public final class TravelWatch {
             Capability.RING_OF_DUELING, Capability.GAMES_NECKLACE, Capability.COMBAT_BRACELET,
             Capability.DIGSITE_PENDANT, Capability.RING_OF_WEALTH, Capability.SKILLS_NECKLACE,
             Capability.SLAYER_RING, Capability.NECKLACE_OF_PASSAGE,
-            Capability.TELEPORT_CRYSTAL, Capability.ECTOPHIAL, Capability.ICY_BASALT,
-            Capability.STONY_BASALT, Capability.BRIMHAVEN_TABLET);
+            Capability.TELEPORT_CRYSTAL, Capability.ECTOPHIAL, Capability.ICY_BASALT, Capability.STONY_BASALT, Capability.BRIMHAVEN_TABLET);
 
     private Map<Integer, Integer> carriedBefore;
     private List<ItemStack> bankBefore;
@@ -93,14 +81,6 @@ public final class TravelWatch {
         regionBefore = null;
     }
 
-    /** Put back a teleport recorded as spent, as landed. */
-    public void restore(TravelTaken taken, String heading) {
-        clear();
-        spent = taken;
-        spentFor = heading;
-        landed = true;
-    }
-
     /** One game tick, for a next stop whose route lands nowhere a teleport could. */
     public boolean tick(PlayerState state, String heading) {
         return tick(state, heading, null);
@@ -120,8 +100,7 @@ public final class TravelWatch {
         String wasFor = spentFor;
         Map<Integer, Integer> carried = carried(state);
         Integer region = state.getRegionId();
-        boolean jumped = regionBefore != null && region != null
-                && !bordering(regionBefore, region);
+        boolean jumped = regionBefore != null && region != null && !bordering(regionBefore, region);
         boolean banked = bankBefore != null && state.getBank() != bankBefore;
 
         if (!spent.isNone()) {
@@ -136,8 +115,7 @@ public final class TravelWatch {
             }
             if (!landed && jumped) {
                 landed = true;
-            } else if (!landed && ticksSinceSpent > LANDING_TICKS || movedOn
-                    || ticksSinceSpent > MAX_TICKS) {
+            } else if (!landed && ticksSinceSpent > LANDING_TICKS || movedOn || ticksSinceSpent > MAX_TICKS) {
                 forget();
             }
         }
@@ -185,8 +163,7 @@ public final class TravelWatch {
         Set<String> means = new HashSet<>();
         for (Destination destination : Destination.values()) {
             for (TeleportMeans way : Teleports.to(destination)) {
-                if (way.isSpell() ? paidFor(way.getRunes(), runesLost)
-                        : way.isTablet() && lost(before, after, way.getItemId()) == 1) {
+                if (way.isSpell() ? paidFor(way.getRunes(), runesLost) : way.isTablet() && lost(before, after, way.getItemId()) == 1) {
                     places.add(destination);
                     means.add(way.getDisplayName());
                 }
@@ -227,8 +204,7 @@ public final class TravelWatch {
         return true;
     }
 
-    private static boolean usedUp(int[] forms, Map<Integer, Integer> before,
-            Map<Integer, Integer> after) {
+    private static boolean usedUp(int[] forms, Map<Integer, Integer> before, Map<Integer, Integer> after) {
         int lost = 0;
         for (int id : forms) {
             int change = after.getOrDefault(id, 0) - before.getOrDefault(id, 0);

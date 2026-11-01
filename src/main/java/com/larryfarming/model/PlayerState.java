@@ -1,12 +1,10 @@
 package com.larryfarming.model;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * What the farm-run planner knows about the account: skills, quests, varbits, and where the
@@ -19,37 +17,21 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>Written on the client thread. The maps the panel can read on the EDT are concurrent.
  */
 public class PlayerState {
+    @Getter
     private final Map<Skill, SkillState> skills;
+    @Getter
     private final Map<String, QuestStatus> quests;
-    /**
-     * Run energy, in hundredths of a percent: 0 to 10,000, not 0 to 100. This is the
-     * client's own unit; {@code EnergyTopUp} does the conversion.
-     *
-     * <p><b>{@link #RUN_ENERGY_UNREAD} until the orb has been read, which is not zero.</b>
-     * Zero is a real reading (an empty bar), so it cannot double as "not read yet". If it
-     * did, an empty bar would get no potion offer and the plugin would push a fresh reading
-     * every tick.
-     *
-     * <p>{@code transient} because it is a live reading. A value restored on login would
-     * read as known and suppress the first real push.
-     */
-    private transient int runEnergy = RUN_ENERGY_UNREAD;
-
-    /**
-     * Whether the bar has run low enough to pack a top-up, held until it has recovered
-     * well past that. {@code EnergyTopUp.lowAfter} moves it. Without the gap, a bar
-     * hovering at the line would add and drop the potion with every step.
-     */
-    private transient boolean runEnergyLow;
-
-    /** Run energy we have not read yet, told apart from an empty bar. */
-    public static final int RUN_ENERGY_UNREAD = -1;
-
+    @Getter
     private List<ItemStack> inventory;
+    @Getter
     private final Map<EquipmentSlot, ItemStack> equipment;
     /** Quest stage counters, by quest name, for quests whose stage gates a route. */
+    @Getter
     private final Map<String, Integer> questProgress;
+    @Getter
     private List<ItemStack> bank;
+    @Getter
+    @Setter
     private Instant bankLastSeen;
     /** Seed vault contents, reported only when the player opens the vault in the Farming
      *  Guild. An established account keeps most seeds here rather than in the bank.
@@ -58,6 +40,8 @@ public class PlayerState {
     private List<ItemStack> seedVault = new ArrayList<>();
     /** When the seed vault was last observed, or null if never. Tells an empty vault apart
      *  from one this plugin has not been shown. */
+    @Getter
+    @Setter
     private Instant seedVaultLastSeen;
     /** Seed box contents. The box travels with the player, so its seeds count wherever the
      *  box itself is; see {@code SeedBox}.
@@ -68,6 +52,8 @@ public class PlayerState {
     private List<ItemStack> seedBox = new ArrayList<>();
     /** When the seed box was last heard about, or null if never. Tells an empty box apart
      *  from one nobody has looked in. */
+    @Getter
+    @Setter
     private Instant seedBoxLastSeen;
     /** Field-level init because Gson bypasses the constructor.
      *  Concurrent: written on the client thread, read on the EDT. */
@@ -84,6 +70,8 @@ public class PlayerState {
      * teleport is already paid for, so a region restored from the last session would drop a
      * teleport from the packing list of a player who logged in elsewhere.
      */
+    @Getter
+    @Setter
     private transient Integer regionId;
 
     public PlayerState() {
@@ -111,23 +99,7 @@ public class PlayerState {
         return state != null ? state.getLevel() : 1;
     }
 
-    public Map<Skill, SkillState> getSkills() { return skills; }
-
-    public Map<String, QuestStatus> getQuests() { return quests; }
-
-    /** Run energy in hundredths of a percent, or {@link #RUN_ENERGY_UNREAD}. See the field. */
-    public int getRunEnergy() { return runEnergy; }
-    public void setRunEnergy(int runEnergy) { this.runEnergy = runEnergy; }
-
-    public boolean isRunEnergyLow() { return runEnergyLow; }
-    public void setRunEnergyLow(boolean runEnergyLow) { this.runEnergyLow = runEnergyLow; }
-
-    public List<ItemStack> getInventory() { return inventory; }
     public void setInventory(List<ItemStack> inventory) { this.inventory = new ArrayList<>(inventory); }
-
-    public Map<EquipmentSlot, ItemStack> getEquipment() { return equipment; }
-
-    public Map<String, Integer> getQuestProgress() { return questProgress; }
 
     public Map<Integer, Integer> getVarbits() {
         // Gson may bypass both constructor and field initializers (via Unsafe.allocateInstance),
@@ -150,11 +122,7 @@ public class PlayerState {
         this.runePouch = next;
     }
 
-    public List<ItemStack> getBank() { return bank; }
     public void setBank(List<ItemStack> bank) { this.bank = new ArrayList<>(bank); }
-
-    public Instant getBankLastSeen() { return bankLastSeen; }
-    public void setBankLastSeen(Instant bankLastSeen) { this.bankLastSeen = bankLastSeen; }
 
     public List<ItemStack> getSeedVault() {
         // Defensive: Gson writes a save's null straight into the field.
@@ -162,17 +130,11 @@ public class PlayerState {
     }
     public void setSeedVault(List<ItemStack> seedVault) { this.seedVault = new ArrayList<>(seedVault); }
 
-    public Instant getSeedVaultLastSeen() { return seedVaultLastSeen; }
-    public void setSeedVaultLastSeen(Instant seen) { this.seedVaultLastSeen = seen; }
-
     public List<ItemStack> getSeedBox() {
         // Defensive: Gson writes a save's null straight into the field.
         return seedBox != null ? seedBox : (seedBox = new ArrayList<>());
     }
     public void setSeedBox(List<ItemStack> seedBox) { this.seedBox = new ArrayList<>(seedBox); }
-
-    public Instant getSeedBoxLastSeen() { return seedBoxLastSeen; }
-    public void setSeedBoxLastSeen(Instant seen) { this.seedBoxLastSeen = seen; }
 
     /**
      * When the box was last <em>read</em> whole, as opposed to last heard about.
@@ -189,10 +151,9 @@ public class PlayerState {
      * <p>{@code transient} because the listing vouches only for the box at the moment it was
      * read. A session that starts from a remembered tally has read nothing.
      */
+    @Getter
+    @Setter
     private transient Instant seedBoxVerifiedAt;
-
-    public Instant getSeedBoxVerifiedAt() { return seedBoxVerifiedAt; }
-    public void setSeedBoxVerifiedAt(Instant seen) { this.seedBoxVerifiedAt = seen; }
 
     /**
      * When seeds were last <em>watched</em> going into or out of the box, this session.
@@ -205,10 +166,9 @@ public class PlayerState {
      * <p>{@code transient} by design: it is null on every restart, so a tally inherited from
      * a previous session earns nothing until the player moves seeds again.
      */
+    @Getter
+    @Setter
     private transient Instant seedBoxWatchedAt;
-
-    public Instant getSeedBoxWatchedAt() { return seedBoxWatchedAt; }
-    public void setSeedBoxWatchedAt(Instant seen) { this.seedBoxWatchedAt = seen; }
 
     /**
      * How many of each seed, by item id, were watched going into the box this session, less
@@ -225,39 +185,6 @@ public class PlayerState {
     private transient Map<Integer, Integer> seedBoxWatchedNet;
 
     public Map<Integer, Integer> getSeedBoxWatchedNet() {
-        return seedBoxWatchedNet != null ? seedBoxWatchedNet
-                : (seedBoxWatchedNet = new HashMap<>());
+        return seedBoxWatchedNet != null ? seedBoxWatchedNet : (seedBoxWatchedNet = new HashMap<>());
     }
-
-    /**
-     * When each farming contract was handed in, oldest first, over the last
-     * {@link ContractTally#WINDOW_DAYS} days, and since when hand-ins have been watched.
-     * Persisted, so the count spans sessions.
-     */
-    private List<Instant> contractsHandedIn = new ArrayList<>();
-    private Instant contractsWatchedSince;
-
-    public List<Instant> getContractsHandedIn() {
-        return contractsHandedIn != null ? contractsHandedIn : List.of();
-    }
-
-    public void setContractsHandedIn(List<Instant> handedIn) {
-        this.contractsHandedIn = new ArrayList<>(handedIn);
-    }
-
-    public Instant getContractsWatchedSince() { return contractsWatchedSince; }
-    public void setContractsWatchedSince(Instant since) { this.contractsWatchedSince = since; }
-
-    /**
-     * Contracts handed in a day on average, or null until enough days have been watched.
-     * Worked out by the plugin from the hand-ins against the clock, which the planner does
-     * not read.
-     */
-    private transient Double contractsPerDay;
-
-    public Double getContractsPerDay() { return contractsPerDay; }
-    public void setContractsPerDay(Double perDay) { this.contractsPerDay = perDay; }
-
-    public Integer getRegionId() { return regionId; }
-    public void setRegionId(Integer regionId) { this.regionId = regionId; }
 }

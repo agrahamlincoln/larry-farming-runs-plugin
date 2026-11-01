@@ -1,9 +1,7 @@
 package com.larryfarming.farming.engine;
 
 import com.larryfarming.engine.farming.Crop;
-import java.util.EnumSet;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Crops named for the player: as the game names what stands in the patch, and as a word
@@ -40,7 +38,6 @@ final class CropNames {
      * is a proper noun ("no Hespori seed").
      */
     static String inSentence(String name) {
-        return name.startsWith(Crop.HESPORI.getDisplayName()) ? name
-                : name.toLowerCase(Locale.ROOT);
+        return name.startsWith(Crop.HESPORI.getDisplayName()) ? name : name.toLowerCase(Locale.ROOT);
     }
 }

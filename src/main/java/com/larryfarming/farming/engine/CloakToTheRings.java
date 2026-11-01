@@ -3,15 +3,9 @@ package com.larryfarming.farming.engine;
 import com.larryfarming.farming.catalogue.FarmingCatalogue;
 import com.larryfarming.farming.detection.CapabilityResolver;
 import com.larryfarming.farming.detection.CapabilityState;
-import com.larryfarming.farming.model.Arrival;
-import com.larryfarming.farming.model.Capability;
-import com.larryfarming.farming.model.Requirement;
-import com.larryfarming.farming.model.TravelOption;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * The Ardougne cloak's Monastery teleport as the way onto the fairy rings, with the
@@ -48,8 +42,7 @@ final class CloakToTheRings {
      * What a Monastery visit by cloak gives the leg after it: 43 walked tiles from the
      * bushes' west face (2616, 3226), where the walk from the cloak arrives, to DJP.
      */
-    static final RunPlanner.Start FROM_THE_BUSHES = new RunPlanner.Start(
-            FarmingCatalogue.toAfairyRing(),
+    static final RunPlanner.Start FROM_THE_BUSHES = new RunPlanner.Start(FarmingCatalogue.toAfairyRing(),
             "Walk east past the Tower of Life to fairy ring DJP. ", 43);
 
     /**
@@ -57,16 +50,14 @@ final class CloakToTheRings {
      * The patch (3452, 3473) is two walked tiles from fairy ring CKS (3447, 3470), from the
      * face nearest the ring.
      */
-    static final RunPlanner.Start FROM_THE_MUSHROOMS = new RunPlanner.Start(
-            FarmingCatalogue.toAfairyRing(),
+    static final RunPlanner.Start FROM_THE_MUSHROOMS = new RunPlanner.Start(FarmingCatalogue.toAfairyRing(),
             "Walk west to fairy ring CKS. ", 2);
 
     /**
      * The cloak as a way to a ring, the catalogue's own arm. The resolver fails it while the
      * player has the cloak switched off.
      */
-    private static final Requirement CLOAK_TO_A_RING =
-            Requirement.cap(Capability.ARDOUGNE_CLOAK_1);
+    private static final Requirement CLOAK_TO_A_RING = Requirement.cap(Capability.ARDOUGNE_CLOAK_1);
 
     /**
      * What the next leg starts from once this group is walked: the bushes' start after a
@@ -98,18 +89,13 @@ final class CloakToTheRings {
      * <p>Whole visits move, as {@link Itinerary#bestHomesFirst} moves them. The bushes are
      * never a herb rotation seat, so moving them leaves the seed order alone.
      *
-     * <p>A ring leg the walkthrough will not draw is passed over: the Farming Guild's bin
-     * carries the guild's own chain, CIR included, and seating the bushes before a bin nobody
-     * passes would hand the start to whatever leg follows it.
-     *
      * <p>Reads each run's own routes, before the circuit re-decides them. A leg that went by
      * ring only for its run's order can lose the ring on re-planning, and then the bushes
      * start a leg with no use for it. That costs nothing against their old seat: both legs
      * are reached by their own teleports. Re-decided routes are no better a guide, since a
      * leg already started from the bushes no longer names a way to a ring.
      */
-    static Itinerary.Trip bushesBeforeTheFirstRing(Itinerary.Trip trip,
-            CapabilityResolver resolver, PlayerState state, FarmingInputs inputs) {
+    static Itinerary.Trip bushesBeforeTheFirstRing(Itinerary.Trip trip, CapabilityResolver resolver, PlayerState state) {
         List<List<Integer>> visits = trip.getVisits();
         List<StopPlan> plans = trip.getPlans();
         int bushes = -1;
@@ -122,11 +108,9 @@ final class CloakToTheRings {
         if (bushes < 0) {
             return trip;
         }
-        Set<Integer> undrawn = RunPlanning.undrawnGroups(visits, plans, inputs, state, true);
         int ring = -1;
         for (int position = 0; position < visits.size(); position++) {
-            if (position != bushes && !undrawn.contains(position)
-                    && byFairyRing(StopRowWriter.leadOf(visits.get(position), plans))) {
+            if (position != bushes && byFairyRing(StopRowWriter.leadOf(visits.get(position), plans))) {
                 ring = position;
                 break;
             }
@@ -144,8 +128,7 @@ final class CloakToTheRings {
     private static boolean reachedByCloak(StopPlan plan) {
         TravelOption option = plan.getRoute();
         return plan.getStop().getArrival() == Arrival.ARDOUGNE_MONASTERY && option != null
-                && !option.getRequires().contains(FarmingCatalogue.toAfairyRing())
-                && option.getRequires().leafCapabilities()
+                && !option.getRequires().contains(FarmingCatalogue.toAfairyRing()) && option.getRequires().leafCapabilities()
                         .contains(Capability.ARDOUGNE_CLOAK_1);
     }
 
@@ -155,7 +138,6 @@ final class CloakToTheRings {
 
     /** Whether a visit's route enters the fairy ring network. */
     private static boolean byFairyRing(StopPlan plan) {
-        return plan.isVisit() && plan.getRoute() != null
-                && plan.getRoute().getRequires().contains(FarmingCatalogue.toAfairyRing());
+        return plan.isVisit() && plan.getRoute() != null && plan.getRoute().getRequires().contains(FarmingCatalogue.toAfairyRing());
     }
 }

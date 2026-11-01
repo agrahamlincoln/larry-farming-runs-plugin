@@ -1,8 +1,6 @@
 package com.larryfarming.farming.detection;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.Set;
+import java.util.*;
 import lombok.Value;
 
 /**
@@ -132,8 +130,7 @@ public final class HouseWatch {
             return own("solo ironman");
         }
         if (reopened) {
-            boolean keepsClaim = entry == null
-                    || (fresh && entry.getOwner() == HouseEntry.Owner.OWN);
+            boolean keepsClaim = entry == null || (fresh && entry.getOwner() == HouseEntry.Owner.OWN);
             if (ownHouse && keepsClaim) {
                 return "your own house still, its loading interface reopened";
             }
@@ -153,9 +150,7 @@ public final class HouseWatch {
         if (!fresh) {
             return "an unknown house, by a click too old to judge";
         }
-        return (entry.getOwner() == HouseEntry.Owner.GUEST
-                ? "someone else's house, by " : "an unknown house, by ")
-                + entry.getSignal();
+        return (entry.getOwner() == HouseEntry.Owner.GUEST ? "someone else's house, by " : "an unknown house, by ") + entry.getSignal();
     }
 
     /** The game state went to LOADING: a new scene is coming, so start the set afresh. */
@@ -231,9 +226,7 @@ public final class HouseWatch {
             pending.clear();
             return null;
         }
-        Set<HouseFeature> found = pending.isEmpty()
-                ? Collections.emptySet()
-                : Collections.unmodifiableSet(EnumSet.copyOf(pending));
+        Set<HouseFeature> found = pending.isEmpty() ? Collections.emptySet() : Collections.unmodifiableSet(EnumSet.copyOf(pending));
         pending.clear();
         return new Scan(found, ownSignal);
     }
@@ -267,8 +260,7 @@ public final class HouseWatch {
     }
 
     private boolean isFresh(int tick) {
-        return lastEntry != null && tick >= lastEntryTick
-                && tick - lastEntryTick <= ENTRY_WINDOW_TICKS;
+        return lastEntry != null && tick >= lastEntryTick && tick - lastEntryTick <= ENTRY_WINDOW_TICKS;
     }
 
     private String own(String signal) {

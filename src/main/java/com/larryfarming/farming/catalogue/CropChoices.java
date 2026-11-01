@@ -2,12 +2,7 @@ package com.larryfarming.farming.catalogue;
 
 import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.engine.farming.PatchType;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * The crops a player may grow instead of the default crop at a stop with one default crop,
@@ -31,13 +26,8 @@ final class CropChoices {
      * stands in for the default crop. A stop's own default crop takes the stop's figure
      * ({@link FarmingCatalogue#everyNthRun}), so the catalogue has one source for it.
      */
-    private static final Map<Crop, Integer> EVERY_NTH_RUN = Map.of(
-            Crop.SNAPE_GRASS, 1,
-            Crop.WATERMELON, 1,
-            Crop.WHITEBERRIES, 2,
-            Crop.POISON_IVY, 2,
-            Crop.POTATO_CACTUS, 1,
-            Crop.CACTUS, 7);
+    private static final Map<Crop, Integer> EVERY_NTH_RUN = Map.of(Crop.SNAPE_GRASS, 1, Crop.WATERMELON, 1, Crop.WHITEBERRIES, 2,
+            Crop.POISON_IVY, 2, Crop.POTATO_CACTUS, 1, Crop.CACTUS, 7);
 
     private static final Map<PatchType, List<Crop>> BY_PATCH = byPatch();
 
@@ -47,22 +37,20 @@ final class CropChoices {
     private static Map<PatchType, List<Crop>> byPatch() {
         Map<PatchType, List<Crop>> byPatch = new EnumMap<>(PatchType.class);
         for (Crop crop : EVERY_NTH_RUN.keySet()) {
-            byPatch.computeIfAbsent(CropData.forCrop(crop).getPatchType(),
-                    type -> new ArrayList<>()).add(crop);
+            byPatch.computeIfAbsent(CropData.forCrop(crop).getPatchType(), type -> new ArrayList<>()).add(crop);
         }
         Map<PatchType, List<Crop>> sorted = new EnumMap<>(PatchType.class);
         for (Map.Entry<PatchType, List<Crop>> family : byPatch.entrySet()) {
             List<Crop> crops = family.getValue();
-            crops.sort(Comparator.comparingInt(
-                    (Crop c) -> CropData.forCrop(c).getFarmingLevel()).reversed());
+            crops.sort(Comparator.comparingInt((Crop c) -> CropData.forCrop(c).getFarmingLevel()).reversed());
             sorted.put(family.getKey(), List.copyOf(crops));
         }
         return Collections.unmodifiableMap(sorted);
     }
 
     /**
-     * The anima plants, in the order the settings show them. They rank by the player's
-     * account, not by level, so this order is display only.
+     * The anima plants, in the order the settings show them. A player who ticks several
+     * plants the first of them they hold seeds for.
      */
     private static final List<Crop> ANIMA_PLANTS = List.of(Crop.ATTAS, Crop.IASOR, Crop.KRONOS);
 
@@ -70,10 +58,6 @@ final class CropChoices {
     static List<Crop> forPatch(PatchType type) {
         if (type == PatchType.ANIMA) {
             return ANIMA_PLANTS;
-        }
-        // Coral ranks by level: umbral, pillar, elkhorn.
-        if (type == PatchType.CORAL) {
-            return CropData.plantableIn(PatchType.CORAL);
         }
         return BY_PATCH.getOrDefault(type, List.of());
     }

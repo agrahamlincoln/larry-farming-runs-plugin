@@ -1,7 +1,6 @@
 package com.larryfarming.farming.engine;
 
 import com.larryfarming.engine.farming.Crop;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.Value;
 
@@ -36,37 +35,9 @@ public class SeedAllocation {
      */
     boolean confident;
 
-    public boolean isEmpty() {
-        return perPatch.isEmpty();
-    }
-
-    /** True when the stock could not fill every patch this end covers. */
-    public boolean isShort() {
-        return perPatch.size() < wanted;
-    }
-
     /** The crop for the nth best patch of this end, or null once the seeds run out. */
     public Crop at(int index) {
         return index >= 0 && index < perPatch.size() ? perPatch.get(index) : null;
-    }
-
-    /**
-     * The distinct crops in order of first use, each with how many patches take it.
-     */
-    public List<Tally> tally() {
-        List<Tally> tallies = new ArrayList<>();
-        for (Crop crop : perPatch) {
-            Tally last = tallies.isEmpty() ? null : tallies.get(tallies.size() - 1);
-            // Allocation walks the tier list in one direction, so equal crops are always
-            // adjacent (also after the filler end is reversed) and only the last entry can
-            // match.
-            if (last != null && last.getCrop() == crop) {
-                tallies.set(tallies.size() - 1, new Tally(crop, last.getCount() + 1));
-            } else {
-                tallies.add(new Tally(crop, 1));
-            }
-        }
-        return tallies;
     }
 
     /** One crop and how many patches take it. */

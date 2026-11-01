@@ -14,13 +14,8 @@ final class Seeds {
 
     static SeedPolicy policy() {
         Preset preset = Preset.DEFAULT;
-        SeedPolicy.SeedPolicyBuilder policy = SeedPolicy.builder()
-                .herbTierList(preset.getHerbRanking())
-                .defaultCutoff(preset.getHerbCutoff())
+        SeedPolicy.SeedPolicyBuilder policy = SeedPolicy.builder().herbTierList(preset.getHerbRanking())
                 .goodSeedsPerRun(preset.getGoodSeedsPerRun());
-        if (preset.isGuildHerbPatchReserved()) {
-            policy.excludePatch(Patches.FARMING_GUILD_HERB);
-        }
         // The one claim is Falador's magic, which the preset can switch off.
         if (preset.isMagicAtFaladorWithEliteDiary()) {
             for (Site site : Site.values()) {

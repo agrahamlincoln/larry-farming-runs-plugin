@@ -1,5 +1,7 @@
 package com.larryfarming.farming.model;
 
+import lombok.Getter;
+
 /**
  * One place on the trip: somewhere the player travels to, and every patch they work
  * before travelling again.
@@ -21,7 +23,7 @@ package com.larryfarming.farming.model;
 public enum Arrival {
 
     // --- Kourend --------------------------------------------------------------
-    /** Contract, hespori, the big bin and every guild patch: one walled garden. */
+    /** Contract, hespori and every guild patch: one walled garden. */
     FARMING_GUILD("the Farming Guild", BankProximity.AT_ARRIVAL),
     HOSIDIUS("Hosidius", BankProximity.FAR),
 
@@ -45,12 +47,6 @@ public enum Arrival {
      * seventeen tiles from the patch and twenty-seven from the bank.
      */
     LLETYA("Lletya", BankProximity.FAR),
-    /**
-     * The bin and the allotments in the north-east of the city. Its north bank costs
-     * twenty-two tiles of detour from the teleport crystal and twenty-seven from the spirit
-     * tree.
-     */
-    PRIFDDINAS("Prifddinas", BankProximity.SHORT_WALK),
 
     // --- Kandarin and the gnome lands ----------------------------------------
     /** Tree and fruit tree both: every arrival here falls between the two patches. */
@@ -63,7 +59,7 @@ public enum Arrival {
      */
     ARDOUGNE_MONASTERY("Ardougne Monastery", BankProximity.FAR),
     ARDOUGNE_FARM("Ardougne", BankProximity.FAR),
-    /** Herb cluster, allotments, flowers, the bin, and the fruit tree east of them. */
+    /** Herb cluster, an allotment, flowers, and the fruit tree east of them. */
     CATHERBY("Catherby", BankProximity.SHORT_WALK),
 
     // --- Karamja --------------------------------------------------------------
@@ -120,12 +116,7 @@ public enum Arrival {
     TROLL_STRONGHOLD("the Troll Stronghold", BankProximity.NONE),
 
     // --- The Great Conch ------------------------------------------------------
-    GREAT_CONCH("the Great Conch", BankProximity.NONE),
-    /**
-     * Underwater off the Great Conch's east coast, down the steps at the end of the east
-     * dock. Never the calquat stop: the two are reached by different walks.
-     */
-    CORAL_NURSERIES("the Coral Nurseries", BankProximity.NONE);
+    GREAT_CONCH("the Great Conch", BankProximity.NONE);
 
     /**
      * How much a bank costs once the player is standing here.
@@ -197,23 +188,17 @@ public enum Arrival {
         }
     }
 
+    /**
+     * Player-facing, written to sit mid-sentence: "travel to the Farming Guild". A caller
+     * wanting a heading capitalises and strips the article.
+     */
+    @Getter
     private final String displayName;
+    @Getter
     private final BankProximity bank;
 
     Arrival(String displayName, BankProximity bank) {
         this.displayName = displayName;
         this.bank = bank;
-    }
-
-    /**
-     * Player-facing, written to sit mid-sentence: "travel to the Farming Guild". A caller
-     * wanting a heading capitalises and strips the article.
-     */
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public BankProximity getBank() {
-        return bank;
     }
 }

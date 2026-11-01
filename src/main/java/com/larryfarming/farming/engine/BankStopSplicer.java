@@ -4,12 +4,7 @@ import com.larryfarming.farming.model.Arrival;
 import com.larryfarming.farming.model.Bank;
 import com.larryfarming.snapshot.FarmingCarryItem;
 import com.larryfarming.snapshot.FarmingStopAdvice;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * The bank rows of a walkthrough: a prescribed bank in front of every leg that needs one,
@@ -39,34 +34,13 @@ final class BankStopSplicer {
      *     indices count only arrivals being made, while {@code stops} also holds skipped
      *     rows. A mis-sized {@code rowOf} throws rather than splicing a bank into the wrong
      *     place.
-     */
-    static List<FarmingStopAdvice> withBankStops(List<FarmingStopAdvice> stops,
-            InventorySim.Plan bag, List<Integer> rowOf) {
-        return withBankStops(stops, bag, rowOf, WithdrawalPlanner.Withdrawals.none());
-    }
-
-    /**
-     * The same splice, told what to withdraw at each bank it places, for a trip not yet
-     * begun.
-     *
      * @param withdrawals what each bank row says to take out, or
      *     {@link WithdrawalPlanner.Withdrawals#none()} where the caller has not worked them
      *     out
-     */
-    static List<FarmingStopAdvice> withBankStops(List<FarmingStopAdvice> stops,
-            InventorySim.Plan bag, List<Integer> rowOf,
-            WithdrawalPlanner.Withdrawals withdrawals) {
-        return withBankStops(stops, bag, rowOf, withdrawals, false);
-    }
-
-    /**
-     * The same splice, for a player who may already be partway round.
-     *
      * @param underway whether the player is partway round, which changes only how the
      *     starting row is headed and lets it stand on a trip with no bank to splice
      */
-    static List<FarmingStopAdvice> withBankStops(List<FarmingStopAdvice> stops,
-            InventorySim.Plan bag, List<Integer> rowOf,
+    static List<FarmingStopAdvice> withBankStops(List<FarmingStopAdvice> stops, InventorySim.Plan bag, List<Integer> rowOf,
             WithdrawalPlanner.Withdrawals withdrawals, boolean underway) {
         // Asks what the legs say, not how many there are: a single leg can still be an
         // arrival nobody could carry. Partway round, the starting row can be the only bank
@@ -87,8 +61,7 @@ final class BankStopSplicer {
                 // indices contiguously, and passableBanksIn excludes each leg's first
                 // arrival, so no two offers share a row. Break either and an offer
                 // silently disappears.
-                FarmingStopAdvice row = optionalBankStop(passed,
-                        withdrawals.afterArrival(passed.getIndex()));
+                FarmingStopAdvice row = optionalBankStop(passed, withdrawals.afterArrival(passed.getIndex()));
                 offered.put(rowOf.get(passed.getIndex()), row);
                 if (passed.getBankPlace() != null) {
                     offeredBank.put(row, passed.getBankPlace());
@@ -96,8 +69,7 @@ final class BankStopSplicer {
             }
         }
 
-        List<FarmingStopAdvice> withBanks = new ArrayList<>(
-                stops.size() + bag.getLegs().size() + offered.size() + 1);
+        List<FarmingStopAdvice> withBanks = new ArrayList<>(stops.size() + bag.getLegs().size() + offered.size() + 1);
         addStartingBag(withBanks, withdrawals, underway);
         int next = 0;
         for (int index = 0; index < bag.getLegs().size(); index++) {
@@ -150,26 +122,15 @@ final class BankStopSplicer {
      * skipped as growing carries no route, so the bank the player last passed is not known
      * here.
      */
-    private static void addStartingBag(List<FarmingStopAdvice> into,
-            WithdrawalPlanner.Withdrawals withdrawals, boolean underway) {
+    private static void addStartingBag(List<FarmingStopAdvice> into, WithdrawalPlanner.Withdrawals withdrawals, boolean underway) {
         List<FarmingCarryItem> first = withdrawals.getBeforeSettingOff();
         // Partway round, deposits alone are reason enough for the row.
         if (first.isEmpty() && withdrawals.getDeposits().isEmpty()) {
             return;
         }
-        into.add(FarmingStopAdvice.builder()
-                .kind(FarmingStopAdvice.Kind.BANK_START)
-                .patchName(!underway ? SETTING_OFF_HEADING
-                        : first.isEmpty() ? NEXT_BANK_HEADING : BANK_FIRST_HEADING)
-                .outcome(FarmingStopAdvice.Outcome.VISIT)
-                .instruction("")
-                .because("")
-                .plants(Collections.emptyList())
-                .setAside(Collections.emptyList())
-                .withdraw(first)
-                .deposit(withdrawals.getDeposits())
-                .depositUrgent(withdrawals.isDepositsUrgent())
-                .build());
+        into.add(row(FarmingStopAdvice.Kind.BANK_START, !underway ? SETTING_OFF_HEADING
+                        : first.isEmpty() ? NEXT_BANK_HEADING : BANK_FIRST_HEADING, "").withdraw(first).deposit(withdrawals.getDeposits())
+                .depositUrgent(withdrawals.isDepositsUrgent()).build());
     }
 
     /**
@@ -181,15 +142,13 @@ final class BankStopSplicer {
      * one bank twice.
      */
     private static FarmingStopAdvice inPlaceOfTheSameBankOffered(List<FarmingStopAdvice> rows,
-            Map<FarmingStopAdvice, Bank> offeredBank, Bank bank,
-            FarmingStopAdvice prescribed) {
+            Map<FarmingStopAdvice, Bank> offeredBank, Bank bank, FarmingStopAdvice prescribed) {
         if (rows.isEmpty() || bank == null) {
             return prescribed;
         }
         FarmingStopAdvice before = rows.get(rows.size() - 1);
         // By the bank, not the heading: an unmeasured bank is headed a bare "Bank".
-        if (before.getKind() != FarmingStopAdvice.Kind.BANK_OPTIONAL
-                || offeredBank.get(before) != bank) {
+        if (before.getKind() != FarmingStopAdvice.Kind.BANK_OPTIONAL || offeredBank.get(before) != bank) {
             return prescribed;
         }
         rows.remove(rows.size() - 1);
@@ -202,18 +161,14 @@ final class BankStopSplicer {
                 continue;
             }
             FarmingCarryItem offered = withdraw.get(both);
-            withdraw.set(both, new FarmingCarryItem(item.getKind(), item.getItemId(),
-                    item.getName(), offered.getQuantity() + item.getQuantity(),
-                    item.getAvailability(), item.getTag(), item.getNote(),
-                    item.getCarriedCount()));
+            withdraw.set(both, item.withQuantity(offered.getQuantity() + item.getQuantity()));
         }
         return prescribed.toBuilder().withdraw(withdraw).build();
     }
 
     private static int indexOfLine(List<FarmingCarryItem> lines, FarmingCarryItem item) {
         for (int i = 0; i < lines.size(); i++) {
-            if (lines.get(i).getItemId() == item.getItemId()
-                    && lines.get(i).getName().equals(item.getName())) {
+            if (lines.get(i).getItemId() == item.getItemId() && lines.get(i).getName().equals(item.getName())) {
                 return i;
             }
         }
@@ -221,8 +176,7 @@ final class BankStopSplicer {
     }
 
     /** The offered-bank row that follows this one, if any. */
-    private static void addIfOffered(List<FarmingStopAdvice> into,
-            Map<Integer, FarmingStopAdvice> offered, int row) {
+    private static void addIfOffered(List<FarmingStopAdvice> into, Map<Integer, FarmingStopAdvice> offered, int row) {
         FarmingStopAdvice passed = offered.get(row);
         if (passed != null) {
             into.add(passed);
@@ -239,21 +193,18 @@ final class BankStopSplicer {
      * {@code note} only as a hover. The bank sits at an arrival already on the circuit, so
      * there is no journey for that line to describe otherwise.
      */
-    private static FarmingStopAdvice bankStop(InventorySim.Leg leg,
-            List<FarmingCarryItem> withdraw) {
-        return FarmingStopAdvice.builder()
-                .withdraw(withdraw)
-                .kind(FarmingStopAdvice.Kind.BANK)
-                // Named by the bank, never by the arrival: Ortus Farm has no bank, and its
-                // rungs bank at the Hunter Guild or in Civitas illa Fortis.
-                .patchName(bankNamed(leg.getBankPlace()))
-                .outcome(FarmingStopAdvice.Outcome.VISIT)
-                .instruction(leg.getPeakSlots() + " of " + InventorySim.SLOTS + " slots full."
-                        + whyHere(leg))
-                .because("")
-                .plants(Collections.emptyList())
-                .setAside(Collections.emptyList())
-                .build();
+    private static FarmingStopAdvice bankStop(InventorySim.Leg leg, List<FarmingCarryItem> withdraw) {
+        // Named by the bank, never by the arrival: Ortus Farm has no bank, and its rungs
+        // bank at the Hunter Guild or in Civitas illa Fortis.
+        return row(FarmingStopAdvice.Kind.BANK, bankNamed(leg.getBankPlace()),
+                leg.getPeakSlots() + " of " + InventorySim.SLOTS + " slots full." + whyHere(leg)).withdraw(withdraw).build();
+    }
+
+    /** A row of this kind under this heading, with nothing planted or set aside. */
+    private static FarmingStopAdvice.FarmingStopAdviceBuilder row(FarmingStopAdvice.Kind kind, String heading, String instruction) {
+        return FarmingStopAdvice.builder().kind(kind).patchName(heading)
+                .outcome(FarmingStopAdvice.Outcome.VISIT).instruction(instruction).because("")
+                .plants(Collections.emptyList()).setAside(Collections.emptyList());
     }
 
     /**
@@ -265,23 +216,13 @@ final class BankStopSplicer {
      * <p>Outcome {@code VISIT} because the bank sits at an arrival already on the circuit.
      * The kind makes it read as optional: the panel draws it muted and unnumbered.
      */
-    private static FarmingStopAdvice optionalBankStop(InventorySim.Opportunity passed,
-            List<FarmingCarryItem> withdraw) {
+    private static FarmingStopAdvice optionalBankStop(InventorySim.Opportunity passed, List<FarmingCarryItem> withdraw) {
         String cost = costOfDetour(passed.getCost());
-        return FarmingStopAdvice.builder()
-                .kind(FarmingStopAdvice.Kind.BANK_OPTIONAL)
-                // Offered banks carry withdrawals too. Most trips never fill the bag, so
-                // every bank row on them is an offered one. A long detour carries none:
-                // WithdrawalPlanner sends its items out with the bank before it.
-                .withdraw(withdraw)
-                // Named by the bank, as in {@link #bankStop}.
-                .patchName(bankNamed(passed.getBankPlace()))
-                .outcome(FarmingStopAdvice.Outcome.VISIT)
-                .instruction(cost.isEmpty() ? "" : cost + ".")
-                .because("")
-                .plants(Collections.emptyList())
-                .setAside(Collections.emptyList())
-                .build();
+        // Named by the bank, as in {@link #bankStop}. Offered banks carry withdrawals too.
+        // Most trips never fill the bag, so every bank row on them is an offered one. A long
+        // detour carries none: WithdrawalPlanner sends its items out with the bank before it.
+        return row(FarmingStopAdvice.Kind.BANK_OPTIONAL, bankNamed(passed.getBankPlace()), cost.isEmpty() ? "" : cost + ".")
+                .withdraw(withdraw).build();
     }
 
     /**
@@ -289,11 +230,11 @@ final class BankStopSplicer {
      * none is.
      *
      * <p>A bank is known only where the catalogue carries a measured figure. "Bank" alone
-     * cannot send the player to the wrong one of Falador's two. Never substitute the
-     * arrival's name.
+     * cannot send the player to the wrong one of Falador's two. The arrival's name never
+     * stands in for a bank's.
      *
-     * <p>A named bank can be shared: {@code RunStop.Builder.banksAll} gives every rung at a stop
-     * the stop's one figure and bank.
+     * <p>A named bank can be shared: every rung at a stop may carry the stop's one figure and
+     * bank.
      */
     private static String bankNamed(Bank bank) {
         return bank == null ? "Bank" : bank.getRowTitle();
@@ -337,8 +278,7 @@ final class BankStopSplicer {
         }
         // Never brought forward at FAR: the cut only moves for a strictly better grade, so a
         // leg that still grades FAR is one the inventory picked rather than the route.
-        String early = leg.isBankBroughtForward()
-                && leg.getBankCost() != Arrival.BankProximity.FAR
+        String early = leg.isBankBroughtForward() && leg.getBankCost() != Arrival.BankProximity.FAR
                 ? " Bank here early. This bank is closer." : "";
         String cost = costOfDetour(leg.getBankCost());
         return cost.isEmpty() ? "" : " " + cost + "." + early;
@@ -348,8 +288,7 @@ final class BankStopSplicer {
     private static boolean nothingToSplice(InventorySim.Plan bag) {
         for (InventorySim.Leg leg : bag.getLegs()) {
             // Offered banks count: a trip needing no stop still offers the banks it passes.
-            if (leg.getBankAt() != null || leg.getOverflow() != null
-                    || !leg.getPassableBanks().isEmpty()) {
+            if (leg.getBankAt() != null || leg.getOverflow() != null || !leg.getPassableBanks().isEmpty()) {
                 return false;
             }
         }
@@ -362,19 +301,9 @@ final class BankStopSplicer {
      * <p>Outcome {@code VISIT} so the fold never hides it behind the skipped patches.
      */
     private static FarmingStopAdvice overflowStop(InventorySim.Leg leg) {
-        return FarmingStopAdvice.builder()
-                .kind(FarmingStopAdvice.Kind.OVERFLOW)
-                .patchName(leg.isHarvestRoomOnly()
-                        ? "No room left for the harvest here"
-                        : "Your inventory fills up here")
-                .outcome(FarmingStopAdvice.Outcome.VISIT)
-                .instruction("")
+        return row(FarmingStopAdvice.Kind.OVERFLOW, leg.isHarvestRoomOnly() ? "No room left for the harvest here"
+                        : "Your inventory fills up here", "")
                 // What the sim found, then what the player can do about it.
-                .actions(List.of(leg.getOverflow(),
-                        "Drop what you can spare, or leave the rest for another trip."))
-                .because("")
-                .plants(Collections.emptyList())
-                .setAside(Collections.emptyList())
-                .build();
+                .actions(List.of(leg.getOverflow(), "Drop what you can spare, or leave the rest for another trip.")).build();
     }
 }

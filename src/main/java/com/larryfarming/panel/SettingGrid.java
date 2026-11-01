@@ -3,18 +3,13 @@ package com.larryfarming.panel;
 import com.larryfarming.snapshot.FarmingSettingChoice;
 import java.awt.Dimension;
 import java.awt.GridLayout;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
-import javax.swing.ImageIcon;
-import javax.swing.JComponent;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
 /**
- * The farming tab's grids of setting squares: one {@link SettingSquare} per choice, laid out
+ * The side panel's grids of setting squares: one {@link SettingSquare} per choice, laid out
  * four across over the inventory colour like the packing grid.
  */
 final class SettingGrid
@@ -30,8 +25,7 @@ final class SettingGrid
 	 * Ticks: a click flips the one square at once and sends its new state. A locked square
 	 * takes no click.
 	 */
-	static InventoryBackdrop toggles(List<FarmingSettingChoice> choices, IconProvider icons,
-		BiConsumer<String, String> send)
+	static InventoryBackdrop toggles(List<FarmingSettingChoice> choices, IconProvider icons, BiConsumer<String, String> send)
 	{
 		List<SettingSquare> squares = new ArrayList<>(choices.size());
 		for (FarmingSettingChoice choice : choices)
@@ -42,25 +36,16 @@ final class SettingGrid
 	}
 
 	/** One tick square, flipping itself on a click and sending its new state. */
-	static SettingSquare toggle(FarmingSettingChoice choice, IconProvider icons,
-		BiConsumer<String, String> send)
+	private static SettingSquare toggle(FarmingSettingChoice choice, IconProvider icons, BiConsumer<String, String> send)
 	{
 		SettingSquare square = square(choice, icons);
 		if (!choice.isLocked())
 		{
-			square.addMouseListener(new MouseAdapter()
+			PanelText.onLeftClick(square, () ->
 			{
-				@Override
-				public void mouseClicked(MouseEvent e)
-				{
-					if (!SwingUtilities.isLeftMouseButton(e))
-					{
-						return;
-					}
-					boolean on = !square.isOn();
-					square.setOn(on);
-					send.accept(choice.getKey(), String.valueOf(on));
-				}
+				boolean on = !square.isOn();
+				square.setOn(on);
+				send.accept(choice.getKey(), String.valueOf(on));
 			});
 		}
 		return square;
@@ -116,12 +101,10 @@ final class SettingGrid
 	static InventoryBackdrop grid(List<? extends JComponent> cells, IconProvider icons)
 	{
 		int rows = Math.max(1, (cells.size() + CarryView.COLUMNS - 1) / CarryView.COLUMNS);
-		InventoryBackdrop grid = new InventoryBackdrop(new GridLayout(rows,
-			CarryView.COLUMNS, ItemSquare.GAP, ItemSquare.GAP));
+		InventoryBackdrop grid = new InventoryBackdrop(new GridLayout(rows, CarryView.COLUMNS, ItemSquare.GAP, ItemSquare.GAP));
 		grid.setIcons(icons);
 		// GridLayout divides all the width it gets. Cap it so squares stay sprite-sized.
-		Dimension size = new Dimension(
-			CarryView.COLUMNS * ItemSquare.SIZE + (CarryView.COLUMNS - 1) * ItemSquare.GAP,
+		Dimension size = new Dimension(CarryView.COLUMNS * ItemSquare.SIZE + (CarryView.COLUMNS - 1) * ItemSquare.GAP,
 			rows * ItemSquare.SIZE + (rows - 1) * ItemSquare.GAP);
 		grid.setMaximumSize(size);
 		grid.setPreferredSize(size);

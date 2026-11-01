@@ -1,8 +1,6 @@
 package com.larryfarming.farming.model;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Somewhere the player can be standing, as the game reports it: a named place over a set
@@ -17,11 +15,11 @@ import java.util.Set;
  * <p>Zones use map regions (64 by 64 tiles), the resolution {@code PlayerState.getRegionId()}
  * carries. Every rung written against a zone must be true anywhere in it.
  *
- * <p>Every id needs a tile behind it. Do not copy ids from {@code FarmingWorldMap}'s
- * registration for a place of the same name: those cover where a patch cluster's varbits
- * transmit, not where a teleport lands. Derive an id from a tile checked against the wiki or
- * in game, with {@code regionId = (x >> 6) << 8 | (y >> 6)}, or walk it. A missing id only
- * leaves a rung unused, but a wrong one drops a teleport from the player's bag.
+ * <p>Each id comes from a tile checked against the wiki or in game, by
+ * {@code regionId = (x >> 6) << 8 | (y >> 6)}, or from a walk. {@code FarmingWorldMap}'s ids
+ * for a place of the same name cover where a patch cluster's varbits transmit, not where a
+ * teleport lands. A missing id only leaves a rung unused. A wrong one drops a teleport from
+ * the player's bag.
  */
 public enum Zone {
 
@@ -37,8 +35,8 @@ public enum Zone {
      *
      * <p>The palace lands on the region's southern edge ({@code y == 3136} is its first
      * row), so the zone extends east and north along the run to Renu. The city's west bank
-     * lies south-west, outside the zone. Do not widen the zone south: the run to Renu is not
-     * free from the bank.
+     * lies south-west. The zone leaves it out, because the run to Renu is not free from the
+     * bank.
      */
     CIVITAS_ILLA_FORTIS("Civitas illa Fortis", 6705),
 
@@ -78,11 +76,6 @@ public enum Zone {
         return displayName;
     }
 
-    /** Every map region this place covers. Never empty. */
-    public Set<Integer> getRegionIds() {
-        return regionIds;
-    }
-
     /**
      * Whether a player in this region is standing in this place.
      *
@@ -100,11 +93,8 @@ public enum Zone {
      * any answer, so a position-aware plan would equal a blind one and can be skipped.
      */
     public static Zone covering(Integer regionId) {
-        if (regionId == null) {
-            return null;
-        }
         for (Zone zone : values()) {
-            if (zone.regionIds.contains(regionId)) {
+            if (zone.covers(regionId)) {
                 return zone;
             }
         }

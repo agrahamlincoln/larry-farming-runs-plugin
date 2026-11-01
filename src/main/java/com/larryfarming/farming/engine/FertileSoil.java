@@ -3,15 +3,8 @@ package com.larryfarming.farming.engine;
 import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.engine.farming.PatchType;
 import com.larryfarming.farming.catalogue.Teleports;
-import com.larryfarming.farming.detection.CapabilitySources;
-import com.larryfarming.farming.model.Capability;
-import com.larryfarming.farming.model.FarmingPreferences;
-import com.larryfarming.farming.model.Rune;
-import com.larryfarming.farming.model.RunStop;
-import com.larryfarming.farming.model.Spellbook;
-import com.larryfarming.model.PlayerState;
-import com.larryfarming.model.QuestStatus;
-import com.larryfarming.model.Skill;
+import com.larryfarming.farming.model.*;
+import com.larryfarming.model.*;
 import java.util.List;
 import java.util.Map;
 
@@ -24,12 +17,10 @@ import java.util.Map;
  * ultracompost instead. Nothing in the game state says whether the tome has been read, so
  * the player says so with the setting, and Larry plans the spell only then.
  *
- * <p>The seaweed patches keep their compost: Larry does not plan the spell underwater. The
- * bottomless bucket also stays in the bag on a trip that empties a compost bin, since the
- * bin empties into it.
+ * <p>The seaweed patches keep their compost: Larry does not plan the spell underwater.
  *
  * <p>Not modelled: the spell's rune stacks taking bag slots for a player without a rune
- * pouch, as for Cure Plant and Resurrect Crops.
+ * pouch, as for Cure Plant.
  */
 final class FertileSoil {
 
@@ -50,16 +41,13 @@ final class FertileSoil {
      * @param tripBook the book the trip is planned for
      */
     static boolean inUse(FarmingPreferences prefs, PlayerState state, Spellbook tripBook) {
-        if (prefs == null || !prefs.compostsWithFertileSoil() || state == null
-                || state.getSkillLevel(Skill.MAGIC) < MAGIC_LEVEL) {
+        if (prefs == null || !prefs.compostsWithFertileSoil() || state == null || state.getSkillLevel(Skill.MAGIC) < MAGIC_LEVEL) {
             return false;
         }
         if (tripBook != Spellbook.ANY) {
             return tripBook == Spellbook.LUNAR;
         }
-        Map<Integer, Integer> varbits = state.getVarbits();
-        Integer book = varbits == null ? null : varbits.get(CapabilitySources.SPELLBOOK_VARBIT);
-        return book != null && book == CapabilitySources.LUNAR_SPELLBOOK;
+        return FarmingAdviceBuilder.openBookOf(state) == Spellbook.LUNAR;
     }
 
     /**
@@ -102,19 +90,13 @@ final class FertileSoil {
     }
 
     /**
-     * Whether the bag still carries its compost on a Fertile Soil trip: the trip empties a
-     * compost bin, which the bottomless bucket takes, or plants a seaweed patch, which keeps
-     * its compost.
+     * Whether the bag still carries its compost on a Fertile Soil trip: the trip plants a
+     * seaweed patch, which keeps its compost.
      */
     static boolean keepsTheCompost(List<StopPlan> plans) {
         for (StopPlan plan : plans) {
-            if (!plan.isVisit()) {
-                continue;
-            }
             RunStop stop = plan.getStop();
-            if (stop.getActions().contains(RunStop.StopAction.EMPTY_COMPOST_BIN)
-                    || stop.patchType() == PatchType.SEAWEED
-                            && stop.getActions().contains(RunStop.StopAction.COMPOST)) {
+            if (plan.isVisit() && stop.patchType() == PatchType.SEAWEED && stop.getActions().contains(RunStop.StopAction.COMPOST)) {
                 return true;
             }
         }
@@ -128,7 +110,6 @@ final class FertileSoil {
 
     private static boolean treats(StopPlan plan) {
         RunStop stop = plan.getStop();
-        return plan.isVisit() && stop.getActions().contains(RunStop.StopAction.COMPOST)
-                && stop.patchType() != PatchType.SEAWEED;
+        return plan.isVisit() && stop.getActions().contains(RunStop.StopAction.COMPOST) && stop.patchType() != PatchType.SEAWEED;
     }
 }

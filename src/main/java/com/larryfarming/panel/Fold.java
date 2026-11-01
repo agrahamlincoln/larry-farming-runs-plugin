@@ -1,20 +1,13 @@
 package com.larryfarming.panel;
 
 import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.function.Consumer;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 import net.runelite.client.ui.FontManager;
 
 /**
  * A clickable header line over content that shows only while open. Every fold on the
- * farming tab is one of these, so their headers cannot drift apart.
+ * side panel is one of these, so their headers cannot drift apart.
  *
  * <p>The header can carry a suffix and colour of its owner's choosing, so a consequence
  * stays readable with the fold shut (see {@link TravelFold}).
@@ -36,38 +29,24 @@ class Fold extends JPanel
 	Fold(String title)
 	{
 		this.title = title;
-		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		setOpaque(false);
-		setAlignmentX(LEFT_ALIGNMENT);
+		PanelText.stack(this);
 		setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
 
 		toggle = new JLabel();
 		toggle.setFont(FontManager.getRunescapeSmallFont());
 		toggle.setAlignmentX(LEFT_ALIGNMENT);
 		toggle.setBorder(BorderFactory.createEmptyBorder(0, 2, 3, 0));
-		toggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-		toggle.addMouseListener(new MouseAdapter()
+		PanelText.onLeftClick(toggle, () ->
 		{
-			@Override
-			public void mouseClicked(MouseEvent e)
+			open = !open;
+			showOpen();
+			if (openCallback != null)
 			{
-				if (!SwingUtilities.isLeftMouseButton(e))
-				{
-					return;
-				}
-				open = !open;
-				showOpen();
-				if (openCallback != null)
-				{
-					openCallback.accept(open);
-				}
+				openCallback.accept(open);
 			}
 		});
 
-		content = new JPanel();
-		content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-		content.setOpaque(false);
-		content.setAlignmentX(LEFT_ALIGNMENT);
+		content = PanelText.stack();
 		content.setBorder(BorderFactory.createEmptyBorder(2, 2, 0, 0));
 
 		add(toggle);

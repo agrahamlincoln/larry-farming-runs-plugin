@@ -1,35 +1,12 @@
 package com.larryfarming.panel;
 
-import com.larryfarming.snapshot.FarmingAdvice;
-import com.larryfarming.snapshot.FarmingCarryItem;
-import com.larryfarming.snapshot.FarmingDurations;
-import com.larryfarming.snapshot.FarmingPatchNote;
-import com.larryfarming.snapshot.FarmingPlantAdvice;
-import com.larryfarming.snapshot.FarmingRunStatus;
-import com.larryfarming.snapshot.FarmingSettingChoice;
-import com.larryfarming.snapshot.FarmingSettingPick;
-import com.larryfarming.snapshot.FarmingSkipReason;
-import com.larryfarming.snapshot.FarmingStopAdvice;
-import com.larryfarming.snapshot.FarmingUpgrade;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
+import com.larryfarming.snapshot.*;
+import java.awt.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiConsumer;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
-import javax.swing.JCheckBox;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextArea;
+import java.util.function.*;
+import javax.swing.*;
 import javax.swing.border.Border;
 import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.ui.ColorScheme;
@@ -79,7 +56,7 @@ public class FarmingPanel extends JPanel
 
 	/**
 	 * The mood's tooltip while nothing is due and some run counts down, from the book On
-	 * Leprechauns in the Prifddinas Grand Library. The tab's one piece of lore.
+	 * Leprechauns in the Prifddinas Grand Library. The panel's one piece of lore.
 	 */
 	static final String HUNGRY_PATIENCE = "They watch. They wait. But theirs is a hungry patience.";
 
@@ -90,10 +67,13 @@ public class FarmingPanel extends JPanel
 	/** Appended to the settings header while no fairy ring can be reached. */
 	private static final String SETTINGS_NO_FAIRY_RING = ": no fairy ring access";
 
+	/** The settings fold's last control, which puts every setting back. */
+	static final String RESET_LABEL = "Reset to the default route";
+
 	private final JLabel titleLabel;
 	/** Larry's face, name and the plugin version, at the top logged in or out. */
 	private final BrandHeader brandHeader;
-	/** The whole tab while no account is logged in. */
+	/** The whole panel while no account is logged in. */
 	private final LoggedOutCard loggedOutCard;
 	private final SpellbookPicker spellbookPicker;
 	private final JCheckBox showSkippedBox;
@@ -134,7 +114,7 @@ public class FarmingPanel extends JPanel
 	private final GearList goalsList;
 
 	/**
-	 * The runs list: the tab's main content on a day with nothing due, and inside the
+	 * The runs list: the panel's main content on a day with nothing due, and inside the
 	 * settings fold otherwise. Moved between {@link #idleRunsSlot} and the fold.
 	 */
 	private final RunsListView runsList;
@@ -148,7 +128,8 @@ public class FarmingPanel extends JPanel
 	private final JPanel planning;
 	private final JLabel runFirstCaption;
 	private final ChoiceChips runFirstChips;
-	private final JCheckBox waitBox;
+	/** The wait-for-every-patch checkbox, which sits above the fold switches. */
+	final JCheckBox waitBox;
 	private String waitKey;
 
 	/** Heads the two route switches, shown while either is. */
@@ -169,17 +150,11 @@ public class FarmingPanel extends JPanel
 	/** Whether the settings header carries the fairy-ring warning. */
 	private boolean settingsWarned;
 
-	/** The settings profile control, first in the settings fold. */
-	private final ProfilePicker profilePicker = new ProfilePicker();
+	/** Puts every farming setting back to the default route, last in the settings fold. */
+	private final SmallButton resetButton = new SmallButton(RESET_LABEL);
 
-	/** The active settings profile's name, or null before the plugin has shown any. */
-	private String settingsProfile;
-
-	/** Whether the live settings differ from the active profile's saved ones. */
-	private boolean settingsUnsaved;
-
-	/** The settings header's suffix as drawn, so it is re-set only on a change. */
-	private String settingsSuffix = "";
+	/** Writes the default route's settings; null until the plugin wires it. */
+	private Runnable resetCallback;
 
 	/**
 	 * The player's choice to draw skipped stops. Off by default because skipped stops
@@ -188,7 +163,7 @@ public class FarmingPanel extends JPanel
 	 */
 	private boolean showSkipped;
 
-	private java.util.function.Consumer<Boolean> showSkippedCallback;
+	private Consumer<Boolean> showSkippedCallback;
 
 	/**
 	 * Whether the banks the route passes are drawn. Separate from {@link #showSkipped}
@@ -197,7 +172,7 @@ public class FarmingPanel extends JPanel
 	 */
 	private boolean showBanks = true;
 
-	private java.util.function.Consumer<Boolean> showBanksCallback;
+	private Consumer<Boolean> showBanksCallback;
 
 	/**
 	 * The advice the rows on screen were built from, so a fold toggle can redraw at once
@@ -213,7 +188,7 @@ public class FarmingPanel extends JPanel
 	/**
 	 * Updaters that re-word each countdown label in place.
 	 *
-	 * <p>Countdown text must stay out of the guard's signature, or the tab would rebuild and
+	 * <p>Countdown text must stay out of the guard's signature, or the panel would rebuild and
 	 * flicker every minute. The signature holds the finish instant instead.
 	 *
 	 * <p>Rebuilt with the rows, so a closure never outlives its label.
@@ -251,12 +226,10 @@ public class FarmingPanel extends JPanel
 		showBanksBox.setSelected(showBanks);
 		showBanksBox.addActionListener(e -> toggleShowBanks(showBanksBox.isSelected()));
 
-		respawnNote = PanelText.textArea("", COLOR_UNCERTAIN,
-			FontManager.getRunescapeSmallFont());
+		respawnNote = PanelText.small("", COLOR_UNCERTAIN);
 		respawnNote.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
 
-		herbNote = PanelText.textArea("", COLOR_UNCERTAIN,
-			FontManager.getRunescapeSmallFont());
+		herbNote = PanelText.small("", COLOR_UNCERTAIN);
 		herbNote.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
 
 		nextRunLabel = new JLabel();
@@ -282,29 +255,20 @@ public class FarmingPanel extends JPanel
 		// With no seed known, nothing comes due, so a first login opens here.
 		lookOnceIdleNote = lookOnceLine(BorderFactory.createEmptyBorder(8, 2, 0, 0));
 		carryView = new CarryView();
-		laterContainer = new JPanel();
-		laterContainer.setLayout(new BoxLayout(laterContainer, BoxLayout.Y_AXIS));
-		laterContainer.setOpaque(false);
-		laterContainer.setAlignmentX(LEFT_ALIGNMENT);
+		laterContainer = PanelText.stack();
 		wearHeading = sectionHeading("Wear");
 		wearList = new GearList(FarmingUpgrade.Kind.EQUIP);
 
 		nowHeading = sectionHeading("First stop");
-		nowContainer = new JPanel();
-		nowContainer.setLayout(new BoxLayout(nowContainer, BoxLayout.Y_AXIS));
-		nowContainer.setOpaque(false);
-		nowContainer.setAlignmentX(LEFT_ALIGNMENT);
+		nowContainer = PanelText.stack();
 		stopsHeading = sectionHeading("Then");
 		stopsContainer = container();
 
 		goalsHeading = sectionHeading("Between runs");
 		goalsList = new GearList(FarmingUpgrade.Kind.GOAL);
 
-		runsList = new RunsListView(sectionHeading("Runs"), container());
-		idleRunsSlot = new JPanel();
-		idleRunsSlot.setLayout(new BoxLayout(idleRunsSlot, BoxLayout.Y_AXIS));
-		idleRunsSlot.setOpaque(false);
-		idleRunsSlot.setAlignmentX(LEFT_ALIGNMENT);
+		runsList = new RunsListView(sectionHeading("Runs"), container(), this::sendSetting);
+		idleRunsSlot = PanelText.stack();
 
 		runFirstCaption = SiteList.caption("", 0);
 		runFirstChips = new ChoiceChips(this::sendSetting);
@@ -313,13 +277,9 @@ public class FarmingPanel extends JPanel
 
 		waitBox = checkbox(null);
 		waitBox.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
-		waitBox.addActionListener(e -> sendSetting(waitKey,
-			String.valueOf(waitBox.isSelected())));
+		waitBox.addActionListener(e -> sendSetting(waitKey, String.valueOf(waitBox.isSelected())));
 
-		planning = new JPanel();
-		planning.setLayout(new BoxLayout(planning, BoxLayout.Y_AXIS));
-		planning.setOpaque(false);
-		planning.setAlignmentX(LEFT_ALIGNMENT);
+		planning = PanelText.stack();
 		planning.add(sectionHeading("Planning"));
 		planning.add(runFirstCaption);
 		planning.add(runFirstChips);
@@ -331,16 +291,23 @@ public class FarmingPanel extends JPanel
 
 		settingsFold = new Fold("Settings");
 		settingsFold.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
-		settingsFold.content().add(profilePicker);
 		settingsFold.content().add(runsList);
 		settingsFold.content().add(planning);
 		settingsFold.content().add(routeHeading);
 		settingsFold.content().add(showSkippedBox);
 		settingsFold.content().add(showBanksBox);
-		travel = new TravelFold();
+		travel = new TravelFold(this::sendSetting);
 		settingsFold.content().add(travel);
-		house = new HouseFold();
+		house = new HouseFold(this::sendSetting);
 		settingsFold.content().add(house);
+		resetButton.addActionListener(e -> confirmReset());
+		JPanel resetRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+		resetRow.setOpaque(false);
+		resetRow.setAlignmentX(LEFT_ALIGNMENT);
+		resetRow.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+		resetRow.add(resetButton);
+		resetRow.setMaximumSize(new Dimension(Short.MAX_VALUE, resetRow.getPreferredSize().height));
+		settingsFold.content().add(resetRow);
 
 		add(brandHeader);
 		add(titleLabel);
@@ -372,7 +339,7 @@ public class FarmingPanel extends JPanel
 	}
 
 	/** Receives the settings fold's new state when the player opens or shuts it. */
-	public void setSettingsOpenCallback(java.util.function.Consumer<Boolean> callback)
+	public void setSettingsOpenCallback(Consumer<Boolean> callback)
 	{
 		settingsFold.setOpenCallback(callback);
 	}
@@ -391,7 +358,7 @@ public class FarmingPanel extends JPanel
 	 * Receives the new skipped-stops setting when the player clicks the box. Never fired by
 	 * {@link #setShowSkipped}, so a restore does not write back.
 	 */
-	public void setShowSkippedCallback(java.util.function.Consumer<Boolean> callback)
+	public void setShowSkippedCallback(Consumer<Boolean> callback)
 	{
 		this.showSkippedCallback = callback;
 	}
@@ -403,9 +370,14 @@ public class FarmingPanel extends JPanel
 	private void toggleShowSkipped(boolean show)
 	{
 		this.showSkipped = show;
-		if (showSkippedCallback != null)
+		reportAndRedraw(showSkippedCallback, show);
+	}
+
+	private void reportAndRedraw(Consumer<Boolean> callback, boolean show)
+	{
+		if (callback != null)
 		{
-			showSkippedCallback.accept(show);
+			callback.accept(show);
 		}
 		display(lastAdvice, lastIcons);
 	}
@@ -418,7 +390,7 @@ public class FarmingPanel extends JPanel
 	}
 
 	/** Receives the new bank-row setting when the player clicks the box. */
-	public void setShowBanksCallback(java.util.function.Consumer<Boolean> callback)
+	public void setShowBanksCallback(Consumer<Boolean> callback)
 	{
 		this.showBanksCallback = callback;
 	}
@@ -426,29 +398,16 @@ public class FarmingPanel extends JPanel
 	private void toggleShowBanks(boolean show)
 	{
 		this.showBanks = show;
-		if (showBanksCallback != null)
-		{
-			showBanksCallback.accept(show);
-		}
-		display(lastAdvice, lastIcons);
+		reportAndRedraw(showBanksCallback, show);
 	}
 
 	/**
-	 * Receives a farming setting the player changed on the tab, as its config key and the
-	 * value to write. The plugin saves it, and the re-plan that follows redraws the tab.
+	 * Receives a farming setting the player changed in the panel, as its config key and the
+	 * value to write. The plugin saves it, and the re-plan that follows redraws the panel.
 	 */
 	public void setSettingCallback(BiConsumer<String, String> callback)
 	{
 		settingCallback = callback;
-		runsList.setSettingCallback(callback);
-		travel.setSettingCallback(callback);
-		house.setSettingCallback(callback);
-	}
-
-	/** The wait-for-every-patch checkbox, which sits above the fold switches. */
-	JCheckBox waitBox()
-	{
-		return waitBox;
 	}
 
 	private void sendSetting(String key, String value)
@@ -491,7 +450,7 @@ public class FarmingPanel extends JPanel
 	}
 
 	/** Receives the travel fold's new state when the player opens or shuts it. */
-	public void setTravelOpenCallback(java.util.function.Consumer<Boolean> callback)
+	public void setTravelOpenCallback(Consumer<Boolean> callback)
 	{
 		travel.setOpenCallback(callback);
 	}
@@ -503,12 +462,12 @@ public class FarmingPanel extends JPanel
 	}
 
 	/** Receives the house fold's new state when the player opens or shuts it. */
-	public void setHouseOpenCallback(java.util.function.Consumer<Boolean> callback)
+	public void setHouseOpenCallback(Consumer<Boolean> callback)
 	{
 		house.setOpenCallback(callback);
 	}
 
-	/** The tab's one checkbox style, for the fold boxes and the farming settings alike. */
+	/** The panel's one checkbox style, for the fold boxes and the farming settings alike. */
 	static JCheckBox checkbox(String text)
 	{
 		JCheckBox box = new JCheckBox(text);
@@ -524,7 +483,7 @@ public class FarmingPanel extends JPanel
 	/**
 	 * Forces the next {@link #display} to rebuild even if the advice is unchanged.
 	 *
-	 * <p>Call when the tab is switched to: its rows wrapped against a width from when it was
+	 * <p>Call when the panel is switched to: its rows wrapped against a width from when it was
 	 * last visible, and the guard's signature cannot see a layout change.
 	 */
 	public void forgetLastBuild()
@@ -536,7 +495,7 @@ public class FarmingPanel extends JPanel
 	 * Receives a request to plan for a different spellbook, as the book's name, or null to
 	 * follow the player's own.
 	 */
-	public void setSpellbookCallback(java.util.function.Consumer<String> callback)
+	public void setSpellbookCallback(Consumer<String> callback)
 	{
 		spellbookPicker.setSpellbookCallback(callback);
 	}
@@ -545,7 +504,7 @@ public class FarmingPanel extends JPanel
 	 * Shows a run, rebuilding only when the advice itself has changed.
 	 *
 	 * <p>Called on every game event. The rows hold wrapping text, and recreating it on each
-	 * call would flicker the tab.
+	 * call would flicker the panel.
 	 */
 	public void display(FarmingAdvice advice, IconProvider icons)
 	{
@@ -574,16 +533,16 @@ public class FarmingPanel extends JPanel
 			return;
 		}
 
-		int visits = visitedStops(advice);
-		Phase phase = visits == 0 ? Phase.IDLE
-			: advice.isUnderway() ? Phase.UNDERWAY : Phase.PACKING;
+		int visits = countFrom(advice, 0, FarmingPanel::isNumbered);
+		Phase phase = visits == 0 ? Phase.IDLE : advice.isUnderway() ? Phase.UNDERWAY : Phase.PACKING;
 		// Underway, every row before the next stop is behind the player: a finished stop (it
 		// turned into a skip when planted) or a bank already passed. Those rows are never
 		// drawn, so the switches' counts start where the drawing does.
 		int from = phase == Phase.UNDERWAY ? nextStopIndex(advice) : 0;
 		// Counted from the rows so the fold label matches exactly what the fold hides: every
-		// arrival that is not a VISIT.
-		int foldedStops = foldedStops(advice, from);
+		// arrival that is not a VISIT. Must match the fold rule below, so the label never
+		// offers more or fewer rows than clicking reveals.
+		int foldedStops = countFrom(advice, from, stop -> stop.getOutcome() != FarmingStopAdvice.Outcome.VISIT);
 		int foldedPatches = foldedPatches(advice);
 
 		boolean drawSkipped = showSkipped;
@@ -600,34 +559,22 @@ public class FarmingPanel extends JPanel
 		boolean underway = phase == Phase.UNDERWAY;
 		boolean pending = anyRunIn(advice.getRuns(), STATUS_PENDING);
 		boolean due = anyRunIn(advice.getRuns(), STATUS_DUE);
-		brandHeader.showMood(mood(idle, underway, pending || due),
-			idle && pending && !due ? HUNGRY_PATIENCE : null);
+		brandHeader.showMood(mood(idle, underway, pending || due), idle && pending && !due ? HUNGRY_PATIENCE : null);
 		// The picker keeps its own change check, so calling it every refresh is cheap.
 		spellbookPicker.rebuild(advice.getCarryFor(), advice.getSpellbookOpen(), icons);
 		String nextRun = nextRunText(advice.getRuns(), Instant.now().getEpochSecond());
 		nextRunLabel.setText(nextRun);
 
 		showSkippedBox.setText(foldLabel(foldedStops, foldedPatches));
-		int banks = bankRowsIn(advice, from);
-		showBanksBox.setText(banks == 1 ? "1 bank you may pass"
-			: banks + " banks you may pass");
+		// The optional banks still ahead. Recommended bank stops are always drawn.
+		int banks = countFrom(advice, from, stop -> stop.getKind() == FarmingStopAdvice.Kind.BANK_OPTIONAL);
+		showBanksBox.setText(banks == 1 ? "1 bank you may pass" : banks + " banks you may pass");
 
-		String respawn = advice.getRespawnAction();
-		boolean suggesting = respawn != null && !respawn.isBlank();
-		if (suggesting)
-		{
-			respawnNote.setText(respawn);
-		}
-
-		String herbs = advice.getHerbNote();
-		boolean untickedSeeds = herbs != null && !herbs.isBlank();
-		if (untickedSeeds)
-		{
-			herbNote.setText(herbs);
-		}
+		boolean suggesting = showNote(respawnNote, advice.getRespawnAction());
+		boolean untickedSeeds = showNote(herbNote, advice.getHerbNote());
 
 		String look = advice.getLookOnce();
-		boolean unlooked = look != null && !look.isBlank();
+		boolean unlooked = PanelText.hasText(look);
 		if (unlooked && !look.equals(lookOnceNote.getText()))
 		{
 			lookOnceNote.setText(look);
@@ -661,8 +608,8 @@ public class FarmingPanel extends JPanel
 			return;
 		}
 
-		// The rows wrap against the tab's inner width less the route box's border. Read off
-		// the tab, since a box hidden until now reports no width of its own.
+		// The rows wrap against the panel's inner width less the route box's border. Read off
+		// the panel, since a box hidden until now reports no width of its own.
 		int width = Math.max(0, getWidth() - getInsets().left - getInsets().right - 2);
 
 		countdowns.clear();
@@ -682,8 +629,7 @@ public class FarmingPanel extends JPanel
 			//
 			// Numbering and drawing are separate decisions. Optional banks are unnumbered but
 			// follow the bank switch, not the skipped-stops fold.
-			boolean numbered = stop.getOutcome() == FarmingStopAdvice.Outcome.VISIT
-				&& !isUnnumberedBankRow(stop);
+			boolean numbered = isNumbered(stop);
 			if (numbered)
 			{
 				number++;
@@ -715,8 +661,7 @@ public class FarmingPanel extends JPanel
 			JPanel row = buildStopRow(stop, number, icons, drawSkipped);
 			// Partway round, a starting row with something to fetch is fetched before the next
 			// stop, so it sits above that stop's card rather than among the stops after it.
-			if (stop.getKind() == FarmingStopAdvice.Kind.BANK_START && !haveNow
-				&& !stop.getWithdraw().isEmpty())
+			if (stop.getKind() == FarmingStopAdvice.Kind.BANK_START && !haveNow && !stop.getWithdraw().isEmpty())
 			{
 				nowContainer.add(sized(row, width));
 				continue;
@@ -749,21 +694,17 @@ public class FarmingPanel extends JPanel
 		List<FarmingCarryItem> carry = advice.getCarry();
 		// Split at the first later bank: what to pack now, then what each bank hands over.
 		boolean split = !carryNow(advice).isEmpty();
-		carryView.rebuild(phase == Phase.PACKING ? (split ? carryNow(advice) : carry) : null,
-			icons, width);
+		carryView.rebuild(phase == Phase.PACKING ? (split ? carryNow(advice) : carry) : null, icons, width);
 		carryHeading.setVisible(carry != null && !carry.isEmpty());
 		rebuildLater(phase == Phase.PACKING && split ? stops : null, drawBanks, icons, width);
 
-		boolean wear = wearList.rebuild(phase == Phase.PACKING ? advice.getUpgrades() : null,
-			icons, width);
+		boolean wear = wearList.rebuild(phase == Phase.PACKING ? advice.getUpgrades() : null, icons, width);
 		wearHeading.setVisible(wear);
-		boolean goals = goalsList.rebuild(phase == Phase.IDLE ? advice.getUpgrades() : null,
-			icons, width);
+		boolean goals = goalsList.rebuild(phase == Phase.IDLE ? advice.getUpgrades() : null, icons, width);
 		goalsHeading.setVisible(goals);
 
 		// Inside the settings fold the list sits behind the fold content's left inset.
-		int runsWidth = phase == Phase.IDLE || width == 0 ? width
-			: Math.max(0, width - settingsFold.content().getInsets().left);
+		int runsWidth = phase == Phase.IDLE || width == 0 ? width : Math.max(0, width - settingsFold.content().getInsets().left);
 		runsList.rebuild(advice, icons, runsWidth);
 
 		revalidate();
@@ -776,8 +717,7 @@ public class FarmingPanel extends JPanel
 	 *
 	 * @param stops the walkthrough, or null to clear the bands
 	 */
-	private void rebuildLater(List<FarmingStopAdvice> stops, boolean drawBanks,
-		IconProvider icons, int width)
+	private void rebuildLater(List<FarmingStopAdvice> stops, boolean drawBanks, IconProvider icons, int width)
 	{
 		laterContainer.removeAll();
 		boolean any = false;
@@ -793,10 +733,7 @@ public class FarmingPanel extends JPanel
 				}
 				laterContainer.add(laterBand(stop.getPatchName()));
 				// The bank row's own grid, so a band and its row below cannot drift apart.
-				JPanel grid = new JPanel();
-				grid.setLayout(new BoxLayout(grid, BoxLayout.Y_AXIS));
-				grid.setOpaque(false);
-				grid.setAlignmentX(LEFT_ALIGNMENT);
+				JPanel grid = PanelText.stack();
 				addWithdrawals(grid, stop, icons, false);
 				laterContainer.add(grid);
 				any = true;
@@ -808,7 +745,7 @@ public class FarmingPanel extends JPanel
 	/** The packing list's "now" half, empty when no later bank splits the trip. */
 	private static List<FarmingCarryItem> carryNow(FarmingAdvice advice)
 	{
-		return advice.getCarryNow() == null ? List.of() : advice.getCarryNow();
+		return PanelText.listOf(advice.getCarryNow());
 	}
 
 	/** "LATER: BANK AT CATHERBY" on a filled strip, so the band reads apart from the bag. */
@@ -831,7 +768,7 @@ public class FarmingPanel extends JPanel
 	}
 
 	/**
-	 * Where the player is in a farm run, which decides what the top of the tab shows: the
+	 * Where the player is in a farm run, which decides what the top of the panel shows: the
 	 * runs on a day with nothing due, the packing list before setting off, the next stop
 	 * once underway.
 	 */
@@ -849,8 +786,7 @@ public class FarmingPanel extends JPanel
 	 * the rebuild turns them on, so the guard's early return cannot leave one on screen
 	 * empty.
 	 */
-	private void showSections(Phase phase, boolean respawn, boolean herbs, boolean unlooked,
-		boolean nextRun)
+	private void showSections(Phase phase, boolean respawn, boolean herbs, boolean unlooked, boolean nextRun)
 	{
 		boolean any = phase != Phase.NONE;
 		boolean idle = phase == Phase.IDLE;
@@ -895,53 +831,32 @@ public class FarmingPanel extends JPanel
 			return;
 		}
 		settingsWarned = blocked;
-		showSettingsHeader();
+		settingsFold.setHeader(blocked ? SETTINGS_NO_FAIRY_RING : "", blocked ? COLOR_DUE : PanelColors.HEADER);
 	}
 
 	/**
-	 * Names the active settings profile on the settings header, starred while it has unsaved
-	 * changes, so both read with the fold shut. The fairy-ring warning takes the name's place
-	 * while it applies: the player has to act on it, the two do not fit side by side, and
-	 * the dropdown still names the profile. The star stays, after "Settings".
+	 * Receives the player's confirmed "Reset to the default route". The plugin writes the
+	 * default route's value for every farming setting.
 	 */
-	private void showSettingsHeader()
+	public void setResetCallback(Runnable callback)
 	{
-		String star = settingsUnsaved ? "*" : "";
-		String suffix = settingsWarned ? star + SETTINGS_NO_FAIRY_RING
-			: settingsProfile != null ? ": " + settingsProfile + star
-			: "";
-		if (suffix.equals(settingsSuffix))
+		resetCallback = callback;
+	}
+
+	/** Asks before a reset, since it overwrites every farming setting at once. */
+	private void confirmReset()
+	{
+		String[] options = {"Reset", "Cancel"};
+		boolean reset = JOptionPane.showOptionDialog(this, "Every farming setting goes back to the default route.", "Larry",
+			JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, options, options[1]) == 0;
+		if (reset && resetCallback != null)
 		{
-			return;
+			resetCallback.run();
 		}
-		settingsSuffix = suffix;
-		settingsFold.setHeader(suffix, settingsWarned ? COLOR_DUE : PanelColors.HEADER);
 	}
 
 	/**
-	 * Shows the settings profiles, the built-in one first, and names the active one on the
-	 * settings header, starred while it has unsaved changes. Call on the EDT. Updates in
-	 * place, so it is safe on every refresh.
-	 *
-	 * @param fixed whether the active entry can't be saved, renamed or deleted
-	 */
-	public void showProfiles(List<String> names, String active, boolean fixed,
-		boolean unsaved)
-	{
-		profilePicker.show(names, active, fixed, unsaved);
-		settingsProfile = active;
-		settingsUnsaved = unsaved;
-		showSettingsHeader();
-	}
-
-	/** Receives what the player does with the settings profile control. */
-	public void setProfileActions(ProfileActions actions)
-	{
-		profilePicker.setActions(actions);
-	}
-
-	/**
-	 * Puts the runs list on the tab itself on a day with nothing due, where it answers "when
+	 * Puts the runs list on the panel itself on a day with nothing due, where it answers "when
 	 * is my next run", and into the settings fold otherwise, where it holds the run switches.
 	 */
 	private void placeRunsList(Phase phase)
@@ -955,8 +870,8 @@ public class FarmingPanel extends JPanel
 		{
 			runsList.getParent().remove(runsList);
 		}
-		// In the settings fold it goes under the profile control, which the settings belong to.
-		home.add(runsList, home == idleRunsSlot ? 0 : 1);
+		// First in the settings fold, ahead of the settings that order the runs.
+		home.add(runsList, 0);
 		home.revalidate();
 		settingsFold.content().revalidate();
 	}
@@ -966,8 +881,7 @@ public class FarmingPanel extends JPanel
 	{
 		row.setOpaque(true);
 		row.setBackground(PanelColors.CONTAINER_BG);
-		row.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createMatteBorder(0, 3, 0, 0, COLOR_DUE),
+		row.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 3, 0, 0, COLOR_DUE),
 			BorderFactory.createEmptyBorder(6, 4, 6, 4)));
 		return row;
 	}
@@ -1024,8 +938,7 @@ public class FarmingPanel extends JPanel
 		FarmingRunStatus soonest = null;
 		for (FarmingRunStatus run : runs)
 		{
-			if (run.getReadyAtEpochSec() > now
-				&& (soonest == null || run.getReadyAtEpochSec() < soonest.getReadyAtEpochSec()))
+			if (run.getReadyAtEpochSec() > now && (soonest == null || run.getReadyAtEpochSec() < soonest.getReadyAtEpochSec()))
 			{
 				soonest = run;
 			}
@@ -1034,8 +947,7 @@ public class FarmingPanel extends JPanel
 		{
 			return "";
 		}
-		return soonest.getRunName() + " ready in "
-			+ FarmingDurations.until(soonest.getReadyAtEpochSec(), now);
+		return soonest.getRunName() + " ready in " + FarmingDurations.until(soonest.getReadyAtEpochSec(), now);
 	}
 
 	/**
@@ -1053,8 +965,7 @@ public class FarmingPanel extends JPanel
 	 * @param captioned whether to head the grid "Withdraw". The starting row's heading says
 	 *     it already before setting off, and a Later band names its bank instead
 	 */
-	private static void addWithdrawals(JPanel text, FarmingStopAdvice stop, IconProvider icons,
-		boolean captioned)
+	private static void addWithdrawals(JPanel text, FarmingStopAdvice stop, IconProvider icons, boolean captioned)
 	{
 		List<FarmingCarryItem> withdraw = stop.getWithdraw();
 		if (withdraw == null || withdraw.isEmpty())
@@ -1078,94 +989,36 @@ public class FarmingPanel extends JPanel
 		{
 			if (captioned)
 			{
-				text.add(PanelText.textArea("Withdraw", COLOR_DUE,
-					FontManager.getRunescapeSmallFont()));
+				text.add(PanelText.small("Withdraw", COLOR_DUE));
 			}
-
-			List<JPanel> squares = new ArrayList<>(fetch.size());
-			for (FarmingCarryItem item : fetch)
-			{
-				squares.add(withdrawalSquare(item, icons));
-			}
-			InventoryBackdrop grid = SettingGrid.grid(squares, icons);
-			grid.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
-			text.add(grid);
+			addBankGrid(text, fetch, icons, true);
 		}
 		// One line however many seeds: checking the box once answers them all.
 		if (checkSeedBox)
 		{
-			text.add(PanelText.textArea(CarryView.CHECK_SEED_BOX, COLOR_DUE,
-				FontManager.getRunescapeSmallFont()));
+			text.add(PanelText.small(CarryView.CHECK_SEED_BOX, COLOR_DUE));
 		}
 	}
 
 	/**
-	 * The withdrawal grid's structural inputs, for the guard. The list changes while the
-	 * player stands at the bank, so the guard must see it.
-	 */
-	private static String withdrawalSignature(FarmingStopAdvice stop)
-	{
-		List<FarmingCarryItem> withdraw = stop.getWithdraw();
-		if (withdraw == null || withdraw.isEmpty())
-		{
-			return "";
-		}
-		StringBuilder out = new StringBuilder();
-		for (FarmingCarryItem item : withdraw)
-		{
-			// Availability is structural: it decides grid square versus seed-box line.
-			// The name is the square's tooltip.
-			out.append(item.getItemId()).append('x').append(item.getQuantity())
-				.append('/').append(item.getName())
-				.append('/').append(item.getNote())
-				.append('/').append(item.getTag())
-				.append('/').append(item.getAvailability()).append(';');
-		}
-		return out.toString();
-	}
-
-	/**
-	 * The deposit grid's structural inputs: which items, and whether they are urgent. Ids
-	 * only, since a deposit tile draws no count, so a harvest piling up does not redraw.
-	 */
-	private static String depositSignature(FarmingStopAdvice stop)
-	{
-		StringBuilder out = new StringBuilder(stop.isDepositUrgent() ? "!" : "");
-		for (FarmingCarryItem item : stop.getDeposit())
-		{
-			out.append(item.getItemId()).append(',');
-		}
-		return out.toString();
-	}
-
-	private static JPanel withdrawalSquare(FarmingCarryItem item, IconProvider icons)
-	{
-		return bankSquare(item, icons, true);
-	}
-
-	/**
-	 * One square of a bank row's grid, deposits and withdrawals alike.
+	 * A bank row's grid of squares, deposits and withdrawals alike.
 	 *
-	 * @param due whether it is something to do, bordered orange. A deposit the bag has room
-	 *     to keep draws without one
+	 * @param due whether they are something to do, bordered orange. A deposit the bag has
+	 *     room to keep draws without one
 	 */
-	private static JPanel bankSquare(FarmingCarryItem item, IconProvider icons, boolean due)
+	private static void addBankGrid(JPanel text, List<FarmingCarryItem> items, IconProvider icons, boolean due)
 	{
-		ImageIcon sprite = icons != null && item.getItemId() > 0
-			? icons.getInventoryIcon(item.getItemId(), item.getQuantity(), true)
-			: null;
-		// The game draws the count into the sprite for stacks of two or more. Only a single
-		// item needs one drawn here.
-		ItemSquare cell = new ItemSquare(sprite,
-			item.getQuantity() == 1 ? "1" : null,
-			item.getTag());
-		cell.setPreferredSize(new Dimension(ItemSquare.SIZE, ItemSquare.SIZE));
-		cell.setMinimumSize(new Dimension(ItemSquare.SIZE, ItemSquare.SIZE));
-		cell.setBorder(due
-			? BorderFactory.createLineBorder(CarryView.COLOR_TO_WITHDRAW)
-			: BorderFactory.createEmptyBorder(1, 1, 1, 1));
-		cell.setToolTipText(CarryView.label(item));
-		return cell;
+		List<JPanel> squares = new ArrayList<>(items.size());
+		for (FarmingCarryItem item : items)
+		{
+			ItemSquare cell = ItemSquare.of(item, icons, true);
+			cell.setBorder(due ? BorderFactory.createLineBorder(CarryView.COLOR_TO_WITHDRAW) : BorderFactory.createEmptyBorder(1, 1, 1, 1));
+			cell.setToolTipText(CarryView.label(item));
+			squares.add(cell);
+		}
+		InventoryBackdrop grid = SettingGrid.grid(squares, icons);
+		grid.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
+		text.add(grid);
 	}
 
 	/**
@@ -1180,23 +1033,14 @@ public class FarmingPanel extends JPanel
 			return;
 		}
 		boolean urgent = stop.isDepositUrgent();
-		text.add(PanelText.textArea("Deposit", urgent ? COLOR_DUE : PanelColors.META,
-			FontManager.getRunescapeSmallFont()));
-		List<JPanel> squares = new ArrayList<>(deposit.size());
-		for (FarmingCarryItem item : deposit)
-		{
-			squares.add(bankSquare(item, icons, urgent));
-		}
-		InventoryBackdrop grid = SettingGrid.grid(squares, icons);
-		grid.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
-		text.add(grid);
+		text.add(PanelText.small("Deposit", urgent ? COLOR_DUE : PanelColors.META));
+		addBankGrid(text, deposit, icons, urgent);
 	}
 
 	/** Every kind of bank row. All get the same margin mark. */
 	private static boolean isBankRow(FarmingStopAdvice stop)
 	{
-		return stop.getKind() == FarmingStopAdvice.Kind.BANK
-			|| stop.getKind() == FarmingStopAdvice.Kind.BANK_OPTIONAL
+		return stop.getKind() == FarmingStopAdvice.Kind.BANK || stop.getKind() == FarmingStopAdvice.Kind.BANK_OPTIONAL
 			|| stop.getKind() == FarmingStopAdvice.Kind.BANK_START;
 	}
 
@@ -1206,26 +1050,31 @@ public class FarmingPanel extends JPanel
 	 */
 	private static boolean isUnnumberedBankRow(FarmingStopAdvice stop)
 	{
-		return stop.getKind() == FarmingStopAdvice.Kind.BANK_OPTIONAL
-			|| stop.getKind() == FarmingStopAdvice.Kind.BANK_START;
+		return stop.getKind() == FarmingStopAdvice.Kind.BANK_OPTIONAL || stop.getKind() == FarmingStopAdvice.Kind.BANK_START;
 	}
 
 	/**
-	 * Counts the optional banks the route passes from {@code from} on. Recommended bank stops
-	 * are always drawn and are not counted.
+	 * A row that takes a number, by the rule that numbers the rows: every {@code VISIT}
+	 * except unnumbered bank rows. A bank stop at an arrival already listed counts separately.
 	 */
-	private static int bankRowsIn(FarmingAdvice advice, int from)
+	private static boolean isNumbered(FarmingStopAdvice stop)
 	{
-		int banks = 0;
+		return stop.getOutcome() == FarmingStopAdvice.Outcome.VISIT && !isUnnumberedBankRow(stop);
+	}
+
+	/** Counts the stops from {@code from} on that {@code which} picks. */
+	private static int countFrom(FarmingAdvice advice, int from, Predicate<FarmingStopAdvice> which)
+	{
+		int count = 0;
 		List<FarmingStopAdvice> stops = advice.getStops();
 		for (int i = from; i < stops.size(); i++)
 		{
-			if (stops.get(i).getKind() == FarmingStopAdvice.Kind.BANK_OPTIONAL)
+			if (which.test(stops.get(i)))
 			{
-				banks++;
+				count++;
 			}
 		}
-		return banks;
+		return count;
 	}
 
 	private static JPanel container()
@@ -1269,43 +1118,6 @@ public class FarmingPanel extends JPanel
 	}
 
 	/**
-	 * Counts the stops the trip is making, by the same rule that numbers the rows: every
-	 * {@code VISIT} except unnumbered bank rows. A bank stop at an arrival already listed
-	 * counts separately.
-	 */
-	private static int visitedStops(FarmingAdvice advice)
-	{
-		int visits = 0;
-		for (FarmingStopAdvice stop : advice.getStops())
-		{
-			if (stop.getOutcome() == FarmingStopAdvice.Outcome.VISIT
-				&& !isUnnumberedBankRow(stop))
-			{
-				visits++;
-			}
-		}
-		return visits;
-	}
-
-	/**
-	 * Counts the rows the fold hides, from {@code from} on. Must match the fold rule in
-	 * {@link #display}, so the label never offers more or fewer rows than clicking reveals.
-	 */
-	private static int foldedStops(FarmingAdvice advice, int from)
-	{
-		int folded = 0;
-		List<FarmingStopAdvice> stops = advice.getStops();
-		for (int i = from; i < stops.size(); i++)
-		{
-			if (stops.get(i).getOutcome() != FarmingStopAdvice.Outcome.VISIT)
-			{
-				folded++;
-			}
-		}
-		return folded;
-	}
-
-	/**
 	 * Where the next stop sits in the stop list: the first numbered visit, or the list's
 	 * end when none is left.
 	 */
@@ -1314,8 +1126,7 @@ public class FarmingPanel extends JPanel
 		List<FarmingStopAdvice> stops = advice.getStops();
 		for (int i = 0; i < stops.size(); i++)
 		{
-			if (stops.get(i).getOutcome() == FarmingStopAdvice.Outcome.VISIT
-				&& !isUnnumberedBankRow(stops.get(i)))
+			if (isNumbered(stops.get(i)))
 			{
 				return i;
 			}
@@ -1325,7 +1136,7 @@ public class FarmingPanel extends JPanel
 
 	/**
 	 * Counts the set-aside patch lines inside visited stops. A skipped stop's lines are not
-	 * counted: they reveal with their row, which {@link #foldedStops} already counts.
+	 * counted: they reveal with their row, which the folded stops already count.
 	 */
 	private static int foldedPatches(FarmingAdvice advice)
 	{
@@ -1360,10 +1171,33 @@ public class FarmingPanel extends JPanel
 	 */
 	private static JTextArea lookOnceLine(Border border)
 	{
-		JTextArea line = PanelText.textArea("", CarryView.COLOR_TO_WITHDRAW,
-			FontManager.getRunescapeSmallFont());
+		JTextArea line = PanelText.small("", CarryView.COLOR_TO_WITHDRAW);
 		line.setBorder(border);
 		return line;
+	}
+
+	/**
+	 * Puts a live note's words on its long-lived area, when there are any.
+	 *
+	 * @return whether the note has anything to say
+	 */
+	private static boolean showNote(JTextArea note, String words)
+	{
+		boolean any = PanelText.hasText(words);
+		if (any)
+		{
+			note.setText(words);
+		}
+		return any;
+	}
+
+	/** Adds a small line in {@code colour}, when there is anything to say. */
+	private static void addLine(JPanel text, String line, Color colour)
+	{
+		if (PanelText.hasText(line))
+		{
+			text.add(PanelText.small(line, colour));
+		}
 	}
 
 	/**
@@ -1372,12 +1206,11 @@ public class FarmingPanel extends JPanel
 	 * @param drawSkipped whether the skipped-stops fold is open, which also lists a stop's
 	 *     set-aside patches
 	 */
-	private JPanel buildStopRow(FarmingStopAdvice stop, int number, IconProvider icons,
-		boolean drawSkipped)
+	private JPanel buildStopRow(FarmingStopAdvice stop, int number, IconProvider icons, boolean drawSkipped)
 	{
 		boolean visiting = stop.getOutcome() == FarmingStopAdvice.Outcome.VISIT;
 		String note = stop.getNote();
-		boolean hasNote = note != null && !note.isBlank();
+		boolean hasNote = PanelText.hasText(note);
 
 		JPanel row = new JPanel(new GridBagLayout());
 		row.setOpaque(false);
@@ -1403,23 +1236,20 @@ public class FarmingPanel extends JPanel
 		}
 		else if (visiting && stop.getKind() == FarmingStopAdvice.Kind.PATCH)
 		{
-			// No crop to show (a compost bin, say). Reserve the margin so every visited
+			// No crop to show (a contract errand alone, say). Reserve the margin so every visited
 			// patch row's text shares one left edge. Other non-patch rows keep full width.
 			gbc.gridheight = GridBagConstraints.REMAINDER;
 			row.add(Box.createRigidArea(new Dimension(ITEM_SPRITE_WIDTH + 5, 0)), gbc);
 			gbc.gridheight = 1;
 		}
 
-		JPanel text = new JPanel();
-		text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
-		text.setOpaque(false);
+		JPanel text = PanelText.stack();
 
 		// A wrapping area, not a JLabel: a skipped stop's heading is long and a JLabel
 		// would truncate it with an ellipsis.
 		// An offered bank is a choice, not a step, so it reads quieter than the stops.
 		boolean step = visiting && stop.getKind() != FarmingStopAdvice.Kind.BANK_OPTIONAL;
-		JTextArea name = PanelText.textArea(headingOf(stop, number),
-			headingColour(stop),
+		JTextArea name = PanelText.textArea(headingOf(stop, number), headingColour(stop),
 			step ? FontManager.getRunescapeBoldFont() : FontManager.getRunescapeSmallFont());
 		text.add(name);
 		if (!visiting && stop.getReadyAtEpochSec() > 0)
@@ -1434,46 +1264,31 @@ public class FarmingPanel extends JPanel
 			String tooltip = hover(stop.getBecause(), hasNote ? note : null);
 			row.setToolTipText(tooltip);
 			name.setToolTipText(tooltip);
-			String because = stop.getBecause();
-			boolean saidInHeading = (stop.getSubject() != null && !stop.getSubject().isBlank())
-				|| headingCarriesBecause(stop);
-			if (!saidInHeading && because != null && !because.isBlank())
+			if (!PanelText.hasText(stop.getSubject()) && !headingCarriesBecause(stop))
 			{
-				text.add(PanelText.textArea(because, COLOR_SKIPPED,
-					FontManager.getRunescapeSmallFont()));
+				addLine(text, stop.getBecause(), COLOR_SKIPPED);
 			}
 			// The heading covers only the most urgent patch. These lines cover the rest.
 			addSetAside(text, stop, drawSkipped);
-			gbc.gridx = 1;
-			gbc.weightx = 1.0;
-			gbc.fill = GridBagConstraints.HORIZONTAL;
-			row.add(text, gbc);
+			PanelText.addFill(row, gbc, 1, text);
 			return row;
 		}
 
 		String detail = stop.getInstruction();
-		if (detail != null && !detail.isBlank())
+		if (PanelText.hasText(detail))
 		{
 			text.add(routeLine(stop, detail, icons));
 		}
 		// Before anything to do here: the stop cannot be done without it. Orange, as
 		// everything still needed is.
-		if (stop.getWarning() != null && !stop.getWarning().isBlank())
-		{
-			text.add(PanelText.textArea(stop.getWarning(), CarryView.COLOR_TO_WITHDRAW,
-				FontManager.getRunescapeSmallFont()));
-		}
+		addLine(text, stop.getWarning(), CarryView.COLOR_TO_WITHDRAW);
 
 		// Check/harvest acts, above the planting lines. One line per act in the given
-		// order: the sequence matters (e.g. a compost bin upgrade), so never sort or merge.
+		// order. The sequence matters (a bush checked before it is dug up), so the lines
+		// stay unsorted and unmerged.
 		for (String act : actions(stop))
 		{
-			if (act == null || act.isBlank())
-			{
-				continue;
-			}
-			text.add(PanelText.textArea(act, COLOR_DUE,
-				FontManager.getRunescapeSmallFont()));
+			addLine(text, act, COLOR_DUE);
 		}
 
 		addDeposits(text, stop, icons);
@@ -1484,33 +1299,23 @@ public class FarmingPanel extends JPanel
 		if (!inABand)
 		{
 			// Before setting off the starting row's heading says "Withdraw" already.
-			addWithdrawals(text, stop, icons,
-				stop.getKind() != FarmingStopAdvice.Kind.BANK_START || drawingUnderway);
+			addWithdrawals(text, stop, icons, stop.getKind() != FarmingStopAdvice.Kind.BANK_START || drawingUnderway);
 		}
 
 		// One line per crop, counted in patches, not seeds (an allotment takes three seeds
 		// but is one planting). Empty when the action line already said "harvest and plant".
 		for (FarmingPlantAdvice plant : plants(stop))
 		{
-			text.add(PanelText.textArea(plantingOf(plant), COLOR_DUE,
-				FontManager.getRunescapeSmallFont()));
+			text.add(PanelText.small(plantingOf(plant), COLOR_DUE));
 		}
 
 		// After the plantings, since the tools are needed until the stop is done. Grey: it
 		// saves slots, and nothing fails without it.
-		if (stop.getLeprechaun() != null && !stop.getLeprechaun().isBlank())
-		{
-			text.add(PanelText.textArea(stop.getLeprechaun(), PanelColors.META,
-				FontManager.getRunescapeSmallFont()));
-		}
+		addLine(text, stop.getLeprechaun(), PanelColors.META);
 
 		// Grey and last of the stop's own lines: it qualifies the work above, and the guess
 		// may be why the player is sent here at all.
-		if (stop.getAssumption() != null && !stop.getAssumption().isBlank())
-		{
-			text.add(PanelText.textArea(stop.getAssumption(), PanelColors.META,
-				FontManager.getRunescapeSmallFont()));
-		}
+		addLine(text, stop.getAssumption(), PanelColors.META);
 
 		// Below the plantings: a row leads with what the player acts on.
 		addSetAside(text, stop, drawSkipped);
@@ -1525,10 +1330,7 @@ public class FarmingPanel extends JPanel
 			name.setToolTipText(note);
 		}
 
-		gbc.gridx = 1;
-		gbc.weightx = 1.0;
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		row.add(text, gbc);
+		PanelText.addFill(row, gbc, 1, text);
 		return row;
 	}
 
@@ -1542,7 +1344,7 @@ public class FarmingPanel extends JPanel
 		StringBuilder joined = new StringBuilder();
 		for (String clause : clauses)
 		{
-			if (clause == null || clause.isBlank())
+			if (!PanelText.hasText(clause))
 			{
 				continue;
 			}
@@ -1568,8 +1370,7 @@ public class FarmingPanel extends JPanel
 		}
 		for (FarmingPatchNote aside : setAside(stop))
 		{
-			JTextArea line = PanelText.textArea(patchNoteText(aside), COLOR_SKIPPED,
-				FontManager.getRunescapeSmallFont());
+			JTextArea line = PanelText.small(patchNoteText(aside), COLOR_SKIPPED);
 			line.setToolTipText(hover(aside.getBecause()));
 			text.add(line);
 			if (aside.getReadyAtEpochSec() > 0)
@@ -1593,8 +1394,7 @@ public class FarmingPanel extends JPanel
 		{
 			return stop.getPatchName();
 		}
-		return stop.getOutcome() == FarmingStopAdvice.Outcome.VISIT
-			? number + ". " + stop.getPatchName()
+		return stop.getOutcome() == FarmingStopAdvice.Outcome.VISIT ? number + ". " + stop.getPatchName()
 			: stop.getPatchName() + " — " + statusOf(stop);
 	}
 
@@ -1624,24 +1424,17 @@ public class FarmingPanel extends JPanel
 			line.add(icon, gbc);
 		}
 
-		gbc.gridx = col;
-		gbc.weightx = 1.0;
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		line.add(PanelText.textArea(detail, detailColour(stop),
-			FontManager.getRunescapeSmallFont()), gbc);
+		PanelText.addFill(line, gbc, col, PanelText.small(detail, detailColour(stop)));
 		return line;
 	}
 
 	/**
-	 * A planting line in words: "Plant toadflax", "Plant toadflax in 2 patches". The crop
-	 * reads lower case mid-sentence, as the game writes it.
+	 * A planting line, counted in patches as the act lines are: "Plant toadflax",
+	 * "Plant toadflax ×2". The crop reads lower case mid-sentence, as the game writes it.
 	 */
 	static String plantingOf(FarmingPlantAdvice plant)
 	{
-		String crop = inSentence(plant.getName());
-		return plant.getPatches() > 1
-			? "Plant " + crop + " in " + plant.getPatches() + " patches"
-			: "Plant " + crop;
+		return "Plant " + inSentence(plant.getName()) + FarmingPlantAdvice.countOf(plant.getPatches());
 	}
 
 	/** A crop name for mid-sentence: lower case, except Hespori, which is a name. */
@@ -1655,13 +1448,11 @@ public class FarmingPanel extends JPanel
 	 * stacked top to bottom, or the crop it harvests when it plants nothing. Null for a
 	 * skipped stop or a visit with nothing to picture.
 	 */
-	private static JComponent marginOf(FarmingStopAdvice stop, boolean visiting,
-		IconProvider icons)
+	private static JComponent marginOf(FarmingStopAdvice stop, boolean visiting, IconProvider icons)
 	{
 		if (isBankRow(stop))
 		{
-			ImageIcon bank = icons == null ? null
-				: icons.getSpriteIcon(SpriteID.Mapfunction.BANK, 16);
+			ImageIcon bank = icons == null ? null : icons.getSpriteIcon(SpriteID.Mapfunction.BANK, 16);
 			return bank == null ? null : marginLabel(bank);
 		}
 		if (!visiting)
@@ -1679,13 +1470,10 @@ public class FarmingPanel extends JPanel
 		if (pictured.isEmpty())
 		{
 			int harvest = stop.getIconItemId();
-			ImageIcon crop = icons == null || harvest <= 0 ? null
-				: icons.getInventoryIcon(harvest, true);
+			ImageIcon crop = icons == null || harvest <= 0 ? null : icons.getInventoryIcon(harvest, true);
 			return crop == null ? null : marginLabel(crop);
 		}
-		JPanel column = new JPanel();
-		column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
-		column.setOpaque(false);
+		JPanel column = PanelText.stack();
 		column.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
 		for (int i = 0; i < pictured.size(); i++)
 		{
@@ -1706,23 +1494,13 @@ public class FarmingPanel extends JPanel
 		return icon;
 	}
 
-	/**
-	 * One planting's crop in the margin. Outlined in amber when the seeds the player
-	 * carries took it off the recommended herb, with the recommendation in the hover. The run
-	 * still plants what they carry.
-	 */
+	/** One planting's crop in the margin, named in the hover. */
 	private static JLabel cropIcon(FarmingPlantAdvice plant, IconProvider icons)
 	{
-		JLabel icon = new JLabel(icons == null ? null
-			: icons.getInventoryIcon(plant.getProduceItemId(), true));
+		JLabel icon = new JLabel(icons == null ? null : icons.getInventoryIcon(plant.getProduceItemId(), true));
 		icon.setAlignmentX(LEFT_ALIGNMENT);
-		boolean offCourse = plant.getRecommendedName() != null;
-		// The same 1px either way, so an outline never shifts the sprite.
-		icon.setBorder(offCourse ? BorderFactory.createLineBorder(COLOR_DUE)
-			: BorderFactory.createEmptyBorder(1, 1, 1, 1));
-		icon.setToolTipText(offCourse
-			? "Recommended: " + plant.getRecommendedName()
-			: plant.getName());
+		icon.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+		icon.setToolTipText(plant.getName());
 		return icon;
 	}
 
@@ -1750,7 +1528,7 @@ public class FarmingPanel extends JPanel
 	{
 		FarmingSkipReason reason = stop.getSkipReason();
 		String subject = stop.getSubject();
-		boolean hasSubject = subject != null && !subject.isBlank();
+		boolean hasSubject = PanelText.hasText(subject);
 		if (reason == FarmingSkipReason.STANDING_CROP)
 		{
 			// Left in on purpose, so no countdown: nothing is waited for.
@@ -1777,8 +1555,7 @@ public class FarmingPanel extends JPanel
 	{
 		FarmingSkipReason reason = stop.getSkipReason();
 		String because = stop.getBecause();
-		return (reason == FarmingSkipReason.NO_SEED || reason == FarmingSkipReason.NEEDS_LEVEL)
-			&& because != null && !because.isBlank();
+		return (reason == FarmingSkipReason.NO_SEED || reason == FarmingSkipReason.NEEDS_LEVEL) && PanelText.hasText(because);
 	}
 
 	/** "growing, ready in 2h 10m", or the label alone when no finish time is known. */
@@ -1820,35 +1597,18 @@ public class FarmingPanel extends JPanel
 	/** A stop's plants, never null: a builder that sets no plants leaves the field null. */
 	private static List<FarmingPlantAdvice> plants(FarmingStopAdvice stop)
 	{
-		return stop.getPlants() != null ? stop.getPlants() : List.of();
+		return PanelText.listOf(stop.getPlants());
 	}
 
 	/** A stop's acts, never null (see {@link #plants}). */
 	private static List<String> actions(FarmingStopAdvice stop)
 	{
-		return stop.getActions() != null ? stop.getActions() : List.of();
+		return PanelText.listOf(stop.getActions());
 	}
 
 	private static List<FarmingPatchNote> setAside(FarmingStopAdvice stop)
 	{
-		return stop.getSetAside() != null ? stop.getSetAside() : List.of();
-	}
-
-	/**
-	 * The set-aside lines' structural inputs: patch, reason and finish instant. Never the
-	 * worded countdown (see {@link #countdowns}).
-	 */
-	private static String setAsideSignature(FarmingStopAdvice stop)
-	{
-		StringBuilder all = new StringBuilder();
-		for (FarmingPatchNote aside : setAside(stop))
-		{
-			// The reason's sentence is the line's tooltip, set only on a rebuild.
-			all.append(aside.getPatchName()).append('~').append(aside.getReason())
-				.append('~').append(aside.getReadyAtEpochSec())
-				.append('~').append(aside.getBecause()).append('/');
-		}
-		return all.toString();
+		return PanelText.listOf(stop.getSetAside());
 	}
 
 	/** A set-aside patch line, e.g. "Flower — growing, ready in 32m". */
@@ -1856,8 +1616,7 @@ public class FarmingPanel extends JPanel
 	{
 		FarmingSkipReason reason = aside.getReason();
 		String label = reason != null ? reason.getLabel() : "skipped";
-		return reason == FarmingSkipReason.STANDING_CROP
-			? aside.getPatchName() + " — " + label
+		return reason == FarmingSkipReason.STANDING_CROP ? aside.getPatchName() + " — " + label
 			: aside.getPatchName() + " — " + withCountdown(label, aside.getReadyAtEpochSec());
 	}
 
@@ -1868,62 +1627,64 @@ public class FarmingPanel extends JPanel
 	 *
 	 * @param drawSkipped whether the skipped-stops fold is open
 	 */
-	private static List<String> signatureOf(FarmingAdvice advice, Phase phase,
-		boolean drawSkipped, boolean drawBanks)
+	private static List<Object> signatureOf(FarmingAdvice advice, Phase phase, boolean drawSkipped, boolean drawBanks)
 	{
-		List<String> signature = new ArrayList<>();
+		// Each entry sits at a fixed position, so no two inputs can be mistaken for each other.
+		List<Object> signature = new ArrayList<>();
 		// The phase and both folds decide which rows and sections exist. So does the cut-off
 		// for rows behind the player, which needs no entry of its own: it follows from the
 		// phase and each stop's kind and outcome, all signed below.
-		signature.add("f:" + phase + "|" + drawSkipped + "|" + drawBanks);
+		signature.add(phase);
+		signature.add(drawSkipped);
+		signature.add(drawBanks);
 		RunsListView.addSignature(signature, advice);
 		// Previewing a book with the same kit changes no item but must still rebuild.
-		signature.add("b:" + advice.getCarryFor() + "|" + advice.getSpellbookOpen());
+		signature.add(advice.getCarryFor());
+		signature.add(advice.getSpellbookOpen());
+		List<List<Object>> stops = new ArrayList<>(advice.getStops().size());
 		for (FarmingStopAdvice stop : advice.getStops())
 		{
-			// The finish instant, never the worded countdown. Kind decides the heading's
-			// colour and numbering.
-			signature.add(stop.getKind() + "|" + stop.getPatchName() + "|" + stop.getOutcome()
-				// The act texts, not their count: each is its own text area.
-				+ "|" + stop.getInstruction() + "|" + actions(stop)
-				+ "|" + stop.getBecause()
-				+ "|" + stop.getSkipReason() + "|" + stop.getSubject()
-				+ "|" + stop.getReadyAtEpochSec()
-				+ "|" + stop.isUncertain() + "|" + stop.isOptional()
-				+ "|" + plants(stop) + "|" + stop.getIconItemId() + "|" + setAsideSignature(stop)
-				+ "|" + stop.getTravelItemId() + "|" + stop.getTravelSpriteId()
-				+ "|" + stop.getNote()
-				+ "|" + withdrawalSignature(stop)
-				+ "|" + depositSignature(stop)
-				+ "|" + stop.getWarning() + "|" + stop.getLeprechaun()
-				+ "|" + stop.getAssumption());
+			stops.add(shapeOf(stop));
 		}
-		if (advice.getCarry() != null)
-		{
-			for (FarmingCarryItem item : advice.getCarry())
-			{
-				// The note can change alone (e.g. owning a ring of charos changes the coins
-				// note, not the quantity).
-				signature.add("c:" + item.getItemId() + "|" + item.getName()
-					+ "|" + item.getQuantity() + "|" + item.getAvailability()
-					+ "|" + item.getNote() + "|" + item.getTag());
-			}
-		}
-		for (FarmingCarryItem item : carryNow(advice))
-		{
-			signature.add("n:" + item.getItemId() + "|" + item.getName()
-				+ "|" + item.getQuantity() + "|" + item.getAvailability()
-				+ "|" + item.getNote() + "|" + item.getTag());
-		}
-		if (advice.getUpgrades() != null)
-		{
-			for (FarmingUpgrade upgrade : advice.getUpgrades())
-			{
-				signature.add("u:" + upgrade.getKind() + "|" + upgrade.getItemId()
-					+ "|" + upgrade.getName() + "|" + upgrade.getDetail());
-			}
-		}
+		signature.add(stops);
+		// The note can change alone (e.g. owning a ring of charos changes the coins note, not
+		// the quantity).
+		signature.add(shapesOf(PanelText.listOf(advice.getCarry())));
+		signature.add(shapesOf(carryNow(advice)));
+		signature.add(PanelText.listOf(advice.getUpgrades()));
 		return signature;
+	}
+
+	/**
+	 * A stop as its row is built. The finish instant stays in, never the worded countdown,
+	 * and so does each set-aside line's reason, the tooltip set only on a rebuild. The landing
+	 * goes, since no row draws it. The deposits are their item ids alone, since a deposit
+	 * tile draws no count, so a harvest piling up does not redraw.
+	 */
+	private static List<Object> shapeOf(FarmingStopAdvice stop)
+	{
+		List<Integer> deposit = new ArrayList<>(stop.getDeposit().size());
+		for (FarmingCarryItem item : stop.getDeposit())
+		{
+			deposit.add(item.getItemId());
+		}
+		return List.of(stop.toBuilder().landing(null)
+			// The list changes while the player stands at the bank, so the guard must see it.
+			.withdraw(shapesOf(PanelText.listOf(stop.getWithdraw()))).deposit(List.of()).build(), deposit);
+	}
+
+	/**
+	 * Carry lines as the panel draws them: without the count already carried, which no line
+	 * shows. Availability stays, since it decides grid square versus seed-box line.
+	 */
+	private static List<FarmingCarryItem> shapesOf(List<FarmingCarryItem> items)
+	{
+		List<FarmingCarryItem> shapes = new ArrayList<>(items.size());
+		for (FarmingCarryItem item : items)
+		{
+			shapes.add(item.withCarriedCount(0));
+		}
+		return shapes;
 	}
 
 	@Override

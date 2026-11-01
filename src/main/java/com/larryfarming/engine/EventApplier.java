@@ -1,17 +1,10 @@
 package com.larryfarming.engine;
 
-import com.larryfarming.model.EquipmentSlot;
-import com.larryfarming.model.ItemStack;
-import com.larryfarming.model.PlayerState;
-import com.larryfarming.model.QuestStatus;
-import com.larryfarming.model.Skill;
-import com.larryfarming.model.SkillState;
+import com.larryfarming.model.*;
 import lombok.Value;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Folds one game event into the {@link PlayerState}. Stateless: every method takes the state
@@ -38,21 +31,12 @@ public final class EventApplier {
         state.getSkills().put(skill, new SkillState(level, xp));
     }
 
-    public static void applyQuestCompleted(PlayerState state, String questName) {
-        state.getQuests().put(questName, QuestStatus.COMPLETED);
-    }
-
     /**
      * The account as the client reports it at login: every skill, the quests finished or
      * started, and what the player is carrying and wearing.
      */
-    public static void applyLoginState(
-            PlayerState state,
-            Map<String, SkillSnapshot> skills,
-            List<String> completedQuests,
-            List<String> startedQuests,
-            List<ItemStack> inventory,
-            Map<EquipmentSlot, ItemStack> equipment) {
+    public static void applyLoginState(PlayerState state, Map<String, SkillSnapshot> skills, List<String> completedQuests,
+            List<String> startedQuests, List<ItemStack> inventory, Map<EquipmentSlot, ItemStack> equipment) {
 
         if (skills != null) {
             for (Map.Entry<String, SkillSnapshot> entry : skills.entrySet()) {
@@ -138,8 +122,7 @@ public final class EventApplier {
         for (int i = 0; i < box.size(); i++) {
             ItemStack held = box.get(i);
             if (held.getItemId() == stored.getItemId()) {
-                box.set(i, new ItemStack(held.getItemId(),
-                        held.getQuantity() + stored.getQuantity(), held.getName()));
+                box.set(i, new ItemStack(held.getItemId(), held.getQuantity() + stored.getQuantity(), held.getName()));
                 commitSeedBox(state, box, stored.getItemId(), stored.getQuantity());
                 return;
             }
@@ -190,8 +173,7 @@ public final class EventApplier {
         if (held.equalsIgnoreCase(spoken)) {
             return true;
         }
-        return spoken.length() > 1
-                && (spoken.endsWith("s") || spoken.endsWith("S"))
+        return spoken.length() > 1 && (spoken.endsWith("s") || spoken.endsWith("S"))
                 && held.equalsIgnoreCase(spoken.substring(0, spoken.length() - 1));
     }
 
@@ -199,18 +181,15 @@ public final class EventApplier {
      * @param movedId the seed the chat line moved
      * @param moved   how many went in, negative for out
      */
-    private static void commitSeedBox(PlayerState state, List<ItemStack> box, int movedId,
-            int moved) {
+    private static void commitSeedBox(PlayerState state, List<ItemStack> box, int movedId, int moved) {
         state.setSeedBox(box);
         state.setSeedBoxLastSeen(Instant.now());
         // Any watched movement lets every kind in the tally take a place in the box; see
         // SeedBox#contentsCarried.
         state.setSeedBoxWatchedAt(Instant.now());
         // What the watched movements vouch for; see SeedBox#trustedOf.
-        state.getSeedBoxWatchedNet().merge(movedId, moved,
-                (was, change) -> Math.max(0, was + change));
-        state.getSeedBoxWatchedNet().computeIfPresent(movedId,
-                (id, net) -> net > 0 ? net : null);
+        state.getSeedBoxWatchedNet().merge(movedId, moved, (was, change) -> Math.max(0, was + change));
+        state.getSeedBoxWatchedNet().computeIfPresent(movedId, (id, net) -> net > 0 ? net : null);
     }
 
     /**
@@ -226,10 +205,7 @@ public final class EventApplier {
             for (int i = 0; i < bank.size(); i++) {
                 if (deposited.getItemId() == bank.get(i).getItemId()) {
                     ItemStack existing = bank.get(i);
-                    bank.set(i, new ItemStack(
-                            existing.getItemId(),
-                            existing.getQuantity() + deposited.getQuantity(),
-                            existing.getName()));
+                    bank.set(i, new ItemStack(existing.getItemId(), existing.getQuantity() + deposited.getQuantity(), existing.getName()));
                     merged = true;
                     break;
                 }
@@ -242,8 +218,7 @@ public final class EventApplier {
         state.setBank(bank);
     }
 
-    public static void applyEquipmentChanged(PlayerState state,
-            Map<EquipmentSlot, ItemStack> equipment) {
+    public static void applyEquipmentChanged(PlayerState state, Map<EquipmentSlot, ItemStack> equipment) {
         state.getEquipment().clear();
         state.getEquipment().putAll(equipment);
     }
@@ -252,8 +227,7 @@ public final class EventApplier {
      * A quest moving on: started or finished by its state, and its stage counter when the
      * quest has one this plugin reads.
      */
-    public static void applyQuestProgress(PlayerState state, String questName,
-            QuestStatus status, Integer stage) {
+    public static void applyQuestProgress(PlayerState state, String questName, QuestStatus status, Integer stage) {
         QuestStatus current = state.getQuests().get(questName);
         if (status == QuestStatus.IN_PROGRESS) {
             if (current == null || current == QuestStatus.NOT_STARTED) {

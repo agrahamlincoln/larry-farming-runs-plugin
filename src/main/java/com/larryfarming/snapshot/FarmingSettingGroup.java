@@ -1,6 +1,5 @@
 package com.larryfarming.snapshot;
 
-import com.google.gson.annotations.SerializedName;
 import java.util.List;
 import lombok.Value;
 
@@ -9,7 +8,7 @@ import lombok.Value;
 public class FarmingSettingGroup {
 
     /** The caption, named for a player: "Portal Nexus". */
-    @SerializedName("label") String label;
+    String label;
 
-    @SerializedName("choices") List<FarmingSettingChoice> choices;
+    List<FarmingSettingChoice> choices;
 }

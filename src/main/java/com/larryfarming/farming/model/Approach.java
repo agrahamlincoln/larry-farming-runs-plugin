@@ -2,9 +2,7 @@ package com.larryfarming.farming.model;
 
 import java.util.ArrayList;
 import java.util.List;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Value;
+import lombok.*;
 
 /**
  * A way onto a travel network that rungs ask for as an "or" of ways in, such as standing at
@@ -50,8 +48,7 @@ public class Approach {
         for (Leg leg : legs) {
             parts.add(leg.getRequires());
         }
-        return new Approach(Requirement.any(parts.toArray(new Requirement[0])),
-                List.of(legs));
+        return new Approach(Requirement.any(parts.toArray(new Requirement[0])), List.of(legs));
     }
 
     /** The leg whose requirement is this part of {@link #getWay()}, or null for none. */

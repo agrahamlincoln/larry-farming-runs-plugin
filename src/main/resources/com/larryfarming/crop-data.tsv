@@ -1,0 +1,84 @@
+# What it takes to plant each crop the runs plant: the Farming level, the patch type it
+# goes in, the tag that tells one seed from another at a glance, and what to carry.
+# Tags are copied from RuneLite's Item Identification plugin (ItemIdentification),
+# Copyright (c) 2019, Hydrox6, BSD 2-Clause License, so the sidebar matches the
+# inventory labels.
+#
+# Levels are the real requirement. Where a boosted figure is quoted, the boost belongs
+# in the advice, not in the gate.
+#
+# Tree-family crops carry their potted-stage ids (seedling, watered seedling, sapling)
+# beside the seed; crops planted straight from seed leave them empty. The ids are not
+# evenly spaced (redwood runs 22850, 22854, 22859), so each is transcribed, never stepped.
+# Each id has RuneLite's ItemID constant for it in the column after.
+#
+# The config key holds whether the player lets Larry plant the crop, and is named for the
+# crop. Crops the settings never offer have none.
+#
+# crop	level	patch type	tag	seed name	seed	ItemID	seedling	ItemID	watered seedling	ItemID	sapling	ItemID	config key
+
+# Herbs.
+GUAM	9	HERB	G	Guam seed	5291	GUAM_SEED	-	-	-	-	-	-	plantGuam
+MARRENTILL	14	HERB	M	Marrentill seed	5292	MARRENTILL_SEED	-	-	-	-	-	-	plantMarrentill
+TARROMIN	19	HERB	TAR	Tarromin seed	5293	TARROMIN_SEED	-	-	-	-	-	-	plantTarromin
+HARRALANDER	26	HERB	HAR	Harralander seed	5294	HARRALANDER_SEED	-	-	-	-	-	-	plantHarralander
+RANARR	32	HERB	R	Ranarr seed	5295	RANARR_SEED	-	-	-	-	-	-	plantRanarr
+TOADFLAX	38	HERB	TOA	Toadflax seed	5296	TOADFLAX_SEED	-	-	-	-	-	-	plantToadflax
+IRIT	44	HERB	I	Irit seed	5297	IRIT_SEED	-	-	-	-	-	-	plantIrit
+AVANTOE	50	HERB	A	Avantoe seed	5298	AVANTOE_SEED	-	-	-	-	-	-	plantAvantoe
+KWUARM	56	HERB	K	Kwuarm seed	5299	KWUARM_SEED	-	-	-	-	-	-	plantKwuarm
+SNAPDRAGON	62	HERB	S	Snapdragon seed	5300	SNAPDRAGON_SEED	-	-	-	-	-	-	plantSnapdragon
+CADANTINE	67	HERB	C	Cadantine seed	5301	CADANTINE_SEED	-	-	-	-	-	-	plantCadantine
+LANTADYME	73	HERB	L	Lantadyme seed	5302	LANTADYME_SEED	-	-	-	-	-	-	plantLantadyme
+DWARF_WEED	79	HERB	D	Dwarf weed seed	5303	DWARF_WEED_SEED	-	-	-	-	-	-	plantDwarfWeed
+TORSTOL	85	HERB	TOR	Torstol seed	5304	TORSTOL_SEED	-	-	-	-	-	-	plantTorstol
+
+# Regular trees.
+OAK	15	TREE	OAK	Acorn	5312	ACORN	5358	PLANTPOT_ACORN	5364	PLANTPOT_ACORN_WATERED	5370	PLANTPOT_OAK_SAPLING	plantOak
+WILLOW	30	TREE	WIL	Willow seed	5313	WILLOW_SEED	5359	PLANTPOT_WILLOW_SEED	5365	PLANTPOT_WILLOW_SEED_WATERED	5371	PLANTPOT_WILLOW_SAPLING	plantWillow
+MAPLE	45	TREE	MAP	Maple seed	5314	MAPLE_SEED	5360	PLANTPOT_MAPLE_SEED	5366	PLANTPOT_MAPLE_SEED_WATERED	5372	PLANTPOT_MAPLE_SAPLING	plantMaple
+YEW	60	TREE	YEW	Yew seed	5315	YEW_SEED	5361	PLANTPOT_YEW_SEED	5367	PLANTPOT_YEW_SEED_WATERED	5373	PLANTPOT_YEW_SAPLING	plantYew
+MAGIC	75	TREE	MAG	Magic seed	5316	MAGIC_TREE_SEED	5362	PLANTPOT_MAGIC_TREE_SEED	5368	PLANTPOT_MAGIC_TREE_SEED_WATERED	5374	PLANTPOT_MAGIC_TREE_SAPLING	plantMagic
+
+# Hardwoods.
+TEAK	35	HARDWOOD_TREE	TEAK	Teak seed	21486	TEAK_SEED	21469	PLANTPOT_TEAK_SEED	21473	PLANTPOT_TEAK_SEED_WATERED	21477	PLANTPOT_TEAK_SAPLING	plantTeak
+MAHOGANY	55	HARDWOOD_TREE	MAH	Mahogany seed	21488	MAHOGANY_SEED	21471	PLANTPOT_MAHOGANY_SEED	21475	PLANTPOT_MAHOGANY_SEED_WATERED	21480	PLANTPOT_MAHOGANY_SAPLING	plantMahogany
+
+# Fruit trees.
+APPLE	27	FRUIT_TREE	APP	Apple tree seed	5283	APPLE_TREE_SEED	5480	PLANTPOT_APPLE_SEED	5488	PLANTPOT_APPLE_SEED_WATERED	5496	PLANTPOT_APPLE_SAPLING	plantApple
+BANANA	33	FRUIT_TREE	BAN	Banana tree seed	5284	BANANA_TREE_SEED	5481	PLANTPOT_BANANA_SEED	5489	PLANTPOT_BANANA_SEED_WATERED	5497	PLANTPOT_BANANA_SAPLING	plantBanana
+ORANGE	39	FRUIT_TREE	ORA	Orange tree seed	5285	ORANGE_TREE_SEED	5482	PLANTPOT_ORANGE_SEED	5490	PLANTPOT_ORANGE_SEED_WATERED	5498	PLANTPOT_ORANGE_SAPLING	plantOrange
+CURRY	42	FRUIT_TREE	CUR	Curry tree seed	5286	CURRY_TREE_SEED	5483	PLANTPOT_CURRY_SEED	5491	PLANTPOT_CURRY_SEED_WATERED	5499	PLANTPOT_CURRY_SAPLING	plantCurry
+PINEAPPLE	51	FRUIT_TREE	PINE	Pineapple seed	5287	PINEAPPLE_TREE_SEED	5484	PLANTPOT_PINEAPPLE_SEED	5492	PLANTPOT_PINEAPPLE_SEED_WATERED	5500	PLANTPOT_PINEAPPLE_SAPLING	plantPineapple
+PAPAYA	57	FRUIT_TREE	PAPA	Papaya tree seed	5288	PAPAYA_TREE_SEED	5485	PLANTPOT_PAPAYA_SEED	5493	PLANTPOT_PAPAYA_SEED_WATERED	5501	PLANTPOT_PAPAYA_SAPLING	plantPapaya
+PALM	68	FRUIT_TREE	PALM	Palm tree seed	5289	PALM_TREE_SEED	5486	PLANTPOT_PALM_SEED	5494	PLANTPOT_PALM_SEED_WATERED	5502	PLANTPOT_PALM_SAPLING	plantPalm
+DRAGONFRUIT	81	FRUIT_TREE	DRA	Dragonfruit tree seed	22877	DRAGONFRUIT_TREE_SEED	22862	PLANTPOT_DRAGONFRUIT_SEED	22864	PLANTPOT_DRAGONFRUIT_SEED_WATERED	22866	PLANTPOT_DRAGONFRUIT_SAPLING	plantDragonfruit
+
+# Single-patch specials. The three tree-shaped ones are potted like any other tree.
+CALQUAT	72	CALQUAT	CAL	Calquat tree seed	5290	CALQUAT_TREE_SEED	5487	PLANTPOT_CALQUAT_SEED	5495	PLANTPOT_CALQUAT_SEED_WATERED	5503	PLANTPOT_CALQUAT_SAPLING	plantCalquat
+CELASTRUS	85	CELASTRUS	CEL	Celastrus seed	22869	CELASTRUS_TREE_SEED	22848	PLANTPOT_CELASTRUS_TREE_SEED	22852	PLANTPOT_CELASTRUS_TREE_SEED_WATERED	22856	PLANTPOT_CELASTRUS_TREE_SAPLING	-
+REDWOOD	90	REDWOOD	RED	Redwood tree seed	22871	REDWOOD_TREE_SEED	22850	PLANTPOT_REDWOOD_TREE_SEED	22854	PLANTPOT_REDWOOD_TREE_SEED_WATERED	22859	PLANTPOT_REDWOOD_TREE_SAPLING	-
+HESPORI	65	HESPORI	HES	Hespori seed	22875	HESPORI_SEED	-	-	-	-	-	-	plantHespori
+SEAWEED	23	SEAWEED	SW	Seaweed spore	21490	SEAWEED_SEED	-	-	-	-	-	-	plantSeaweed
+# Bittercaps, planted from a spore.
+MUSHROOM	53	MUSHROOM	MUSH	Mushroom spore	5282	MUSHROOM_SEED	-	-	-	-	-	-	plantMushrooms
+BELLADONNA	63	BELLADONNA	BELL	Belladonna seed	5281	BELLADONNA_SEED	-	-	-	-	-	-	plantBelladonna
+# The anima plants, whose seeds drop only from Hespori.
+ATTAS	76	ANIMA	AT	Attas seed	22881	ATTAS_SEED	-	-	-	-	-	-	plantAttas
+IASOR	76	ANIMA	IA	Iasor seed	22883	IASOR_SEED	-	-	-	-	-	-	plantIasor
+KRONOS	76	ANIMA	KRO	Kronos seed	22885	KRONOS_SEED	-	-	-	-	-	-	plantKronos
+# Cacti. The Al Kharid patch grows potato cactus; the guild patch is held for contracts.
+CACTUS	55	CACTUS	CAC	Cactus seed	5280	CACTUS_SEED	-	-	-	-	-	-	plantCactus
+POTATO_CACTUS	64	CACTUS	P.CAC	Potato cactus seed	22873	POTATO_CACTUS_SEED	-	-	-	-	-	-	plantPotatoCactus
+
+# Bushes.
+JANGERBERRIES	48	BUSH	JANG	Jangerberry seed	5104	JANGERBERRY_BUSH_SEED	-	-	-	-	-	-	-
+WHITEBERRIES	59	BUSH	WHIT	Whiteberry seed	5105	WHITEBERRY_BUSH_SEED	-	-	-	-	-	-	plantWhiteberries
+POISON_IVY	70	BUSH	POI	Poison ivy seed	5106	POISONIVY_BUSH_SEED	-	-	-	-	-	-	plantPoisonIvy
+
+# Flowers and allotments.
+LIMPWURT	26	FLOWER	LIMP	Limpwurt seed	5100	LIMPWURT_SEED	-	-	-	-	-	-	plantLimpwurt
+WHITE_LILY	58	FLOWER	LILY	White lily seed	22887	WHITE_LILY_SEED	-	-	-	-	-	-	plantWhiteLily
+STRAWBERRY	31	ALLOTMENT	STRA	Strawberry seed	5323	STRAWBERRY_SEED	-	-	-	-	-	-	-
+WATERMELON	47	ALLOTMENT	MEL	Watermelon seed	5321	WATERMELON_SEED	-	-	-	-	-	-	plantWatermelon
+SNAPE_GRASS	61	ALLOTMENT	SNA	Snape grass seed	22879	SNAPE_GRASS_SEED	-	-	-	-	-	-	plantSnapeGrass

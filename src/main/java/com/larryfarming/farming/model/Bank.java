@@ -1,5 +1,7 @@
 package com.larryfarming.farming.model;
 
+import lombok.Getter;
+
 /**
  * The bank a {@link TravelOption}'s detour figure was walked to.
  *
@@ -13,10 +15,10 @@ package com.larryfarming.farming.model;
  * <p>Each bank was identified by walking the route to it, by being the town's
  * only bank, or (Civitas illa Fortis) by checking in game.
  *
- * <p>The tile lets a walked figure be measured again. It comes from the
- * bank's wiki {@code |map=} infobox; it is not necessarily the tile anybody measured from, and
- * not a claim about where a player should stand.
+ * <p>The tile comes from the bank's wiki
+ * {@code |map=} infobox. It locates the bank, not where a player stands.
  */
+@Getter
 public enum Bank {
 
     /**
@@ -66,12 +68,6 @@ public enum Bank {
     /** Lletya, reached from the teleport crystal's landing. */
     LLETYA("Lletya", 2352, 3162),
 
-    /**
-     * Prifddinas north, in the Amlodd district, the nearer of the city's two banks to both
-     * landings that serve its compost bin. The tile is the middle of the wiki's map outline.
-     */
-    PRIFDDINAS_NORTH("Prifddinas north", 3258, 6108),
-
     /** The Museum Camp chest; named a chest because it is one. */
     MUSEUM_CAMP("Museum Camp bank chest", 3740, 3810),
 
@@ -97,9 +93,21 @@ public enum Bank {
      */
     HUNTER_GUILD("Hunter Guild bank chest", 1542, 3039);
 
+    /**
+     * Player-facing: a place to follow "Bank at" ("Falador east"), or a bank chest that
+     * names itself ("Museum Camp bank chest"). Qualified only where a town has more than
+     * one bank.
+     */
     private final String displayName;
     private final int x;
     private final int y;
+    /**
+     * Zero for a bank on the ground.
+     *
+     * <p>Identity, not cost: the plane separates the two Gnome Stronghold banks, which share
+     * an x and a y. Stair cost lives in {@code banksUpstairs} and
+     * {@code BankProximity.FLOOR_CHANGE_TILES}.
+     */
     private final int plane;
 
     Bank(String displayName, int x, int y) {
@@ -113,40 +121,8 @@ public enum Bank {
         this.plane = plane;
     }
 
-    /**
-     * Player-facing: a place to follow "Bank at" ("Falador east"), or a bank chest that
-     * names itself ("Museum Camp bank chest"). Qualified only where a town has more than
-     * one bank.
-     */
-    public String getDisplayName() {
-        return displayName;
-    }
-
     /** "Bank at Falador east", or the chest's own name, which already says "bank". */
     public String getRowTitle() {
-        return isChest() ? displayName : "Bank at " + displayName;
-    }
-
-    private boolean isChest() {
-        return displayName.endsWith("bank chest");
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public int getY() {
-        return y;
-    }
-
-    /**
-     * Zero for a bank on the ground.
-     *
-     * <p>Identity, not cost: the plane separates the two Gnome Stronghold banks, which share
-     * an x and a y. Stair cost lives in {@code banksUpstairs} and
-     * {@code BankProximity.FLOOR_CHANGE_TILES}.
-     */
-    public int getPlane() {
-        return plane;
+        return displayName.endsWith("bank chest") ? displayName : "Bank at " + displayName;
     }
 }

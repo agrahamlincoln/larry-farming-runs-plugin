@@ -1,8 +1,6 @@
 package com.larryfarming.farming.model;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 /**
  * The order a ladder's rungs are tried in: fewest walked tiles first, over the whole route as
@@ -87,8 +85,7 @@ public final class RungOrder {
                 to++;
             }
             List<Integer> tied = new ArrayList<>(measured.subList(from, to));
-            tied.sort(Comparator.<Integer>comparingInt(i -> figures.cost(i).ordinal())
-                    .thenComparingInt(i -> i));
+            tied.sort(Comparator.<Integer>comparingInt(i -> figures.cost(i).ordinal()).thenComparingInt(i -> i));
             ranked.addAll(tied);
             from = to;
         }

@@ -5,8 +5,9 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
+import java.util.function.*;
 import javax.swing.ImageIcon;
+import javax.swing.SwingUtilities;
 import net.runelite.api.SpriteID;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
@@ -71,8 +72,7 @@ public class IconProvider
 	 * Never delivered when there is no client to decode it, which every caller already
 	 * treats as "not loaded yet".
 	 */
-	protected void spriteAsync(int spriteId, int file,
-		Consumer<BufferedImage> callback)
+	protected void spriteAsync(int spriteId, int file, Consumer<BufferedImage> callback)
 	{
 		if (spriteManager != null)
 		{
@@ -92,37 +92,10 @@ public class IconProvider
 		loadSpellbookIcon("ARCEUUS", SpriteID.TAB_MAGIC_SPELLBOOK_ARCEUUS);
 	}
 
-	/**
-	 * Fetches one spellbook sprite into an icon handed out blank at full size.
-	 *
-	 * <p>The panel rebuilds its rows only when the advice changes, so it never asks again
-	 * for an icon that was missing at rebuild time. Publishing the instance up front lets
-	 * the load land in a label already on screen. Every deferred-fill icon in this class
-	 * relies on this rule.
-	 */
+	/** Fetches one spellbook sprite, once, into an icon handed out blank at full size. */
 	private void loadSpellbookIcon(String book, int spriteId)
 	{
-		if (spellbookIcons.containsKey(book))
-		{
-			return;
-		}
-		ImageIcon icon = new ImageIcon(new BufferedImage(SPELLBOOK_ICON_SIZE,
-			SPELLBOOK_ICON_SIZE, BufferedImage.TYPE_INT_ARGB));
-		spellbookIcons.put(book, icon);
-
-		spriteAsync(spriteId, 0, img ->
-		{
-			if (img == null)
-			{
-				return;
-			}
-			BufferedImage sized = fitTo(img, SPELLBOOK_ICON_SIZE);
-			javax.swing.SwingUtilities.invokeLater(() ->
-			{
-				icon.setImage(sized);
-				repaintLater();
-			});
-		});
+		spellbookIcons.computeIfAbsent(book, b -> getSpriteIcon(spriteId, SPELLBOOK_ICON_SIZE));
 	}
 
 	/**
@@ -157,7 +130,7 @@ public class IconProvider
 					log.debug("Inventory panel sprite had no opaque middle to average");
 					return;
 				}
-				javax.swing.SwingUtilities.invokeLater(() ->
+				SwingUtilities.invokeLater(() ->
 				{
 					inventoryPanelColour = average;
 					repaintLater();
@@ -201,8 +174,7 @@ public class IconProvider
 		{
 			return null;
 		}
-		return new Color((int) (red / counted), (int) (green / counted),
-			(int) (blue / counted));
+		return new Color((int) (red / counted), (int) (green / counted), (int) (blue / counted));
 	}
 
 	/**
@@ -214,9 +186,7 @@ public class IconProvider
 	 */
 	static BufferedImage fitTo(BufferedImage sprite, int size)
 	{
-		return sprite.getWidth() == size && sprite.getHeight() == size
-			? sprite
-			: ImageUtil.resizeImage(squared(sprite), size, size);
+		return sprite.getWidth() == size && sprite.getHeight() == size ? sprite : ImageUtil.resizeImage(squared(sprite), size, size);
 	}
 
 	/**
@@ -242,7 +212,12 @@ public class IconProvider
 
 	/**
 	 * Any game sprite by ID, at a fixed size. Returns a blank icon at full size that fills
-	 * in place when the sprite loads (see {@link #loadSpellbookIcon}), or null for an id &lt;= 0.
+	 * in place when the sprite loads, or null for an id &lt;= 0.
+	 *
+	 * <p>The panel rebuilds its rows only when the advice changes, so it never asks again
+	 * for an icon that was missing at rebuild time. Publishing the instance up front lets
+	 * the load land in a label already on screen. Every deferred-fill icon in this class
+	 * relies on this rule.
 	 *
 	 * @param spriteId the game's sprite ID
 	 * @param size     width and height in pixels
@@ -270,8 +245,7 @@ public class IconProvider
 			return cached;
 		}
 
-		ImageIcon icon = new ImageIcon(
-			new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB));
+		ImageIcon icon = new ImageIcon(new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB));
 		cache.put(cacheKey, icon);
 		spriteAsync(spriteId, 0, img ->
 		{
@@ -281,7 +255,7 @@ public class IconProvider
 			}
 			BufferedImage fitted = fitTo(img, size);
 			BufferedImage sized = held ? fitted : ImageUtil.grayscaleImage(fitted);
-			javax.swing.SwingUtilities.invokeLater(() ->
+			SwingUtilities.invokeLater(() ->
 			{
 				icon.setImage(sized);
 				repaintLater();
@@ -330,42 +304,56 @@ public class IconProvider
 			return cached;
 		}
 
-		BufferedImage sprite;
-		try
-		{
-			sprite = itemImage(itemId);
-		}
-		catch (RuntimeException e)
-		{
-			log.debug("Failed to load gear icon for item {}", itemId, e);
-			return null;
-		}
+		BufferedImage sprite = loaded(() -> itemImage(itemId), "gear", itemId);
 		if (sprite == null)
 		{
 			return null;
 		}
 
-		// Resizing and greyscaling read pixels an AsyncBufferedImage does not have yet, so
-		// styling waits for the load. It restyles the same ImageIcon in place because labels
-		// already hold this instance. Replacing it would leave a greyed item in full colour.
 		ImageIcon icon = new ImageIcon(sprite);
 		// Cached before the callback is registered, so a fast client thread cannot have
 		// its styled result overwritten by this raw one.
 		cache.put(cacheKey, icon);
+		styleWhenLoaded(icon, sprite, art -> styleGear(art, size, earned, fillSquare));
+		return icon;
+	}
+
+	/** An item's sprite from {@code load}, or null when the client cannot give one. */
+	private static BufferedImage loaded(Supplier<BufferedImage> load, String kind, int itemId)
+	{
+		try
+		{
+			return load.get();
+		}
+		catch (RuntimeException e)
+		{
+			log.debug("Failed to load {} icon for item {}", kind, itemId, e);
+			return null;
+		}
+	}
+
+	/**
+	 * Gives the icon its sprite styled, now or once its pixels arrive.
+	 *
+	 * <p>Resizing and greyscaling read pixels an AsyncBufferedImage does not have yet, so
+	 * styling waits for the load. It restyles the same ImageIcon in place because labels
+	 * already hold this instance. Replacing it would leave a greyed item in full colour.
+	 */
+	private void styleWhenLoaded(ImageIcon icon, BufferedImage sprite, UnaryOperator<BufferedImage> style)
+	{
 		if (sprite instanceof AsyncBufferedImage)
 		{
 			AsyncBufferedImage async = (AsyncBufferedImage) sprite;
-			async.onLoaded(() -> javax.swing.SwingUtilities.invokeLater(() ->
+			async.onLoaded(() -> SwingUtilities.invokeLater(() ->
 			{
-				icon.setImage(styleGear(async, size, earned, fillSquare));
+				icon.setImage(style.apply(async));
 				repaintLater();
 			}));
 		}
 		else
 		{
-			icon.setImage(styleGear(sprite, size, earned, fillSquare));
+			icon.setImage(style.apply(sprite));
 		}
-		return icon;
 	}
 
 	/**
@@ -397,17 +385,8 @@ public class IconProvider
 			return cached;
 		}
 
-		BufferedImage sprite;
-		try
-		{
-			// A non-stackable item ignores the stackable flag and draws a single sprite.
-			sprite = itemImage(itemId, stack, stack > 1);
-		}
-		catch (RuntimeException e)
-		{
-			log.debug("Failed to load inventory icon for item {}", itemId, e);
-			return null;
-		}
+		// A non-stackable item ignores the stackable flag and draws a single sprite.
+		BufferedImage sprite = loaded(() -> itemImage(itemId, stack, stack > 1), "inventory", itemId);
 		if (sprite == null)
 		{
 			return null;
@@ -419,34 +398,20 @@ public class IconProvider
 		cache.put(cacheKey, icon);
 		if (!held)
 		{
-			if (sprite instanceof AsyncBufferedImage)
-			{
-				AsyncBufferedImage async = (AsyncBufferedImage) sprite;
-				async.onLoaded(() -> javax.swing.SwingUtilities.invokeLater(() ->
-				{
-					icon.setImage(ImageUtil.grayscaleImage(async));
-					repaintLater();
-				}));
-			}
-			else
-			{
-				icon.setImage(ImageUtil.grayscaleImage(sprite));
-			}
+			styleWhenLoaded(icon, sprite, ImageUtil::grayscaleImage);
 		}
 		else if (sprite instanceof AsyncBufferedImage)
 		{
 			Runnable repaint = onImageLoaded;
 			if (repaint != null)
 			{
-				((AsyncBufferedImage) sprite).onLoaded(() ->
-					javax.swing.SwingUtilities.invokeLater(repaint));
+				((AsyncBufferedImage) sprite).onLoaded(() -> SwingUtilities.invokeLater(repaint));
 			}
 		}
 		return icon;
 	}
 
-	private static BufferedImage styleGear(BufferedImage sprite, int size, boolean earned,
-		boolean fillSquare)
+	private static BufferedImage styleGear(BufferedImage sprite, int size, boolean earned, boolean fillSquare)
 	{
 		BufferedImage styled = earned ? sprite : ImageUtil.grayscaleImage(sprite);
 		return fitTo(fillSquare ? cropToArt(styled) : styled, size);

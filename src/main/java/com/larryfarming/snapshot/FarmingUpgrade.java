@@ -1,6 +1,5 @@
 package com.larryfarming.snapshot;
 
-import com.google.gson.annotations.SerializedName;
 import lombok.Value;
 
 /**
@@ -19,17 +18,17 @@ public class FarmingUpgrade {
         GOAL
     }
 
-    @SerializedName("kind") Kind kind;
+    Kind kind;
 
     /** The sprite for the row. */
-    @SerializedName("itemId") int itemId;
+    int itemId;
 
     /** The thing itself: "Farming cape", "Farmer's outfit". */
-    @SerializedName("name") String name;
+    String name;
 
     /**
-     * The whole sentence the row shows: "Wear your Explorer's ring 2 to save a slot.",
+     * The whole sentence the row shows: "Wear your Explorer's ring 2 to save an inventory slot.",
      * "Earn Ardougne cloak 2 for three teleports a day to the Ardougne patch."
      */
-    @SerializedName("detail") String detail;
+    String detail;
 }

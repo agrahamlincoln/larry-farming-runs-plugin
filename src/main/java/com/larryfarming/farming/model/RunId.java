@@ -15,20 +15,18 @@ public enum RunId {
     CONTRACT("Farming contract"),
     HESPORI("Hespori"),
     ANIMA("Anima plant"),
-    CORAL("Coral"),
     CALQUAT("Calquat run"),
     FRUIT_TREE("Fruit tree run"),
     HERB("Herb run"),
     REGULAR_TREE("Tree run"),
-    SEAWEED("Seaweed run"),
-    ULTRACOMPOST("Compost bins");
+    SEAWEED("Seaweed run");
 
     /**
-     * The order the Farming tab lists the runs in, fixed so no row moves when a run comes
+     * The order the side panel lists the runs in, fixed so no row moves when a run comes
      * due or is switched off. Display only: {@link #getPriority()} still orders the planning.
      */
     public static final List<RunId> DISPLAY_ORDER = List.of(HERB, REGULAR_TREE, FRUIT_TREE,
-            HARDWOOD, CALQUAT, SEAWEED, HESPORI, ANIMA, CORAL, CONTRACT, ULTRACOMPOST);
+            HARDWOOD, CALQUAT, SEAWEED, HESPORI, ANIMA, CONTRACT);
 
     private final String displayName;
 

@@ -1,14 +1,12 @@
 package com.larryfarming.farming.engine;
 
-import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.CropState;
-import com.larryfarming.engine.farming.PatchPrediction;
-import com.larryfarming.engine.farming.PatchType;
+import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.catalogue.CropData;
 import com.larryfarming.farming.model.FarmingPreferences;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.farming.model.RunStop;
 import java.util.List;
+import lombok.AllArgsConstructor;
 
 /**
  * What one patch is asking for, read against the stop that works it.
@@ -66,26 +64,21 @@ final class PatchWork {
         if (actions.contains(RunStop.StopAction.KILL_HESPORI)) {
             return Act.KILL;
         }
-        if (actions.contains(RunStop.StopAction.EMPTY_COMPOST_BIN)) {
-            return Act.EMPTY_BIN;
-        }
         // The pre-check state is GROWING at max stage, so an unchecked patch asks for its
         // check whatever else the stop can do there.
-        if (actions.contains(RunStop.StopAction.CHECK_HEALTH)
-                && seen.getState() == CropState.GROWING) {
+        if (actions.contains(RunStop.StopAction.CHECK_HEALTH) && seen.getState() == CropState.GROWING) {
             return Act.CHECK;
         }
         // Everything else is picked, including a patch that has had its check. Lumber trees
         // declare no HARVEST and return null here; their replanting is standsEmpty's job.
         //
-        // Do not require CropState.HARVESTABLE: the tracker sets it only from a direct
-        // sighting, so a crop that finished unobserved still reads GROWING. The readiness
-        // check above makes this safe.
+        // This does not require CropState.HARVESTABLE, which the tracker sets only from a
+        // direct sighting, so a crop that finished unobserved still reads GROWING. The
+        // readiness check above makes this safe.
         //
         // Crop#isProduce excludes the scarecrow, which ticks like a crop in a flower patch
         // but has nothing to pick.
-        return actions.contains(RunStop.StopAction.HARVEST) && seen.getCrop().isProduce()
-                ? Act.HARVEST : null;
+        return actions.contains(RunStop.StopAction.HARVEST) && seen.getCrop().isProduce() ? Act.HARVEST : null;
     }
 
     /**
@@ -100,8 +93,8 @@ final class PatchWork {
      * {@code StopSkipRules.stillStandingIn}.
      *
      * <p>A spent crop counts only where the stop replants, and only where picking is not
-     * the whole of what it offers: a bush or allotment between pickings is still working,
-     * and a compost bin is not ground. A stop that also checks health (fruit tree, calquat,
+     * the whole of what it offers: a bush or allotment between pickings is still working.
+     * A stop that also checks health (fruit tree, calquat,
      * celastrus) is judged as spent once its fruit is taken. Bushes and cacti check health as
      * well, but a picked one keeps growing, so it is never spent.
      *
@@ -117,13 +110,9 @@ final class PatchWork {
         if (seen.getCrop() == Crop.WEEDS) {
             return true;
         }
-        boolean pickingIsAllItOffers =
-                stop.getActions().contains(RunStop.StopAction.HARVEST)
-                        && (!stop.getActions().contains(RunStop.StopAction.CHECK_HEALTH)
-                                || growsAbushOrCactus(stop));
-        if (!stop.isPlanting()
-                || seen.getState() != CropState.HARVESTABLE
-                || pickingIsAllItOffers) {
+        boolean pickingIsAllItOffers = stop.getActions().contains(RunStop.StopAction.HARVEST)
+                        && (!stop.getActions().contains(RunStop.StopAction.CHECK_HEALTH) || growsAbushOrCactus(stop));
+        if (!stop.isPlanting() || seen.getState() != CropState.HARVESTABLE || pickingIsAllItOffers) {
             return false;
         }
         return at(seen, stop, nowEpochSec) == null;
@@ -145,16 +134,13 @@ final class PatchWork {
      * <p>Only where the next crop can go in: the player has the Farming level and is not
      * known to be out of its seed. Otherwise digging up a bearing bush gains nothing.
      */
-    static boolean comesOut(PatchPrediction seen, RunStop stop, FarmingPreferences prefs,
-            PlayerState player) {
-        if (seen == null || seen.getCrop() == null || seen.isIdle()
-                || seen.getCrop() == Crop.WEEDS || !growsAbushOrCactus(stop)
+    static boolean comesOut(PatchPrediction seen, RunStop stop, FarmingPreferences prefs, PlayerState player) {
+        if (seen == null || seen.getCrop() == null || seen.isIdle() || seen.getCrop() == Crop.WEEDS || !growsAbushOrCactus(stop)
                 || !stop.isFixedCrop() || !stop.isPlanting()) {
             return false;
         }
         CropState state = seen.getState();
-        if (state == CropState.DEAD || state == CropState.DISEASED
-                || StopSkipRules.isStillGrowing(seen)) {
+        if (state == CropState.DEAD || state == CropState.DISEASED || StopSkipRules.isStillGrowing(seen)) {
             return false;
         }
         if (FixedCrops.ticked(stop, prefs).isEmpty()) {
@@ -162,8 +148,7 @@ final class PatchWork {
         }
         Crop next = FixedCrops.cropFor(stop, prefs, player);
         CropData data = next == null ? null : CropData.forCrop(next);
-        return data != null && !FixedCrops.belowLevel(player, data)
-                && !SeedSelector.definitelyOutOf(next, player, data.getSeedsPerPatch());
+        return data != null && !FixedCrops.belowLevel(player, data) && !SeedSelector.definitelyOutOf(next, player, data.getSeedsPerPatch());
     }
 
     /**
@@ -180,48 +165,16 @@ final class PatchWork {
      * What a patch is waiting for, most urgent first. The order is the ranking readers
      * walk, so a diseased patch outranks a harvest at the same arrival.
      */
+    @AllArgsConstructor
     enum Act {
-        CURE("Cure the disease", "Cure %d diseased patches", null),
+        CURE("Cure"),
         // Not DIG_UP, which StopAction uses for taking a stump out after a check.
-        // A dead crop the player can revive with the Arceuus spell. Never answered by at(),
-        // which cannot see the player's spellbook: the row writer turns a CLEAR_DEAD into
-        // this when Resurrection offers the cast. A failed cast clears the patch, and the
-        // planting line that follows covers it.
-        RESURRECT("Cast Resurrect Crops on the dead crop",
-                "Cast Resurrect Crops on %d dead patches",
-                "Cast Resurrect Crops on the dead %s"),
-        CLEAR_DEAD("Dig up the dead crop", "Dig up %d dead patches", null),
-        KILL("Kill Hespori", "Kill Hespori in %d patches", null),
-        // The unnamed singulars guard against a caller without a crop name producing
-        // "Check 1 patches". "Patches", not "trees": bushes, cacti and grapes need checks too.
-        CHECK("Check the patch", "Check %d patches", "Check the %s"),
-        // Above the bin, because a bin keeps and a crop does not. A full bin and a ready
-        // allotment can share an arrival; this decides which the row leads with.
-        HARVEST("Harvest the patch", "Harvest %d patches", "Harvest the %s"),
-        EMPTY_BIN("Empty the compost bin", "Empty %d compost bins", null);
+        CLEAR_DEAD("Clear dead"),
+        KILL("Kill"),
+        CHECK("Check"),
+        HARVEST("Harvest");
 
-        private final String one;
-        private final String many;
-        private final String named;
-
-        Act(String one, String many, String named) {
-            this.one = one;
-            this.many = many;
-            this.named = named;
-        }
-
-        /**
-         * @param cropName the display name of the crop covering every patch of this act, or
-         *                 null when they differ; used only when the count is one
-         */
-        String word(int count, String cropName) {
-            if (count == 1 && named != null && cropName != null) {
-                return String.format(named, CropNames.inSentence(cropName));
-            }
-            if (count == 1 && one != null) {
-                return one;
-            }
-            return String.format(many, count);
-        }
+        /** The act as a row's leading verb; the row adds the crop and the patch count. */
+        final String verb;
     }
 }

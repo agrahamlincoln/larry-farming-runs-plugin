@@ -1,13 +1,8 @@
 package com.larryfarming.farming.model;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Value;
+import java.util.*;
+import java.util.function.Function;
+import lombok.*;
 
 /**
  * What a single travel rung asks of the player, as a boolean expression. Usually one
@@ -76,8 +71,7 @@ public class Requirement {
     /** Immutable; empty unless {@link #kind} is {@link Kind#ALL} or {@link Kind#ANY}. */
     List<Requirement> parts;
 
-    private static Requirement leaf(Kind kind, Capability capability, Destination destination,
-            PatchRef patch, Zone zone) {
+    private static Requirement leaf(Kind kind, Capability capability, Destination destination, PatchRef patch, Zone zone) {
         return new Requirement(kind, capability, destination, patch, zone, false, List.of());
     }
 
@@ -109,8 +103,7 @@ public class Requirement {
         if (destination == null) {
             throw new IllegalArgumentException("a destination requirement needs a destination");
         }
-        return new Requirement(Kind.DESTINATION, null, destination, null, null, true,
-                List.of());
+        return new Requirement(Kind.DESTINATION, null, destination, null, null, true, List.of());
     }
 
     public static Requirement reachedPatch(PatchRef patch) {
@@ -175,10 +168,7 @@ public class Requirement {
             changed |= after != each;
             granted.add(after);
         }
-        return changed
-                ? new Requirement(kind, capability, destination, patch, zone, bySwap,
-                        List.copyOf(granted))
-                : this;
+        return changed ? new Requirement(kind, capability, destination, patch, zone, bySwap, List.copyOf(granted)) : this;
     }
 
     /** Whether this expression, or any part of it, is exactly {@code other}. */
@@ -198,36 +188,7 @@ public class Requirement {
      * Every capability mentioned anywhere in this expression.
      */
     public Set<Capability> leafCapabilities() {
-        Set<Capability> found = new LinkedHashSet<>();
-        collectCapabilities(found);
-        return Collections.unmodifiableSet(found);
-    }
-
-    private void collectCapabilities(Set<Capability> into) {
-        if (kind == Kind.CAPABILITY) {
-            into.add(capability);
-            return;
-        }
-        for (Requirement part : parts) {
-            part.collectCapabilities(into);
-        }
-    }
-
-    /** Every place this expression asks the player to be able to reach. */
-    public Set<Destination> leafDestinations() {
-        Set<Destination> found = new LinkedHashSet<>();
-        collectDestinations(found);
-        return Collections.unmodifiableSet(found);
-    }
-
-    private void collectDestinations(Set<Destination> into) {
-        if (kind == Kind.DESTINATION) {
-            into.add(destination);
-            return;
-        }
-        for (Requirement part : parts) {
-            part.collectDestinations(into);
-        }
+        return leaves(Kind.CAPABILITY, Requirement::getCapability);
     }
 
     /**
@@ -235,39 +196,23 @@ public class Requirement {
      * where the trip has already put the player, which makes them free.
      */
     public Set<PatchRef> leafPatches() {
-        Set<PatchRef> found = new LinkedHashSet<>();
-        collectPatches(found);
+        return leaves(Kind.REACHED_PATCH, Requirement::getPatch);
+    }
+
+    /** What every leaf of this kind anywhere in this expression holds, first found first. */
+    public <T> Set<T> leaves(Kind leafKind, Function<Requirement, T> value) {
+        Set<T> found = new LinkedHashSet<>();
+        collect(leafKind, value, found);
         return Collections.unmodifiableSet(found);
     }
 
-    private void collectPatches(Set<PatchRef> into) {
-        if (kind == Kind.REACHED_PATCH) {
-            into.add(patch);
+    private <T> void collect(Kind leafKind, Function<Requirement, T> value, Set<T> into) {
+        if (kind == leafKind) {
+            into.add(value.apply(this));
             return;
         }
         for (Requirement part : parts) {
-            part.collectPatches(into);
-        }
-    }
-
-    /**
-     * Every place this expression asks the player to already be standing in. The planner
-     * withholds position-conditioned rungs from stops the player will reach later in the
-     * trip, since the player will not be standing there by then.
-     */
-    public Set<Zone> leafZones() {
-        Set<Zone> found = new LinkedHashSet<>();
-        collectZones(found);
-        return Collections.unmodifiableSet(found);
-    }
-
-    private void collectZones(Set<Zone> into) {
-        if (kind == Kind.STANDING_IN) {
-            into.add(zone);
-            return;
-        }
-        for (Requirement part : parts) {
-            part.collectZones(into);
+            part.collect(leafKind, value, into);
         }
     }
 
@@ -275,9 +220,8 @@ public class Requirement {
      * Whether anything in here can be answered from where the player is standing — either
      * a zone named outright, or a place whose ground is known.
      *
-     * <p>Answers what {@link #leafZones()} and {@link #leafDestinations()} answer together,
-     * without allocating. The planner calls this for every rung on every snapshot, so keep
-     * it allocation-free.
+     * <p>Answers what the zone and destination leaves answer together, without allocating,
+     * because the planner calls this for every rung on every snapshot.
      */
     public boolean readableFromPosition() {
         if (kind == Kind.STANDING_IN) {

@@ -1,24 +1,13 @@
 package com.larryfarming.farming.model;
 
-import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.engine.farming.PatchType;
-import java.util.ArrayList;
 import java.util.List;
-import lombok.Builder;
-import lombok.NonNull;
-import lombok.Singular;
-import lombok.Value;
+import lombok.*;
 
-/**
- * One repeatable farming activity: an ordered set of stops, what unlocks it, and the
- * crop whose growth sets its rhythm.
- */
+/** One repeatable farming activity: an ordered set of stops, and what unlocks it. */
 @Value
 @Builder
 public class FarmingRun {
-
-    /** Not crop-driven; {@link #cadenceSeconds()} returns this. */
-    public static final long NO_CROP_CADENCE = -1L;
 
     @NonNull
     RunId id;
@@ -28,15 +17,6 @@ public class FarmingRun {
 
     @NonNull
     UnlockGate unlock;
-
-    /**
-     * The crop that paces the run, or null when no crop decides when to go again.
-     * Cadence derives from this crop's grow time, so it cannot drift from the game's
-     * crop table.
-     *
-     * <p>Null for contracts and ultracompost, which wait on no crop.
-     */
-    Crop pacingCrop;
 
     /**
      * The town this run prefers its respawn point set to, or null when it has no
@@ -60,23 +40,4 @@ public class FarmingRun {
      * shared herb rotation. Stating both packs the same seed twice.
      */
     PatchType seedPatchType;
-
-    /**
-     * How long the pacing crop takes to finish growing, or {@link #NO_CROP_CADENCE}
-     * when this run is not paced by a crop at all.
-     */
-    public long cadenceSeconds() {
-        return pacingCrop == null ? NO_CROP_CADENCE : pacingCrop.totalGrowSeconds();
-    }
-
-    /** The stops that make up the route proper, excluding the woven-in extras. */
-    public List<RunStop> requiredStops() {
-        List<RunStop> required = new ArrayList<>();
-        for (RunStop stop : stops) {
-            if (!stop.isOptional()) {
-                required.add(stop);
-            }
-        }
-        return required;
-    }
 }

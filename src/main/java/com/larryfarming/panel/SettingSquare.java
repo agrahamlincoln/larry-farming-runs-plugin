@@ -1,16 +1,7 @@
 package com.larryfarming.panel;
 
-import java.awt.AlphaComposite;
-import java.awt.Color;
-import java.awt.Composite;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
-import javax.swing.BorderFactory;
-import javax.swing.ImageIcon;
-import javax.swing.JPanel;
+import java.awt.*;
+import javax.swing.*;
 import javax.swing.border.Border;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
@@ -24,19 +15,17 @@ import net.runelite.client.ui.FontManager;
  * faint, with a padlock and the level it needs. Missing, for an item the player does not own,
  * draws it grey with no padlock and stays clickable; off as well draws it grey and faint.
  *
- * <p>Every setting grid on the tab uses this one square, so on and off read the same in each.
+ * <p>Every setting grid in the panel uses this one square, so on and off read the same in each.
  *
  * <p>The states change in place, so a click shows at once without waiting for the re-plan
  * that follows it.
  */
 class SettingSquare extends JPanel
 {
-	/** How strongly an unticked sprite shows. */
-	private static final AlphaComposite DIM =
-		AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.35f);
+	/** How strongly an unticked sprite shows, and any other faint icon. */
+	static final AlphaComposite DIM = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.35f);
 	/** The tag fades less than the sprite, so it stays readable. */
-	private static final AlphaComposite DIM_TAG =
-		AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.45f);
+	private static final AlphaComposite DIM_TAG = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.45f);
 
 	private static final Color COLOR_TAG = Color.WHITE;
 	private static final Color COLOR_SHADOW = Color.BLACK;
@@ -45,8 +34,7 @@ class SettingSquare extends JPanel
 	private static final Color COLOR_LOCK_BACK = new Color(0, 0, 0, 160);
 
 	private static final Border PLAIN_BORDER = BorderFactory.createEmptyBorder(1, 1, 1, 1);
-	private static final Border ON_BORDER =
-		BorderFactory.createLineBorder(ColorScheme.PROGRESS_COMPLETE_COLOR);
+	private static final Border ON_BORDER = BorderFactory.createLineBorder(ColorScheme.PROGRESS_COMPLETE_COLOR);
 
 	private final ImageIcon sprite;
 	private final ImageIcon greySprite;
@@ -60,8 +48,7 @@ class SettingSquare extends JPanel
 	 * @param greySprite the sprite drained of colour, drawn while locked or missing
 	 * @param missing    true for an item the player does not own
 	 */
-	SettingSquare(ImageIcon sprite, ImageIcon greySprite, String tag, int level,
-		boolean locked, boolean on, boolean missing)
+	SettingSquare(ImageIcon sprite, ImageIcon greySprite, String tag, int level, boolean locked, boolean on, boolean missing)
 	{
 		this.sprite = sprite;
 		this.greySprite = greySprite;
@@ -142,9 +129,7 @@ class SettingSquare extends JPanel
 				{
 					g2.setComposite(DIM);
 				}
-				shown.paintIcon(this, g2,
-					(getWidth() - shown.getIconWidth()) / 2,
-					(getHeight() - shown.getIconHeight()) / 2);
+				shown.paintIcon(this, g2, (getWidth() - shown.getIconWidth()) / 2, (getHeight() - shown.getIconHeight()) / 2);
 				g2.setComposite(full);
 			}
 			g2.setFont(getFont());

@@ -4,17 +4,10 @@ import com.larryfarming.engine.ItemCounts;
 import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.engine.farming.PatchType;
 import com.larryfarming.farming.catalogue.CropData;
-import com.larryfarming.farming.model.FarmingPreferences;
-import com.larryfarming.farming.model.Preset;
-import com.larryfarming.farming.model.SeedPolicy;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.model.Skill;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Picks the seeds a herb run plants, from the tier list and what the player owns.
@@ -50,23 +43,6 @@ public final class SeedSelector {
     }
 
     /**
-     * Both ends of the rotation for one run drawing alone, filled from one reading of the
-     * stock.
-     *
-     * <p>Together because the ends compete for the same seeds: allocating them apart would
-     * hand the same stack to both. Counting stacks once also matters, since this runs on
-     * every game event. A run walked with others draws through {@link #rotationStock}.
-     *
-     * @param goodPatches how many of the run's best patches take the better seeds
-     * @param badPatches  how many patches take the filler
-     */
-    public static SeedPlan select(SeedPolicy policy, FarmingPreferences prefs,
-            PlayerState state, int goodPatches, int badPatches) {
-        return select(policy, prefs, state, goodPatches, badPatches,
-                rotationStock(policy, prefs, state));
-    }
-
-    /**
      * The rotation's seeds, counted once so several runs can draw on them in turn.
      *
      * <p>A trip can walk several families that draw on the herb rotation. Passing this one
@@ -76,13 +52,15 @@ public final class SeedSelector {
      * <p>Package-private with its overload of {@code select}: the shared stock belongs to one
      * trip's planning.
      */
-    static Stock rotationStock(SeedPolicy policy, FarmingPreferences prefs,
-            PlayerState state) {
+    static Stock rotationStock(SeedPolicy policy, FarmingPreferences prefs, PlayerState state) {
         return stockOf(state, herbWindow(policy, prefs));
     }
 
     /**
-     * The rotation's split, drawn against a stock the caller owns.
+     * Both ends of the rotation for one run, drawn against a stock the caller owns.
+     *
+     * <p>Together because the ends compete for the same seeds: allocating them apart would
+     * hand the same stack to both.
      *
      * <p><b>Carried seeds are the player's choice only when they cover the run.</b> A player
      * who brings enough herb seeds for every patch to fill has chosen what to plant, and
@@ -103,12 +81,10 @@ public final class SeedSelector {
      *     Must come from {@link #rotationStock} on the same policy and preferences; a stock
      *     built from another pair reads as empty
      */
-    static SeedPlan select(SeedPolicy policy, FarmingPreferences prefs,
-            PlayerState state, int goodPatches, int badPatches, Stock stock) {
+    static SeedPlan select(SeedPolicy policy, FarmingPreferences prefs, PlayerState state, int goodPatches, int badPatches, Stock stock) {
         List<Crop> window = herbWindow(policy, prefs);
         boolean confident = seedsSeen(state);
-        List<Map<Crop, Integer>> sources = stock.carriedCovers(goodPatches + badPatches)
-                ? stock.carriedOnly() : stock.carriedFirst();
+        List<Map<Crop, Integer>> sources = stock.carriedCovers(goodPatches + badPatches) ? stock.carriedOnly() : stock.carriedFirst();
 
         // The good end draws first, so the best seeds go where the yield bonus applies. It
         // walks crop by crop over every source, so a carried seed never outranks a better
@@ -136,8 +112,7 @@ public final class SeedSelector {
         good.sort(byRank);
         bad.sort(byRank);
 
-        return new SeedPlan(
-                new SeedAllocation(List.copyOf(good), goodPatches, confident),
+        return new SeedPlan(new SeedAllocation(List.copyOf(good), goodPatches, confident),
                 new SeedAllocation(List.copyOf(bad), badPatches, confident));
     }
 
@@ -149,8 +124,7 @@ public final class SeedSelector {
      * missing tick. Nor is a herb the preset keeps for contracts (torstol): carried, it is
      * most likely bound for one, and the note would push against the preset's own advice.
      */
-    public static List<Crop> carriedButUnticked(SeedPolicy policy, FarmingPreferences prefs,
-            PlayerState state) {
+    public static List<Crop> carriedButUnticked(SeedPolicy policy, FarmingPreferences prefs, PlayerState state) {
         List<Crop> unticked = new ArrayList<>();
         for (Crop crop : policy.getHerbTierList()) {
             if (!FarmingPreferences.HERB_CHOICES.contains(crop) || prefs.allows(crop)
@@ -159,8 +133,7 @@ public final class SeedSelector {
             }
             CropData data = CropData.forCrop(crop);
             // plantableCount reads zero for a crop above the player's level.
-            if (data != null && plantableCount(state, crop) > 0
-                    && carriedStock(state, data) > 0) {
+            if (data != null && plantableCount(state, crop) > 0 && formsHeld(state, data, true) > 0) {
                 unticked.add(crop);
             }
         }
@@ -178,36 +151,22 @@ public final class SeedSelector {
      * <p>Everything goes on the filler end: tree runs have no yield-bonus patches to hold
      * a better seed back for.
      *
-     * @param patches how many patches this run is actually planting in today
-     */
-    public static SeedPlan forPreference(FarmingPreferences prefs, PatchType seedPatchType,
-            PlayerState state, int patches) {
-        return forPreference(prefs, seedPatchType, state, patches, Set.of());
-    }
-
-    /**
-     * The same, with some crops kept off the ladder because a diary keeps them for one
-     * patch (see {@link DiaryPlantings}). That patch takes its crop outside this plan.
+     * <p>Some crops are kept off the ladder because a diary keeps them for one patch (see
+     * {@link DiaryPlantings}). That patch takes its crop outside this plan.
      *
      * @param patches how many patches draw on the ladder, so without the claimed patch
      */
-    static SeedPlan forPreference(FarmingPreferences prefs, PatchType seedPatchType,
-            PlayerState state, int patches, Set<Crop> withheld) {
+    static SeedPlan forPreference(FarmingPreferences prefs, PatchType seedPatchType, PlayerState state, int patches, Set<Crop> withheld) {
         List<Crop> ladder = new ArrayList<>(plantingLadder(prefs, seedPatchType));
         ladder.removeAll(withheld);
         Map<Crop, Integer> stock = new EnumMap<>(Crop.class);
-        for (Crop crop : ladder) {
-            stock.put(crop, plantableCount(state, crop));
-        }
-
         List<Crop> chosen = new ArrayList<>();
         for (Crop crop : ladder) {
+            stock.put(crop, plantableCount(state, crop));
             take(crop, stock, chosen, patches);
         }
-
-        return new SeedPlan(
-                new SeedAllocation(List.of(), 0, seedsSeen(state)),
-                new SeedAllocation(List.copyOf(chosen), patches, seedsSeen(state)));
+        boolean seen = seedsSeen(state);
+        return new SeedPlan(new SeedAllocation(List.of(), 0, seen), new SeedAllocation(List.copyOf(chosen), patches, seen));
     }
 
     /**
@@ -236,8 +195,7 @@ public final class SeedSelector {
      * {@link CropData#plantableIn}: the rotation ranks by experience and {@code plantableIn}
      * by level.
      */
-    public static List<Crop> plantableFrom(SeedPolicy policy, FarmingPreferences prefs,
-            PatchType seedPatchType, PatchType type) {
+    public static List<Crop> plantableFrom(SeedPolicy policy, FarmingPreferences prefs, PatchType seedPatchType, PatchType type) {
         if (seedPatchType != null) {
             return plantingLadder(prefs, seedPatchType);
         }
@@ -269,8 +227,7 @@ public final class SeedSelector {
      * @param needed how many one patch swallows, so an allotment's three is not read as
      *               three separate plantings' worth
      */
-    public static boolean definitelyOutOfAll(List<Crop> crops, PlayerState state,
-            int needed) {
+    public static boolean definitelyOutOfAll(List<Crop> crops, PlayerState state, int needed) {
         if (!seedsSeen(state)) {
             return false;
         }
@@ -291,7 +248,7 @@ public final class SeedSelector {
      * @param needed how many the patch swallows, since an allotment wants three
      */
     public static boolean definitelyOutOf(Crop crop, PlayerState state, int needed) {
-        return seedsSeen(state) && plantableCount(state, crop) < needed;
+        return definitelyOutOfAll(List.of(crop), state, needed);
     }
 
     /**
@@ -301,10 +258,8 @@ public final class SeedSelector {
      * and the seed vault once the player can enter the Farming Guild at
      * {@value #FARMING_GUILD_LEVEL}.
      */
-    static int plantableAcross(FarmingPreferences prefs, PatchType seedPatchType,
-            PlayerState state) {
-        if (state == null || state.getBankLastSeen() == null
-                || state.getSeedVaultLastSeen() == null
+    static int plantableAcross(FarmingPreferences prefs, PatchType seedPatchType, PlayerState state) {
+        if (state == null || state.getBankLastSeen() == null || state.getSeedVaultLastSeen() == null
                         && state.getSkillLevel(Skill.FARMING) >= FARMING_GUILD_LEVEL) {
             return -1;
         }
@@ -317,7 +272,7 @@ public final class SeedSelector {
 
     /** Whether the player owns at least one of this crop's planting forms and can plant it. */
     static boolean holdsAny(Crop crop, PlayerState state) {
-        return plantableCount(state, crop) > 0;
+        return knownToHold(crop, state, 1);
     }
 
     /**
@@ -334,31 +289,30 @@ public final class SeedSelector {
     /** How many of this crop the player could put in the ground right now. */
     private static int plantableCount(PlayerState state, Crop crop) {
         CropData data = CropData.forCrop(crop);
-        if (data == null || state == null
-                || state.getSkillLevel(Skill.FARMING) < data.getFarmingLevel()) {
+        if (data == null || state == null || state.getSkillLevel(Skill.FARMING) < data.getFarmingLevel()) {
             return 0;
         }
-        return plantableStock(state, data);
+        return formsHeld(state, data, false);
     }
 
     /**
-     * The planting stock for one crop, counting every form it comes in.
+     * The planting stock for one crop, owned or only carried, counting every form it comes
+     * in.
      *
      * <p>A tree patch takes a sapling, which players usually prepare at the bank from a
      * seed, through seedling stages in between. Every form fills a patch, so the forms are
      * summed.
      */
-    private static int plantableStock(PlayerState state, CropData data) {
+    private static int formsHeld(PlayerState state, CropData data, boolean carriedOnly) {
         int stock = 0;
         for (int itemId : data.getPlantingForms()) {
-            stock += ItemCounts.countOwned(state, itemId, null);
+            stock += carriedOnly ? ItemCounts.countCarried(state, itemId, null) : ItemCounts.countOwned(state, itemId, null);
         }
         return stock;
     }
 
     /** Moves as many seeds of this crop into the allocation as it can still use. */
-    private static void take(Crop crop, Map<Crop, Integer> stock, List<Crop> into,
-            int wanted) {
+    private static void take(Crop crop, Map<Crop, Integer> stock, List<Crop> into, int wanted) {
         Integer available = stock.get(crop);
         if (available == null || available <= 0) {
             return;
@@ -379,19 +333,9 @@ public final class SeedSelector {
             CropData data = CropData.forCrop(crop);
             // Capped at what is owned: the two counts read different containers, and a
             // carried seed is never one the player does not own.
-            int carried = held == 0 || data == null ? 0
-                    : Math.min(held, carriedStock(state, data));
+            int carried = held == 0 || data == null ? 0 : Math.min(held, formsHeld(state, data, true));
             stock.carried.put(crop, carried);
             stock.elsewhere.put(crop, held - carried);
-        }
-        return stock;
-    }
-
-    /** How many of this crop's planting forms the player has on them right now. */
-    private static int carriedStock(PlayerState state, CropData data) {
-        int stock = 0;
-        for (int itemId : data.getPlantingForms()) {
-            stock += ItemCounts.countCarried(state, itemId, null);
         }
         return stock;
     }
@@ -411,23 +355,6 @@ public final class SeedSelector {
         private final Map<Crop, Integer> elsewhere = new EnumMap<>(Crop.class);
 
         private Stock() {
-        }
-
-        /**
-         * A separate copy of this stock with every seed counted as owned elsewhere, so
-         * {@link #select} ranks it as the default rotation would for a player carrying nothing.
-         *
-         * <p>A copy so the recommendation can draw down its own seeds across a trip's
-         * families without spending the ones the real plan is allocating from.
-         */
-        Stock withNothingCarried() {
-            Stock copy = new Stock();
-            for (Map.Entry<Crop, Integer> held : elsewhere.entrySet()) {
-                copy.carried.put(held.getKey(), 0);
-                copy.elsewhere.put(held.getKey(),
-                        held.getValue() + carried.getOrDefault(held.getKey(), 0));
-            }
-            return copy;
         }
 
         /** The two halves in the order the rotation draws from them. */
@@ -480,8 +407,7 @@ public final class SeedSelector {
      * only in the box is not told to open a vault.
      */
     private static boolean seedsSeen(PlayerState state) {
-        return state != null
-                && (state.getSeedVaultLastSeen() != null || state.getBankLastSeen() != null
+        return state != null && (state.getSeedVaultLastSeen() != null || state.getBankLastSeen() != null
                         || state.getSeedBoxLastSeen() != null);
     }
 }

@@ -37,8 +37,7 @@ public class FarmingAdvisorInfoBox extends InfoBox {
      * @param runs supplies every run and its status, best first; the same list the
      *             side panel draws, so the two agree about what is due
      */
-    public FarmingAdvisorInfoBox(BufferedImage image, Plugin plugin,
-                                 Supplier<List<FarmingRunStatus>> runs) {
+    public FarmingAdvisorInfoBox(BufferedImage image, Plugin plugin, Supplier<List<FarmingRunStatus>> runs) {
         super(image, plugin);
         this.runs = runs;
         // Right-clicking the box opens the side panel.
@@ -92,19 +91,21 @@ public class FarmingAdvisorInfoBox extends InfoBox {
 
         StringBuilder tooltip = new StringBuilder("Farming");
         for (FarmingRunStatus run : due) {
-            tooltip.append("</br>").append(run.getRunName());
-            if (run.getDetail() != null && !run.getDetail().isEmpty()) {
-                tooltip.append(" — ").append(run.getDetail());
-            }
+            appendLine(tooltip, "", run, " — ");
         }
         FarmingRunStatus next = soonest(current);
         if (next != null) {
-            tooltip.append("</br>Next: ").append(next.getRunName());
-            if (next.getDetail() != null && !next.getDetail().isEmpty()) {
-                tooltip.append(" ").append(next.getDetail());
-            }
+            appendLine(tooltip, "Next: ", next, " ");
         }
         tooltipCache = tooltip.toString();
+    }
+
+    /** A tooltip line: the run's name, then its detail after {@code gap} when it has one. */
+    private static void appendLine(StringBuilder tooltip, String lead, FarmingRunStatus run, String gap) {
+        tooltip.append("</br>").append(lead).append(run.getRunName());
+        if (run.getDetail() != null && !run.getDetail().isEmpty()) {
+            tooltip.append(gap).append(run.getDetail());
+        }
     }
 
     private static List<FarmingRunStatus> due(List<FarmingRunStatus> runs) {

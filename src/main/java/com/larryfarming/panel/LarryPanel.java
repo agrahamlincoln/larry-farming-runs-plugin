@@ -2,17 +2,8 @@ package com.larryfarming.panel;
 
 import com.larryfarming.farming.FarmingPlanner;
 import com.larryfarming.snapshot.FarmingAdvice;
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Rectangle;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.SwingUtilities;
-import javax.swing.Timer;
+import java.awt.*;
+import javax.swing.*;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
 
@@ -53,9 +44,6 @@ public class LarryPanel extends PluginPanel
 	/** The advice on screen, re-shown by the ticker. EDT only. */
 	private FarmingAdvice shown;
 
-	/** What "Report a problem" does; null hides nothing, the button just does nothing. */
-	private volatile ReportActions reportActions;
-
 	public LarryPanel(FarmingPanel farmingPanel)
 	{
 		super(false);
@@ -64,7 +52,7 @@ public class LarryPanel extends PluginPanel
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 
 		farmingPanel.setAlignmentX(LEFT_ALIGNMENT);
-		JScrollPane scroll = new JScrollPane(wrapForScrolling(farmingPanel, reportRow()));
+		JScrollPane scroll = new JScrollPane(wrapForScrolling(farmingPanel));
 		scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
 		scroll.setBorder(BorderFactory.createEmptyBorder());
@@ -87,37 +75,6 @@ public class LarryPanel extends PluginPanel
 	public void setIconProvider(IconProvider iconProvider)
 	{
 		this.iconProvider = iconProvider;
-	}
-
-	/** What the "Report a problem" button does. */
-	public void setReportActions(ReportActions actions)
-	{
-		this.reportActions = actions;
-	}
-
-	/**
-	 * The foot of the tab: "Report a problem", under everything else, logged in or out. Rare,
-	 * so it sits below the settings, but always visible: the tab hides no controls.
-	 */
-	private JPanel reportRow()
-	{
-		JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-		row.setOpaque(false);
-		row.setAlignmentX(LEFT_ALIGNMENT);
-		// The farming panel's own 8px inset, so the button lines up with the tab above it.
-		row.setBorder(BorderFactory.createEmptyBorder(4, 8, 10, 8));
-		SmallButton report = new SmallButton("Report a problem");
-		report.addActionListener(e ->
-		{
-			ReportActions actions = reportActions;
-			if (actions != null)
-			{
-				ReportDialog.open(this, actions);
-			}
-		});
-		row.add(report);
-		row.setMaximumSize(new Dimension(Short.MAX_VALUE, row.getPreferredSize().height));
-		return row;
 	}
 
 	/**
@@ -208,13 +165,12 @@ public class LarryPanel extends PluginPanel
 	 * Packs a panel to the top of its scroll pane at a fixed width, so wrapping text
 	 * knows where to break and short content does not stretch to fill the viewport.
 	 */
-	private static JPanel wrapForScrolling(JPanel content, JPanel foot)
+	private static JPanel wrapForScrolling(JPanel content)
 	{
 		JPanel fixedWidth = new FixedWidthPanel();
 		fixedWidth.setLayout(new BoxLayout(fixedWidth, BoxLayout.Y_AXIS));
 		fixedWidth.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		fixedWidth.add(content);
-		fixedWidth.add(foot);
 
 		JPanel northWrapper = new ScrollAnchoredPanel();
 		northWrapper.setBackground(ColorScheme.DARK_GRAY_COLOR);

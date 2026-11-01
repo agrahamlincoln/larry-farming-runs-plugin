@@ -30,8 +30,7 @@ final class LookOnce {
             stores.add("bank");
         }
         // An unread level never asks: getSkillLevel answers 1 for it.
-        if (state.getSeedVaultLastSeen() == null
-                && state.getSkillLevel(Skill.FARMING) >= SeedSelector.FARMING_GUILD_LEVEL) {
+        if (state.getSeedVaultLastSeen() == null && state.getSkillLevel(Skill.FARMING) >= SeedSelector.FARMING_GUILD_LEVEL) {
             stores.add("seed vault");
         }
         if (Boolean.TRUE.equals(HouseLocation.ownsHouse(state.getVarbits())) && house != null) {
@@ -44,15 +43,12 @@ final class LookOnce {
         if (stores.isEmpty()) {
             return "";
         }
-        return "Check your " + listed(stores) + ".";
+        return "Check your " + joined(stores, "and") + ".";
     }
 
-    /** "bank", "bank and house", "bank, seed vault and house". */
-    private static String listed(List<String> stores) {
-        if (stores.size() == 1) {
-            return stores.get(0);
-        }
-        String last = stores.get(stores.size() - 1);
-        return String.join(", ", stores.subList(0, stores.size() - 1)) + " and " + last;
+    /** "bank", "bank and house", "bank, seed vault and house", with {@code and} as given. */
+    static String joined(List<String> names, String and) {
+        int last = names.size() - 1;
+        return last == 0 ? names.get(0) : String.join(", ", names.subList(0, last)) + " " + and + " " + names.get(last);
     }
 }

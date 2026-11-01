@@ -24,15 +24,8 @@ final class FixedCrops {
 
     /**
      * The stop's crops the player has ticked, best first. Empty silences the stop.
-     *
-     * <p>An allotment feeding a bin grows its crop whatever the crop switches say: the
-     * watermelon switch belongs to the Catherby allotment's snape grass, and the bin's own
-     * switches decide whether the allotment is worked.
      */
     static List<Crop> ticked(RunStop stop, FarmingPreferences prefs) {
-        if (stop.feedsAbin()) {
-            return List.of(stop.getFixedCrop());
-        }
         List<Crop> ticked = new ArrayList<>();
         for (Crop crop : FarmingCatalogue.cropChoices(stop)) {
             if (prefs.allows(crop)) {
@@ -50,19 +43,17 @@ final class FixedCrops {
      * names the seed to fetch. With none growable, the lowest-level ticked crop, so its level
      * skip names the level to reach (see {@link #belowLevel}). Null only for a stop with
      * nothing ticked, which the planting gate silences.
-     *
-     * <p>The anima plants are tried in {@link AnimaChoice}'s order instead, since one plant
-     * is not better than another for every player.
      */
     static Crop cropFor(RunStop stop, FarmingPreferences prefs, PlayerState state) {
-        List<Crop> ticked = AnimaChoice.ranked(ticked(stop, prefs), stop, state);
+        List<Crop> ticked = ticked(stop, prefs);
         if (ticked.isEmpty()) {
             return null;
         }
         Crop growable = null;
         for (Crop crop : ticked) {
             CropData data = CropData.forCrop(crop);
-            if (data == null || !canGrow(state, data)) {
+            // An unread Farming level grows anything, so it never moves the choice.
+            if (data == null || belowLevel(state, data)) {
                 continue;
             }
             if (!SeedSelector.definitelyOutOf(crop, state, data.getSeedsPerPatch())) {
@@ -83,18 +74,12 @@ final class FixedCrops {
         return crop != null && FarmingCatalogue.cropChoices(stop).contains(crop);
     }
 
-    /** An unread Farming level grows anything, so an unread level never moves the choice. */
-    private static boolean canGrow(PlayerState state, CropData data) {
-        return !belowLevel(state, data);
-    }
-
     /**
      * Whether the player's Farming level is known and short of this crop's. An unread level
      * is never short, so it never skips a stop.
      */
     static boolean belowLevel(PlayerState state, CropData data) {
-        if (state == null || state.getSkills() == null
-                || !state.getSkills().containsKey(Skill.FARMING)) {
+        if (state == null || state.getSkills() == null || !state.getSkills().containsKey(Skill.FARMING)) {
             return false;
         }
         return state.getSkillLevel(Skill.FARMING) < data.getFarmingLevel();

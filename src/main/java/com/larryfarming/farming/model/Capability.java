@@ -1,6 +1,8 @@
 package com.larryfarming.farming.model;
 
+import com.larryfarming.data.Tables;
 import java.util.Collection;
+import lombok.Getter;
 
 /**
  * Something a player can or cannot do, referenced by the ordered travel chains in
@@ -12,6 +14,7 @@ import java.util.Collection;
  * route requires, and the detection layer answers it against game state, so improving
  * detection never forces an edit to the catalogue. {@link Detectability} is the
  * exception, because whether a capability is observable at all is a property of the thing.
+ * Each constant's attributes come from the capabilities table.
  *
  * <p>Some capabilities are rationed per day: an Explorer's ring 2 teleports to the Falador
  * cabbage patch three times a day, an Ardougne cloak 2 three times and a cloak 3 five, and
@@ -21,6 +24,7 @@ import java.util.Collection;
  * <p>Charge counts on rechargeable items are not modelled: item IDs distinguish "holds a
  * charged one" but never "has two left", and no daily reset gives a count to start from.
  */
+@Getter
 public enum Capability {
 
     // --- Achievement diary reward items -------------------------------------
@@ -30,75 +34,73 @@ public enum Capability {
     // seen, while the diary flag is readable from login.
     // Ardougne cloak 1 matters only for its Monastery teleport, which lands beside a fairy
     // ring.
-    ARDOUGNE_CLOAK_1("Ardougne cloak 1", Detectability.VARBIT, TierFamily.ARDOUGNE_CLOAK, 1),
-    ARDOUGNE_CLOAK_2("Ardougne cloak 2", Detectability.VARBIT, 3, TierFamily.ARDOUGNE_CLOAK, 2),
-    ARDOUGNE_CLOAK_3("Ardougne cloak 3", Detectability.VARBIT, 5, TierFamily.ARDOUGNE_CLOAK, 3),
-    ARDOUGNE_CLOAK_4("Ardougne cloak 4", Detectability.VARBIT, TierFamily.ARDOUGNE_CLOAK, 4),
-    EXPLORERS_RING_2("Explorer's ring 2", Detectability.VARBIT, 3, TierFamily.EXPLORERS_RING, 2),
-    EXPLORERS_RING_3("Explorer's ring 3", Detectability.VARBIT, TierFamily.EXPLORERS_RING, 3),
-    EXPLORERS_RING_4("Explorer's ring 4", Detectability.VARBIT, TierFamily.EXPLORERS_RING, 4),
-    DIARY_CAPE("Achievement diary cape", Detectability.ITEM),
+    ARDOUGNE_CLOAK_1,
+    ARDOUGNE_CLOAK_2,
+    ARDOUGNE_CLOAK_3,
+    ARDOUGNE_CLOAK_4,
+    EXPLORERS_RING_2,
+    EXPLORERS_RING_3,
+    EXPLORERS_RING_4,
+    DIARY_CAPE,
     /**
      * The medium Varrock diary. Its reward adds the Grand Exchange as a second landing for
      * the Varrock Teleport spell and tablet, which the player picks per cast. Read from the
      * diary flag, since no item carries it.
      */
-    VARROCK_DIARY_MEDIUM("Medium Varrock diary", Detectability.VARBIT),
+    VARROCK_DIARY_MEDIUM,
 
     // --- Skill capes --------------------------------------------------------
-    FARMING_CAPE("Farming cape", Detectability.ITEM),
-    CONSTRUCTION_CAPE("Construction cape", Detectability.ITEM),
-    HUNTER_CAPE("Hunter cape", Detectability.ITEM),
-    FISHING_CAPE("Fishing cape", Detectability.ITEM),
-    QUEST_CAPE("Quest point cape", Detectability.ITEM),
+    FARMING_CAPE,
+    CONSTRUCTION_CAPE,
+    HUNTER_CAPE,
+    FISHING_CAPE,
+    QUEST_CAPE,
 
     // --- Jewellery and charged teleport items -------------------------------
-    SKILLS_NECKLACE("Skills necklace", Detectability.ITEM),
-    GAMES_NECKLACE("Games necklace", Detectability.ITEM),
-    COMBAT_BRACELET("Combat bracelet", Detectability.ITEM),
-    RING_OF_DUELING("Ring of dueling", Detectability.ITEM),
-    RING_OF_WEALTH("Ring of wealth", Detectability.ITEM),
-    RING_OF_THE_ELEMENTS("Ring of the elements", Detectability.ITEM),
-    SLAYER_RING("Slayer ring", Detectability.ITEM),
-    ROYAL_SEED_POD("Royal seed pod", Detectability.ITEM),
-    XERICS_TALISMAN("Xeric's talisman", Detectability.ITEM),
+    SKILLS_NECKLACE,
+    GAMES_NECKLACE,
+    COMBAT_BRACELET,
+    RING_OF_DUELING,
+    RING_OF_WEALTH,
+    RING_OF_THE_ELEMENTS,
+    SLAYER_RING,
+    ROYAL_SEED_POD,
+    XERICS_TALISMAN,
     /**
      * Kharedst's memoirs with its Lunch by the Lancalliums page added and a charge left.
      * The page and the charges are the player's varbits, not the book's.
      */
-    KHAREDSTS_MEMOIRS("Kharedst's memoirs", Detectability.ITEM),
+    KHAREDSTS_MEMOIRS,
     /** The memoirs' upgrade from A Kingdom Divided, with the same page and charges. */
-    BOOK_OF_THE_DEAD("Book of the Dead", Detectability.ITEM),
-    DIGSITE_PENDANT("Digsite pendant", Detectability.ITEM),
-    TELEPORT_CRYSTAL("Teleport crystal", Detectability.ITEM),
-    CHRONICLE("Chronicle", Detectability.ITEM),
+    BOOK_OF_THE_DEAD,
+    DIGSITE_PENDANT,
+    TELEPORT_CRYSTAL,
+    CHRONICLE,
     /**
      * Ghosts Ahoy's reward, which teleports to the Ectofuntus and refills there on landing,
      * so it never runs out. The empty one is not a route: it must be refilled at the
      * Ectofuntus first.
      */
-    ECTOPHIAL("Ectophial", Detectability.ITEM),
+    ECTOPHIAL,
 
     // --- Consumable teleports ------------------------------------------------
-    ICY_BASALT("Icy basalt", Detectability.ITEM),
-    STONY_BASALT("Stony basalt", Detectability.ITEM),
-    MOKHAIOTL_WAYSTONE("Mokhaiotl waystone", Detectability.ITEM),
+    ICY_BASALT,
+    STONY_BASALT,
+    MOKHAIOTL_WAYSTONE,
 
     /**
      * A redirected house tab: a teleport-to-house tablet with a scroll of
      * redirection used on it, open to a player housed anywhere. It lands where
      * {@link #POH_IN_BRIMHAVEN} does, with different unlocks and costs.
      */
-    BRIMHAVEN_TABLET("Brimhaven teleport tablet", Detectability.ITEM),
+    BRIMHAVEN_TABLET,
 
     // --- Spells --------------------------------------------------------------
     // Teleports to a fixed place are not capabilities: a tablet and a spell to the same
     // spot are one requirement, expressed as a Destination. Respawn Teleport stays here
     // because it lands at a setting rather than a place.
-    RESPAWN_TELEPORT("Respawn Teleport", Detectability.VARBIT),
-    HUMIDIFY("Humidify", Detectability.VARBIT),
-    FERTILE_SOIL("Fertile Soil", Detectability.VARBIT),
-    RESURRECT_CROP("Resurrect Crops", Detectability.VARBIT),
+    RESPAWN_TELEPORT,
+    FERTILE_SOIL,
 
     /**
      * Where the player respawns, which decides where Respawn Teleport lands. The default
@@ -108,25 +110,25 @@ public enum Capability {
      * the flags by town ({@code CAMELOT_SPAWN}, {@code FALADOR_SPAWN}), so search for
      * {@code _SPAWN}, not {@code RESPAWN}.
      */
-    RESPAWN_AVAILABLE_CAMELOT("Camelot respawn point", Detectability.VARBIT),
-    RESPAWN_AVAILABLE_FALADOR("Falador respawn point", Detectability.VARBIT),
+    RESPAWN_AVAILABLE_CAMELOT,
+    RESPAWN_AVAILABLE_FALADOR,
 
     // --- Transport networks --------------------------------------------------
     // Fairy-ring codes and glider stations are instruction text, not capabilities: the
     // player has or lacks access to the network.
-    FAIRY_RINGS("Fairy rings", Detectability.VARBIT),
+    FAIRY_RINGS,
     /**
      * Using a fairy ring without a staff. Fairytale I and the Fairy Godfather's permission
      * in Fairytale II open the rings, but until the elite Lumbridge &amp; Draynor diary is
      * finished every trip needs a dramen or lunar staff wielded.
      */
-    STAFFLESS_FAIRY_RINGS("Fairy rings without a staff", Detectability.VARBIT),
+    STAFFLESS_FAIRY_RINGS,
     /**
      * The three Varlamore ring codes, which the rest of the network does not open. Each
      * requires having travelled to Civitas illa Fortis via Regulus Cento after Children of
      * the Sun.
      */
-    VARLAMORE_FAIRY_RINGS("Varlamore fairy rings", Detectability.VARBIT),
+    VARLAMORE_FAIRY_RINGS,
     /**
      * Reaching Varlamore at all. Every route in (charter ships, fairy rings, spells,
      * quetzals) works only once Children of the Sun is done and Regulus Cento has carried
@@ -135,8 +137,8 @@ public enum Capability {
      * <p>The bottom of every Varlamore chain: without it the run drops the patch rather
      * than inventing a route.
      */
-    VARLAMORE_ACCESS("Access to Varlamore", Detectability.VARBIT),
-    GNOME_GLIDER("Gnome glider", Detectability.VARBIT),
+    VARLAMORE_ACCESS,
+    GNOME_GLIDER,
     /**
      * One balloon station. Flights are gated per station: Enlightened Journey opens only
      * Entrana-to-Taverley, and each other station opens by flying to it from Entrana once.
@@ -152,42 +154,42 @@ public enum Capability {
      * <p>Only stations the runs use are named. Entrana and the Crafting Guild have varbits
      * too ({@code ZEP_MULTI_BASKET}, {@code ZEP_MULTI_CRAFT}).
      */
-    BALLOON_STATION_TAVERLEY("Taverley balloon station", Detectability.VARBIT),
-    BALLOON_STATION_CASTLE_WARS("Castle Wars balloon station", Detectability.VARBIT),
-    BALLOON_STATION_GRAND_TREE("Grand Tree balloon station", Detectability.VARBIT),
-    BALLOON_STATION_VARROCK("Varrock balloon station", Detectability.VARBIT),
-    LOVAKENGJ_MINECART("Lovakengj minecart network", Detectability.VARBIT),
+    BALLOON_STATION_TAVERLEY,
+    BALLOON_STATION_CASTLE_WARS,
+    BALLOON_STATION_GRAND_TREE,
+    BALLOON_STATION_VARROCK,
+    LOVAKENGJ_MINECART,
     /**
      * The charter ships, which sail for anyone who pays. The fare is halved by Cabin Fever
      * or a ring of charos(a).
      */
-    CHARTER_SHIP("Charter ship", Detectability.VARBIT),
-    QUETZAL_WHISTLE("Quetzal whistle", Detectability.ITEM),
+    CHARTER_SHIP,
+    QUETZAL_WHISTLE,
     /**
      * Renu, the quetzal Twilight's Promise gifts, ridden from a landing site.
      *
      * <p>Not interchangeable with {@link #QUETZAL_WHISTLE}: the whistle calls a quetzal from
      * anywhere, but Renu has to be walked to. Chains carry the leg that reaches a site.
      */
-    RENU("Renu, your quetzal", Detectability.VARBIT),
+    RENU,
     /**
      * The Kastori landing site, which the player builds (ten quetzal feed, three limestone
      * bricks, four soft clay, no Construction level). Without it a quetzal flies to Tal
      * Teklan instead of the patch.
      */
-    QUETZAL_SITE_KASTORI("Kastori quetzal landing site", Detectability.VARBIT),
-    MOUNTAIN_GUIDE("Mountain guide", Detectability.VARBIT),
-    CANAL_BARGE("Canal barge to Fossil Island", Detectability.VARBIT),
+    QUETZAL_SITE_KASTORI,
+    MOUNTAIN_GUIDE,
+    CANAL_BARGE,
     /**
      * Being allowed onto Harmony Island at all, which starting The Great Brain Robbery
      * opens: Brother Tranquility ferries anyone who has begun it. The Harmony stop's access
      * gate. The teleports, house portals included, also need the quest finished, which
      * each one checks for itself.
      */
-    HARMONY_ISLAND_ACCESS("Access to Harmony Island", Detectability.VARBIT),
-    FOSSIL_ISLAND_ZIPLINE("Fossil Island zipline", Detectability.SKILL),
+    HARMONY_ISLAND_ACCESS,
+    FOSSIL_ISLAND_ZIPLINE,
     /** The climbing rocks on Taverley's east wall, crossed east to west only. */
-    TAVERLEY_CLIMBING_ROCKS("Taverley climbing rocks", Detectability.SKILL),
+    TAVERLEY_CLIMBING_ROCKS,
 
     // --- Sailing travel ------------------------------------------------------
     // Holding the item is readable, and so is statue activation for the two pendant
@@ -197,10 +199,10 @@ public enum Capability {
     // The pendant's other four destinations and the Sailors' amulet's docks have no known
     // flag, so they count as available. Unlocking one is a one-off trip, and the
     // instruction tells the player to activate it.
-    PENDANT_OF_ATES("Pendant of Ates", Detectability.ITEM),
-    ATES_STATUE_KASTORI("Kastori statue activated", Detectability.VARBIT),
-    ATES_STATUE_NEMUS_RETREAT("Nemus Retreat statue activated", Detectability.VARBIT),
-    SAILORS_AMULET("Sailors' amulet", Detectability.ITEM),
+    PENDANT_OF_ATES,
+    ATES_STATUE_KASTORI,
+    ATES_STATUE_NEMUS_RETREAT,
+    SAILORS_AMULET,
 
     // --- Player-owned house --------------------------------------------------
     // The house's town is a varbit (2187), readable anywhere. The portals, the spirit tree
@@ -211,32 +213,31 @@ public enum Capability {
     //
     // A "redirected" tab's landing spot belongs to the tab, not the house: see
     // BRIMHAVEN_TABLET.
-    POH_IN_HOSIDIUS("House in Hosidius", Detectability.VARBIT),
-    POH_IN_BRIMHAVEN("House in Brimhaven", Detectability.VARBIT),
-    POH_IN_TAVERLEY("House in Taverley", Detectability.VARBIT),
-    POH_PORTAL_WEISS("House portal to Weiss", Detectability.SEEN),
+    POH_IN_HOSIDIUS,
+    POH_IN_BRIMHAVEN,
+    POH_IN_TAVERLEY,
+    POH_PORTAL_WEISS,
     /**
      * The Troll Stronghold Portal, directed with stony basalt's salts, which lands where the
      * basalt does: the stronghold entrance, or its roof after the hard Fremennik diary with
      * 73 Agility. Not the Trollheim Portal, which lands on the mountain far from the patch.
      */
-    POH_PORTAL_TROLL_STRONGHOLD("House portal to the Troll Stronghold", Detectability.SEEN),
-    POH_PORTAL_KOUREND("House portal to Kourend", Detectability.SEEN),
+    POH_PORTAL_TROLL_STRONGHOLD,
+    POH_PORTAL_KOUREND,
     /** Lands where Fenkenstrain's Castle Teleport does, west of the Morytania herb patch. */
-    POH_PORTAL_FENKENSTRAIN("House portal to Fenkenstrain's Castle", Detectability.SEEN),
+    POH_PORTAL_FENKENSTRAIN,
     /** Lands where Harmony Island Teleport does, 27 walked tiles north of the herb patch. */
-    POH_PORTAL_HARMONY("House portal to Harmony Island", Detectability.SEEN),
+    POH_PORTAL_HARMONY,
     // A Portal Nexus destination is a separate build from a portal room portal, and
     // the chains rank them as separate rungs, so they cannot share a constant.
-    POH_NEXUS_WEISS("Weiss attuned in your Portal Nexus", Detectability.SEEN),
-    POH_NEXUS_HARMONY("Harmony Island attuned in your Portal Nexus", Detectability.SEEN),
+    POH_NEXUS_WEISS,
+    POH_NEXUS_HARMONY,
     /** The Nexus's stony basalt slot, which lands where the Troll Stronghold Portal does. */
-    POH_NEXUS_TROLL_STRONGHOLD("Troll Stronghold attuned in your Portal Nexus",
-            Detectability.SEEN),
-    POH_SPIRIT_TREE("Spirit tree in your house", Detectability.SEEN),
-    POH_FAIRY_RING("Fairy ring in your house", Detectability.SEEN),
+    POH_NEXUS_TROLL_STRONGHOLD,
+    POH_SPIRIT_TREE,
+    POH_FAIRY_RING,
     /** Teleports beside the Wizards' Tower ring, for accounts with no Ardougne diary. */
-    NECKLACE_OF_PASSAGE("Necklace of passage", Detectability.ITEM),
+    NECKLACE_OF_PASSAGE,
 
     /**
      * Permission to ride the spirit tree network, which Tree Gnome Village grants. Eight
@@ -250,7 +251,7 @@ public enum Capability {
      *
      * <p>Departing the Gnome Stronghold tree also needs {@link #SPIRIT_TREE_STRONGHOLD}.
      */
-    SPIRIT_TREE_NETWORK("Spirit tree network", Detectability.VARBIT),
+    SPIRIT_TREE_NETWORK,
 
     /**
      * Boarding the Gnome Stronghold's own spirit tree at (2461, 3444), which The Grand Tree
@@ -260,7 +261,7 @@ public enum Capability {
      * departing from this tree. Kept apart from {@link #GNOME_GLIDER}, which shares the
      * unlock, because the packing list names what the player is about to click.
      */
-    SPIRIT_TREE_STRONGHOLD("Gnome Stronghold spirit tree", Detectability.VARBIT),
+    SPIRIT_TREE_STRONGHOLD,
 
     /**
      * A spirit tree grown in one patch, which adds that location as a destination.
@@ -268,30 +269,22 @@ public enum Capability {
      * <p>Answered from the patch as last seen (see {@code CapabilitySources}). An unseen
      * patch counts as empty.
      */
-    SPIRIT_TREE_GROWN_BRIMHAVEN("Grown spirit tree in Brimhaven", Detectability.VARBIT),
-    SPIRIT_TREE_GROWN_FARMING_GUILD(
-            "Grown spirit tree in the Farming Guild", Detectability.VARBIT),
-    SPIRIT_TREE_GROWN_PORT_SARIM("Grown spirit tree in Port Sarim", Detectability.VARBIT),
+    SPIRIT_TREE_GROWN_BRIMHAVEN,
+    SPIRIT_TREE_GROWN_FARMING_GUILD,
+    SPIRIT_TREE_GROWN_PORT_SARIM,
 
     /**
      * Being allowed into Lletya, which Mourning's End Part I opens once <em>started</em>.
      * It gates the patch rather than any one rung: without it no route in exists.
      */
-    LLETYA_ACCESS("Access to Lletya", Detectability.VARBIT),
-
-    /**
-     * Being allowed into Prifddinas, which Song of the Elves opens. It gates the city's bin
-     * and allotments, and the teleport crystal's Prifddinas dial and the city's spirit tree
-     * open with it.
-     */
-    PRIFDDINAS_ACCESS("Access to Prifddinas", Detectability.VARBIT),
+    LLETYA_ACCESS,
 
     // --- Whether a patch is the player's to work at all -----------------------
     // Each of these is a stop's accessGate: without it the patch cannot be worked by any
     // means, because the place is shut or the patch is not built. Access gates are checked
     // before any travel chain is walked.
 
-    MORYTANIA_ACCESS("Access to Morytania", Detectability.VARBIT),
+    MORYTANIA_ACCESS,
 
     /**
      * The Troll Stronghold herb patch, which sits on the stronghold roof and is a reward of
@@ -299,7 +292,7 @@ public enum Capability {
      * requires Death Plateau and Troll Stronghold, so anyone who can work the patch can walk
      * to it.
      */
-    TROLL_STRONGHOLD_HERB_PATCH("Troll Stronghold herb patch", Detectability.VARBIT),
+    TROLL_STRONGHOLD_HERB_PATCH,
 
     /**
      * The fire of nourishment, without which the Weiss patch cannot be farmed.
@@ -309,40 +302,37 @@ public enum Capability {
      * lack it. Detection reads it from whether the Weiss patch has been seen (see
      * {@code CapabilitySources}).
      */
-    WEISS_HERB_PATCH("Fire of nourishment at Weiss", Detectability.VARBIT),
+    WEISS_HERB_PATCH,
 
     /**
      * The Locus Oasis hardwood patches, behind a quest of their own on top of Varlamore.
      */
-    LOCUS_OASIS_PATCH("Locus Oasis hardwood patches", Detectability.VARBIT),
+    LOCUS_OASIS_PATCH,
 
     /**
      * The Great Conch, which Troubled Tortugans opens partway through, when the player hands
      * Floopa the bandage. Neither Varlamore nor the Sailing level for its dock is needed: a
      * fairy ring and a charter both reach it.
      */
-    GREAT_CONCH_ACCESS("Access to the Great Conch", Detectability.VARBIT),
-
-    /**
-     * The coral nurseries off the Great Conch's east coast. Chet, their gardener, turns the
-     * player away until Troubled Tortugans is finished, a later point than
-     * {@link #GREAT_CONCH_ACCESS}.
-     */
-    CORAL_NURSERY_ACCESS("Access to the coral nurseries", Detectability.VARBIT),
+    GREAT_CONCH_ACCESS,
 
     // --- Farming supplies ----------------------------------------------------
     // Inventory-space downgrades, ranked the same way as travel ones.
-    BOTTOMLESS_COMPOST_BUCKET("Bottomless compost bucket", Detectability.ITEM),
-    ULTRACOMPOST("Ultracompost", Detectability.ITEM),
-    MAGIC_SECATEURS("Magic secateurs", Detectability.ITEM),
-    SEED_DIBBER("Seed dibber", Detectability.ITEM),
-    SPADE("Spade", Detectability.ITEM),
+    BOTTOMLESS_COMPOST_BUCKET,
+    ULTRACOMPOST,
+    MAGIC_SECATEURS,
+    SEED_DIBBER,
+    SPADE,
 
     /**
      * Planting seeds by hand, which the Farming part of Barbarian Training teaches and
      * which removes the need for a seed dibber.
      */
-    BARE_HAND_PLANTING("Barbarian planting", Detectability.VARBIT);
+    BARE_HAND_PLANTING;
+
+    static {
+        Rows.TABLE.requireAll(values());
+    }
 
     /**
      * A set of items that are upgrades of one another, where owning a higher one means
@@ -375,59 +365,34 @@ public enum Capability {
     /** A capability with no per-day cap, which is most of them. */
     public static final int UNLIMITED = 0;
 
+    /** Player-facing name, phrased as the game phrases it. */
     private final String displayName;
     private final Detectability detectability;
+    /** How many times a day this can be used, or {@link #UNLIMITED} for no cap. */
     private final int dailyUses;
     private final TierFamily tierFamily;
+    /** Position within {@link #tierFamily}, higher being better. Zero if untiered. */
     private final int tier;
 
-    Capability(String displayName, Detectability detectability) {
-        this(displayName, detectability, UNLIMITED, TierFamily.NONE, 0);
+    Capability() {
+        Tables.Row row = Rows.TABLE.of(name());
+        this.displayName = row.text(1);
+        this.detectability = row.constant(Detectability.class, 2);
+        this.dailyUses = row.integer(3);
+        this.tierFamily = row.constant(TierFamily.class, 4);
+        this.tier = row.integer(5);
     }
 
-    Capability(String displayName, Detectability detectability, int dailyUses) {
-        this(displayName, detectability, dailyUses, TierFamily.NONE, 0);
-    }
-
-    /** A tiered item the game does not ration. */
-    Capability(String displayName, Detectability detectability, TierFamily tierFamily, int tier) {
-        this(displayName, detectability, UNLIMITED, tierFamily, tier);
-    }
-
-    Capability(String displayName, Detectability detectability, int dailyUses,
-            TierFamily tierFamily, int tier) {
-        this.displayName = displayName;
-        this.detectability = detectability;
-        this.dailyUses = dailyUses;
-        this.tierFamily = tierFamily;
-        this.tier = tier;
-    }
-
-    /** Player-facing name, phrased as the game phrases it. */
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public Detectability getDetectability() {
-        return detectability;
-    }
-
-    /** How many times a day this can be used, or {@link #UNLIMITED} for no cap. */
-    public int getDailyUses() {
-        return dailyUses;
+    /**
+     * The capabilities table, held apart so the constructors can read it; see
+     * {@link Tables#byName}.
+     */
+    private static final class Rows {
+        static final Tables.Named TABLE = Tables.byName("/com/larryfarming/capabilities.tsv", 6);
     }
 
     public boolean isRationedDaily() {
         return dailyUses != UNLIMITED;
-    }
-
-    public TierFamily getTierFamily() {
-        return tierFamily;
-    }
-
-    /** Position within {@link #getTierFamily()}, higher being better. Zero if untiered. */
-    public int getTier() {
-        return tier;
     }
 
     /**
@@ -440,9 +405,7 @@ public enum Capability {
         if (held == this) {
             return true;
         }
-        return tierFamily != TierFamily.NONE
-                && held.tierFamily == tierFamily
-                && held.tier >= tier;
+        return tierFamily != TierFamily.NONE && held.tierFamily == tierFamily && held.tier >= tier;
     }
 
     /**
@@ -458,8 +421,7 @@ public enum Capability {
         }
         Capability best = null;
         for (Capability capability : held) {
-            if (capability.tierFamily == family
-                    && (best == null || capability.tier > best.tier)) {
+            if (capability.tierFamily == family && (best == null || capability.tier > best.tier)) {
                 best = capability;
             }
         }

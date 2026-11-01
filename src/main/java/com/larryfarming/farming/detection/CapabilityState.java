@@ -50,18 +50,4 @@ public enum CapabilityState {
         }
         return sawUnknown ? UNKNOWN : HAVE;
     }
-
-    /** True when this is good enough to act on without qualification. */
-    public boolean isCertain() {
-        return this == HAVE;
-    }
-
-    /**
-     * True when a route in this state is worth offering. Includes UNKNOWN on purpose:
-     * showing a route the player may lack costs a glance, while hiding one they have
-     * costs a patch.
-     */
-    public boolean isWorthOffering() {
-        return this != LACK;
-    }
 }

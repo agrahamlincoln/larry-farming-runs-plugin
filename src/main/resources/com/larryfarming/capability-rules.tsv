@@ -1,0 +1,166 @@
+# How the simple capabilities are answered from game state, one row per rule. The first cell
+# names the kind of rule, which fixes the columns after the capability:
+#
+# carried	capability	description (held anywhere, ids from carry-items.tsv)
+# items	capability	description	item ids	ItemID names
+# quest	capability	quest	what it unlocks
+# progress	capability	quest	progress value that opens it	what it opens
+# questItem	capability	what the quest gives	description (behind its gate row)
+# varbit	capability	varbit	VarbitID name	value it reaches	why yes	why no
+# balloon	capability	varbit	VarbitID name	station
+# spell	capability	Magic level	quest or -	spell name
+# skill	capability	skill	level	description
+# houseIn	capability	town
+# open	capability	why everyone has it
+#
+# Two kinds are facts rather than rules:
+# gate	capability	quest	how far along	(an item only that quest hands out or makes work)
+# cape	capability	skill	(a Cape of Accomplishment, sold only at 99)
+#
+# Capabilities that need more than one of these (diary rewards, the Lancalliums books,
+# respawn points, fairy rings, house and patch items) are answered in code.
+
+# Skill capes. The Quest point and Achievement diary capes are read from the cape, not the
+# quests or diaries behind them: both must be bought afterwards.
+carried	FARMING_CAPE	a Farming cape
+carried	CONSTRUCTION_CAPE	a Construction cape
+carried	FISHING_CAPE	a Fishing cape
+carried	HUNTER_CAPE	a Hunter cape
+carried	QUEST_CAPE	a Quest point cape
+carried	DIARY_CAPE	an Achievement diary cape
+cape	FARMING_CAPE	FARMING
+cape	CONSTRUCTION_CAPE	CONSTRUCTION
+cape	FISHING_CAPE	FISHING
+cape	HUNTER_CAPE	HUNTER
+
+# Jewellery, by every charge tier that still works. The ids come from carry-items.tsv, so
+# detection and the packing list always agree; that table records which tiers are excluded.
+carried	RING_OF_DUELING	a ring of dueling
+carried	GAMES_NECKLACE	a games necklace
+carried	COMBAT_BRACELET	a charged combat bracelet
+carried	DIGSITE_PENDANT	a digsite pendant
+carried	RING_OF_WEALTH	a charged ring of wealth
+carried	SKILLS_NECKLACE	a skills necklace
+carried	XERICS_TALISMAN	a charged Xeric's talisman
+carried	ROYAL_SEED_POD	a royal seed pod
+carried	CHRONICLE	a Chronicle
+carried	NECKLACE_OF_PASSAGE	a necklace of passage
+carried	SLAYER_RING	a slayer ring
+carried	RING_OF_THE_ELEMENTS	a charged ring of the elements
+carried	SAILORS_AMULET	a charged sailors' amulet
+
+# Consumable teleports. Both basalts are craftable only after Making Friends with My Arm, so
+# no quest check is needed.
+carried	ICY_BASALT	icy basalt
+carried	STONY_BASALT	stony basalt
+
+# Items only a quest hands out, or that work only once it is done. Each is untradeable or
+# useless before the quest, so no shop or craft gets a player round it. Holding one shows
+# the quest passed, so most are detected from the item alone.
+#
+# Arianwyn hands the teleport crystal over on the first arrival in Lletya, partway through
+# Mourning's End Part I, so having started the quest is the gate. Every charge state and the
+# eternal crystal count; the uncharged seed and the Gauntlet's crystals do not.
+gate	TELEPORT_CRYSTAL	Mourning's End Part I	IN_PROGRESS
+questItem	TELEPORT_CRYSTAL	the teleport crystal	a charged teleport crystal
+# Both drop sources (Amoxliatl, Frost Nagua) need The Heart of Darkness done. Only the
+# charged pendant is a route; the inert one needs frozen tears first.
+gate	PENDANT_OF_ATES	The Heart of Darkness	COMPLETED
+questItem	PENDANT_OF_ATES	the pendant of Ates	a charged pendant of Ates
+# Waystones drop from the Doom of Mokhaiotl and are consumed by the teleport. They only
+# work after The Final Dawn.
+gate	MOKHAIOTL_WAYSTONE	The Final Dawn	COMPLETED
+questItem	MOKHAIOTL_WAYSTONE	the Mokhaiotl waystone	a Mokhaiotl waystone
+# Velorina hands the ectophial over as the quest ends.
+gate	ECTOPHIAL	Ghosts Ahoy	COMPLETED
+questItem	ECTOPHIAL	the ectophial	a full ectophial
+# King Narnode Shareen's reward, untradeable.
+gate	ROYAL_SEED_POD	Monkey Madness II	COMPLETED
+# Veos hands the memoirs over as the quest's reward.
+gate	KHAREDSTS_MEMOIRS	Client of Kourend	COMPLETED
+gate	BOOK_OF_THE_DEAD	A Kingdom Divided	COMPLETED
+# Untradeable, and the quest is needed "to make or use" one.
+gate	DIGSITE_PENDANT	The Dig Site	COMPLETED
+
+# Each Ates statue sets its own flag the first time it is touched, read as "not zero"
+# whatever the flag's bit width.
+varbit	ATES_STATUE_KASTORI	16752	PENDANT_OF_ATES_TLATI_FOUND	1	the Kastori statue is activated	the Kastori statue has not been activated yet
+varbit	ATES_STATUE_NEMUS_RETREAT	16757	PENDANT_OF_ATES_AUBURN_FOUND	1	the Nemus Retreat statue is activated	the Nemus Retreat statue has not been activated yet
+
+# Farming supplies.
+items	SPADE	a spade	952	SPADE
+items	SEED_DIBBER	a seed dibber	5343	DIBBER
+items	MAGIC_SECATEURS	magic secateurs	7409	FAIRY_ENCHANTED_SECATEURS
+items	BOTTOMLESS_COMPOST_BUCKET	a bottomless compost bucket	22994 22997	BOTTOMLESS_COMPOST_BUCKET BOTTOMLESS_COMPOST_BUCKET_FILLED
+items	ULTRACOMPOST	ultracompost	21483	BUCKET_ULTRACOMPOST
+# Otto's planting lesson: 1 tasked, 2 seed planted, 3 reported back. The perk unlocks at 2,
+# when the seed is planted (wiki: "immediately upon successfully planting the seed
+# barehand"); the miniquest ends later, after reporting back to Otto.
+varbit	BARE_HAND_PLANTING	9609	BRUT_FARMING_PLANTING	2	you can plant seeds bare-handed	you still need a seed dibber
+
+# Quest-gated networks. The wiki also names a one-time boat to Varlamore with Regulus Cento,
+# but that ride is part of finishing Children of the Sun and has no separate flag.
+quest	VARLAMORE_FAIRY_RINGS	Children of the Sun	the Varlamore fairy rings
+quest	VARLAMORE_ACCESS	Children of the Sun	reaching Varlamore
+# Started, not finished: Arianwyn leads the player into Lletya partway through, at quest
+# counter (varplayer 517) value 2.
+progress	LLETYA_ACCESS	Mourning's End Part I	2	Lletya
+# One flag per balloon station, which already implies Enlightened Journey and its
+# Firemaking level. Enlightened Journey opens only the Entrana-Taverley route; the rest are
+# unlocked by flying to them.
+balloon	BALLOON_STATION_TAVERLEY	2868	ZEP_MULTI_PICCARD	Taverley
+balloon	BALLOON_STATION_CASTLE_WARS	2869	ZEP_MULTI_CAST	Castle Wars
+balloon	BALLOON_STATION_GRAND_TREE	2870	ZEP_MULTI_GNO	the Grand Tree
+balloon	BALLOON_STATION_VARROCK	2872	ZEP_MULTI_VARR	Varrock
+quest	GNOME_GLIDER	The Grand Tree	the gnome gliders
+quest	CANAL_BARGE	Bone Voyage	the barge to Fossil Island
+# Started, not finished: Brother Tranquility ferries anyone who has begun the quest. The
+# tablet's stricter bar belongs to the rung that names the tablet.
+progress	HARMONY_ISLAND_ACCESS	The Great Brain Robbery	10	Harmony Island
+
+# Whether a patch is the player's to work at all. The Troll Stronghold roof patch is My
+# Arm's Big Adventure's reward; Eadgar's Ruse only opens a teleport.
+quest	MORYTANIA_ACCESS	Priest in Peril	entering Morytania
+quest	TROLL_STRONGHOLD_HERB_PATCH	My Arm's Big Adventure	the Troll Stronghold herb patch
+quest	LOCUS_OASIS_PATCH	The Ribbiting Tale of a Lily Pad Labour Dispute	the Locus Oasis hardwood patches
+# The counter reaches 6 when the player hands Floopa the bandage, which opens the island.
+progress	GREAT_CONCH_ACCESS	Troubled Tortugans	6	the Great Conch
+
+# Open to everyone. These need a row because a capability with none answers "unknown" for
+# ever. The minecart needs no Kourend favour; its only cost is a 20gp toll per ride, which
+# The Forsaken Tower waives. The mountain guide walks anyone between Quetzacalli Gorge and
+# Auburn Valley, free.
+open	LOVAKENGJ_MINECART	the minecart network is open to everyone
+open	CHARTER_SHIP	the charter ships sail for anyone who pays the fare
+open	MOUNTAIN_GUIDE	the mountain guide walks anyone who asks
+
+# The quetzal whistle is detected on the item, not the quest: it is crafted after ten
+# Hunters' Rumours, not handed over with Twilight's Promise. Renu flies the same network,
+# but only from a landing site the player has walked to; the quest gifts it, and there is no
+# item to hold. Kastori is a player-built landing site (no Construction level needed), so
+# its flag alone answers it.
+carried	QUETZAL_WHISTLE	a quetzal whistle
+carried	BRIMHAVEN_TABLET	a Brimhaven teleport tablet
+quest	RENU	Twilight's Promise	riding Renu
+varbit	QUETZAL_SITE_KASTORI	17757	QUETZAL_KASTORI	1	the Kastori landing site is built	the Kastori landing site has not been built
+
+# Spells with no fixed destination; teleports.tsv answers the rest. These answer "could this
+# player ever cast it". The spell's book is enforced apart from this.
+spell	RESPAWN_TELEPORT	34	-	Respawn Teleport
+spell	FERTILE_SOIL	83	Lunar Diplomacy	Fertile Soil
+
+# Skill-gated shortcuts.
+skill	FOSSIL_ISLAND_ZIPLINE	AGILITY	74	the zipline
+skill	TAVERLEY_CLIMBING_ROCKS	AGILITY	66	the climbing rocks into Taverley
+
+# The spirit tree network needs no Farming level: eight of its destinations are permanent
+# trees. The Stronghold's tree is the one departure with a second quest, the gliders'
+# unlock, kept a separate capability so the player is told which journey it is.
+quest	SPIRIT_TREE_NETWORK	Tree Gnome Village	the spirit tree network
+quest	SPIRIT_TREE_STRONGHOLD	The Grand Tree	the Gnome Stronghold spirit tree
+
+# Where the house is: the one fact about it readable from anywhere, which decides where every
+# redirected route lands.
+houseIn	POH_IN_HOSIDIUS	Hosidius
+houseIn	POH_IN_BRIMHAVEN	Brimhaven
+houseIn	POH_IN_TAVERLEY	Taverley

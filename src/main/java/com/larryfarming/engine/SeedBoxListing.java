@@ -1,11 +1,7 @@
 package com.larryfarming.engine;
 
 import com.larryfarming.model.ItemStack;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * A Check listing part way through arriving.
@@ -47,8 +43,7 @@ public final class SeedBoxListing {
      * @return false when the message is not a listing entry, which means the listing has ended
      */
     public static boolean read(String message, SeedBoxListing into, Map<String, Integer> known) {
-        Optional<SeedBoxChat.SeedBoxMove> entry =
-                SeedBoxChat.parseSeedBoxContentsEntry(message);
+        Optional<SeedBoxChat.SeedBoxMove> entry = SeedBoxChat.parseSeedBoxContentsEntry(message);
         if (!entry.isPresent()) {
             return false;
         }

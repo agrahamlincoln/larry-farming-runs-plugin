@@ -1,24 +1,12 @@
 package com.larryfarming.farming.engine;
 
-import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.CropState;
-import com.larryfarming.engine.farming.FarmingWorldMap;
-import com.larryfarming.engine.farming.PatchType;
-import com.larryfarming.engine.farming.PatchPrediction;
+import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.catalogue.Arrivals;
 import com.larryfarming.farming.catalogue.CropData;
-import com.larryfarming.farming.model.PatchRef;
-import com.larryfarming.farming.model.RunStop;
-import com.larryfarming.farming.model.Spellbook;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import lombok.AllArgsConstructor;
 
 /**
  * Which crop goes into which patch: the run's seeds dealt down the patches best home first,
@@ -43,8 +31,7 @@ final class CropAssigner {
      * {@link StopRowWriter#adviseOnGroup}), so the hold usually lasts one conversation.
      */
     static boolean heldForTheNextContract(PatchRef patch, PlayerState state) {
-        return PatchPriority.isReservedForContracts(patch)
-                && RunScheduler.nextContractCropUnknown(state);
+        return PatchPriority.isReservedForContracts(patch) && RunScheduler.nextContractCropUnknown(state);
     }
 
     /**
@@ -62,10 +49,8 @@ final class CropAssigner {
      * <p>Null too when the player provably has no such seed, the rule {@link #assignCrops}
      * applies to fixed-crop stops: holding the patch empty would also cost a rotation herb.
      */
-    static Crop contractedInto(PatchRef patch, PlayerState state,
-            FarmingInputs inputs) {
-        if (!PatchPriority.isReservedForContracts(patch)
-                || heldForTheNextContract(patch, state)) {
+    static Crop contractedInto(PatchRef patch, PlayerState state, FarmingInputs inputs) {
+        if (!PatchPriority.isReservedForContracts(patch) || heldForTheNextContract(patch, state)) {
             return null;
         }
         Crop crop = inputs.getContractCrop();
@@ -78,8 +63,7 @@ final class CropAssigner {
         if (seen != null && seen.getCrop() == crop && seen.getState() != CropState.DEAD) {
             return null;
         }
-        return SeedSelector.definitelyOutOf(crop, state, data.getSeedsPerPatch())
-                ? null : crop;
+        return SeedSelector.definitelyOutOf(crop, state, data.getSeedsPerPatch()) ? null : crop;
     }
 
     /**
@@ -104,8 +88,7 @@ final class CropAssigner {
      * seat. Skipped stops are kept: a patch skipped because it is growing is exactly a spent
      * seat.
      */
-    static int goodSeatsSpent(List<StopPlan> plans, PlayerState state,
-            FarmingInputs inputs, int quota, int[] walk) {
+    static int goodSeatsSpent(List<StopPlan> plans, PlayerState state, FarmingInputs inputs, int quota, int[] walk) {
         List<Seat> seats = new ArrayList<>();
         Set<PatchRef> filled = new LinkedHashSet<>();
         for (int index = 0; index < plans.size(); index++) {
@@ -113,11 +96,11 @@ final class CropAssigner {
             if (!plan.getStop().isPlanting() || plan.getStop().isFixedCrop()) {
                 continue;
             }
-            int patchIndex = 0;
-            for (PatchRef ref : plan.getStop().getPatches()) {
-                if (PatchPriority.isReservedForContracts(ref)
-                        || heldForTheNextContract(ref, state)) {
-                    patchIndex++;
+            List<PatchRef> patches = plan.getStop().getPatches();
+            for (int patchIndex = 0; patchIndex < patches.size(); patchIndex++) {
+                PatchRef ref = patches.get(patchIndex);
+                // A patch held for the next contract is reserved for contracts too.
+                if (PatchPriority.isReservedForContracts(ref)) {
                     continue;
                 }
                 boolean occupied = occupiedByAlivingCrop(ref, inputs);
@@ -125,10 +108,8 @@ final class CropAssigner {
                     filled.add(ref);
                 }
                 if (occupied || plan.isVisit()) {
-                    seats.add(new Seat(index, patchIndex, walk[index],
-                            PatchPriority.scoreOf(ref, state), null, ref));
+                    seats.add(new Seat(index, patchIndex, walk[index], PatchPriority.scoreOf(ref, state), null, ref));
                 }
-                patchIndex++;
             }
         }
         // The comparator and walk assignCrops deals by. The seat sets differ (this one keeps
@@ -180,8 +161,7 @@ final class CropAssigner {
         int open = 0;
         for (PatchRef ref : stop.getPatches()) {
             boolean free = !occupiedByAlivingCrop(ref, inputs) && !staysAfterPicking(ref, inputs);
-            if (free || PatchWork.comesOut(inputs.patchAt(ref), stop,
-                    inputs.getPreferences(), state)) {
+            if (free || PatchWork.comesOut(inputs.patchAt(ref), stop, inputs.getPreferences(), state)) {
                 open++;
             }
         }
@@ -191,8 +171,7 @@ final class CropAssigner {
     /** Whether this patch holds a living crop that regrows, which picking leaves standing. */
     private static boolean staysAfterPicking(PatchRef ref, FarmingInputs inputs) {
         PatchPrediction seen = inputs.patchAt(ref);
-        return seen != null && seen.getCrop() != null && !seen.isIdle()
-                && seen.getCrop().getRegrowTickRateMinutes() > 0
+        return seen != null && seen.getCrop() != null && !seen.isIdle() && seen.getCrop().getRegrowTickRateMinutes() > 0
                 && seen.getState() != CropState.DEAD;
     }
 
@@ -205,8 +184,7 @@ final class CropAssigner {
      */
     private static boolean stillFillingOut(PatchRef ref, FarmingInputs inputs) {
         PatchPrediction seen = inputs.patchAt(ref);
-        return seen != null && seen.getCrop() != null && !seen.isIdle()
-                && StopSkipRules.isStillGrowing(seen);
+        return seen != null && seen.getCrop() != null && !seen.isIdle() && StopSkipRules.isStillGrowing(seen);
     }
 
     /**
@@ -227,23 +205,14 @@ final class CropAssigner {
      * <p>{@link Itinerary} lifts the better homes forward from the same ranking, so a seed
      * box lands correctly. This deals to patches, never to positions, so it does not depend
      * on that.
-     */
-    static List<List<Crop>> assignCrops(List<StopPlan> plans, SeedPlan seeds,
-            PlayerState state, FarmingInputs inputs, int[] walk) {
-        return assignCrops(plans, seeds, state, inputs, walk, new HashMap<>());
-    }
-
-    /**
-     * The same allocation, also reporting which patch each seed landed in.
      *
-     * <p>The per-stop lists cannot say which of Fossil Island's three patches a teak goes
+     * <p>Also reports which patch each seed landed in. The per-stop lists cannot say which of Fossil Island's three patches a teak goes
      * into. {@code StopRowWriter.treesMakingWay} needs the patch to decide which trees to
      * fell.
      *
      * @param plantedIn <b>filled by this method</b>, one entry per seed that found a home
      */
-    static List<List<Crop>> assignCrops(List<StopPlan> plans, SeedPlan seeds,
-            PlayerState state, FarmingInputs inputs, int[] walk,
+    static List<List<Crop>> assignCrops(List<StopPlan> plans, SeedPlan seeds, PlayerState state, FarmingInputs inputs, int[] walk,
             Map<PatchRef, Crop> plantedIn) {
         List<List<Crop>> cropFor = new ArrayList<>(plans.size());
         // Every patch drawing on the run's seeds. Collected on the way past so the
@@ -268,9 +237,7 @@ final class CropAssigner {
                 // Only where the player provably holds the seed.
                 // {@link StopSkipRules#skipIfNoSeed} drops the stop only when nothing else is
                 // waiting; here a harvest can keep the visit while the planting goes.
-                CropData data = fixed == null ? null : CropData.forCrop(fixed);
-                if (fixed == null || (data != null
-                        && SeedSelector.definitelyOutOf(fixed, state, data.getSeedsPerPatch()))) {
+                if (fixed == null || RunScheduler.outOfSeedFor(fixed, state)) {
                     continue;
                 }
                 // A patch holding any living crop takes no seed: one seaweed patch growing
@@ -285,11 +252,11 @@ final class CropAssigner {
             if (!plan.getStop().isPlanting()) {
                 continue;
             }
-            int patchIndex = 0;
-            for (PatchRef ref : plan.getStop().getPatches()) {
+            List<PatchRef> patches = plan.getStop().getPatches();
+            for (int patchIndex = 0; patchIndex < patches.size(); patchIndex++) {
+                PatchRef ref = patches.get(patchIndex);
                 // Held, not skipped: the errand still stands; only the planting waits.
                 if (heldForTheNextContract(ref, state)) {
-                    patchIndex++;
                     continue;
                 }
                 Crop standing = StopSkipRules.stillStandingIn(ref, plan.getStop(), inputs);
@@ -306,7 +273,6 @@ final class CropAssigner {
                 // living crop either, and the guild's errand stop never reaches
                 // {@link StopSkipRules#skipIfPatchesStillFull}.
                 if (standing == null && occupiedByAlivingCrop(ref, inputs)) {
-                    patchIndex++;
                     continue;
                 }
                 // An immature tree is not traded away: felling it wastes the seed and the
@@ -315,7 +281,6 @@ final class CropAssigner {
                 // the check turns it HARVESTABLE. It also covers a fruit tree stop with
                 // several patches.
                 if (standing != null && stillFillingOut(ref, inputs)) {
-                    patchIndex++;
                     continue;
                 }
                 // A contract's named crop claims its patch ahead of the rotation's filler,
@@ -324,20 +289,15 @@ final class CropAssigner {
                 if (contracted == null) {
                     contracted = DiaryPlantings.claimedBy(ref, state, inputs.getPreferences());
                 }
-                if (contracted != null) {
-                    claimed.put(new Seat(index, patchIndex, walk[index],
-                            PatchPriority.scoreOf(ref, state), null, ref), contracted);
-                    patchIndex++;
-                    continue;
-                }
                 Seat seat = new Seat(index, patchIndex, walk[index],
-                        PatchPriority.scoreOf(ref, state), standing, ref);
-                if (standing == null) {
+                        PatchPriority.scoreOf(ref, state), contracted == null ? standing : null, ref);
+                if (contracted != null) {
+                    claimed.put(seat, contracted);
+                } else if (standing == null) {
                     drawing.add(seat);
                 } else {
                     replacing.add(seat);
                 }
-                patchIndex++;
             }
         }
 
@@ -357,8 +317,7 @@ final class CropAssigner {
         landed.putAll(claimed);
 
         List<Seat> planted = new ArrayList<>(landed.keySet());
-        planted.sort(Comparator.comparingInt((Seat seat) -> seat.planIndex)
-                .thenComparingInt(seat -> seat.patchIndex));
+        planted.sort(Comparator.comparingInt((Seat seat) -> seat.planIndex).thenComparingInt(seat -> seat.patchIndex));
         for (Seat seat : planted) {
             cropFor.get(seat.planIndex).add(landed.get(seat));
             plantedIn.put(seat.patch, landed.get(seat));
@@ -382,12 +341,10 @@ final class CropAssigner {
      * @param inputs whose preferences say whether a grown fruit tree need only be matched,
      *             as a lumber tree is, so its own kind replaces it
      */
-    private static void dealOutUpgrades(List<Seat> replacing, SeedPlan seeds, int from,
-            Map<Seat, Crop> landed, FarmingInputs inputs) {
+    private static void dealOutUpgrades(List<Seat> replacing, SeedPlan seeds, int from, Map<Seat, Crop> landed, FarmingInputs inputs) {
         boolean replantsGrownTrees = inputs.getPreferences().replantsGrownTrees();
         // Worst standing crop first; ties by the better home, as the ground seats rank.
-        replacing.sort(Comparator.comparingInt((Seat seat) -> tierOf(seat.standing, seat.patch))
-                .reversed()
+        replacing.sort(Comparator.comparingInt((Seat seat) -> tierOf(seat.standing, seat.patch)).reversed()
                 .thenComparing(Comparator.comparingInt((Seat seat) -> seat.score).reversed()));
         // What the ground left over, as a pool rather than in order, bounded by the seats.
         List<Crop> spare = new ArrayList<>();
@@ -406,8 +363,7 @@ final class CropAssigner {
             // empty than holding an oak, and seedRanOutAt then drops the stop.
             // Replanting grown trees, a fruit tree is matched too: its fruit is worth less
             // than a fresh tree's health check. Not a diseased one, which a cure keeps.
-            boolean kept = keepsGiving(candidate.standing)
-                    && !(replantsGrownTrees && isFruitTree(candidate.patch)
+            boolean kept = keepsGiving(candidate.standing) && !(replantsGrownTrees && isFruitTree(candidate.patch)
                             && !diseased(candidate.patch, inputs));
             int floor = kept ? standing - 1 : standing;
             // The <em>worst</em> sapling that still improves this patch, not the best: a
@@ -475,6 +431,7 @@ final class CropAssigner {
      * <p>{@code standing} is null for bare ground. {@link #goodSeatsSpent} builds seats only
      * to count the quota, reading {@code patch} and the sort keys.
      */
+    @AllArgsConstructor
     private static final class Seat {
         private final int planIndex;
         /** Position within the stop's own patch list, which is the order readers expect. */
@@ -485,16 +442,6 @@ final class CropAssigner {
         /** What is growing here that would have to go, or null for bare ground. */
         private final Crop standing;
         private final PatchRef patch;
-
-        Seat(int planIndex, int patchIndex, int walkPosition, int score, Crop standing,
-                PatchRef patch) {
-            this.planIndex = planIndex;
-            this.patchIndex = patchIndex;
-            this.walkPosition = walkPosition;
-            this.score = score;
-            this.standing = standing;
-            this.patch = patch;
-        }
     }
 
     /**
@@ -515,10 +462,8 @@ final class CropAssigner {
      * <p><b>An optional stop can draw a good seed, and that is intended.</b> Ortus Farm sits
      * second on the circuit, so it takes the second seed out of the box.
      */
-    private static final Comparator<Seat> BEST_HOME_FIRST =
-            Comparator.comparingInt((Seat seat) -> seat.score).reversed()
-                    .thenComparingInt(seat -> seat.walkPosition)
-                    .thenComparingInt(seat -> seat.planIndex)
+    private static final Comparator<Seat> BEST_HOME_FIRST = Comparator.comparingInt((Seat seat) -> seat.score).reversed()
+                    .thenComparingInt(seat -> seat.walkPosition).thenComparingInt(seat -> seat.planIndex)
                     .thenComparingInt(seat -> seat.patchIndex);
 
     /**
@@ -555,8 +500,6 @@ final class CropAssigner {
      * up into them.
      */
     private static Crop seatCrop(SeedPlan seeds, int seat) {
-        return seat < seeds.getGood().getWanted()
-                ? seeds.getGood().at(seat)
-                : seeds.getBad().at(seat - seeds.getGood().getWanted());
+        return seat < seeds.getGood().getWanted() ? seeds.getGood().at(seat) : seeds.getBad().at(seat - seeds.getGood().getWanted());
     }
 }

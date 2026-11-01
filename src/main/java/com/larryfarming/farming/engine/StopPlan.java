@@ -1,11 +1,9 @@
 package com.larryfarming.farming.engine;
 
 import com.larryfarming.farming.detection.CapabilityState;
-import com.larryfarming.farming.model.Capability;
-import com.larryfarming.farming.model.RunStop;
-import com.larryfarming.farming.model.TeleportMeans;
-import com.larryfarming.farming.model.TravelOption;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.snapshot.FarmingSkipReason;
+import java.util.Collections;
 import java.util.Set;
 import lombok.Value;
 
@@ -82,6 +80,11 @@ public class StopPlan {
      * It decides whether the bag packs a tablet or runes.
      */
     TeleportMeans teleport;
+
+    /** A skip for a reason found in the ground or the stock, after the route was settled. */
+    static StopPlan skip(RunStop stop, String because, FarmingSkipReason reason, long readyAtEpochSec) {
+        return new StopPlan(stop, Outcome.SKIP, null, CapabilityState.HAVE, because, reason, readyAtEpochSec, Collections.emptySet(), null);
+    }
 
     public boolean isVisit() {
         return outcome == Outcome.VISIT;

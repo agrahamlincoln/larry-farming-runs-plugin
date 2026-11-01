@@ -1,5 +1,7 @@
 package com.larryfarming.farming.model;
 
+import lombok.Getter;
+
 /**
  * Somewhere a farm run teleports to, as opposed to the particular way of getting there.
  *
@@ -11,8 +13,8 @@ package com.larryfarming.farming.model;
  * <p>A destination may also name the {@link Zone} it lands in. A player already inside
  * that zone reaches the rung for free: no cast, no tablet, nothing to pack. The zone is
  * null for destinations whose regions have not been walked, so the shortcut never fires
- * there. Never guess a zone: a wrong one drops a teleport from the packing list that the
- * player then needs.
+ * there. A zone is set only from a walked or checked tile. A wrong one would drop a
+ * teleport from the packing list that the player then needs.
  */
 public enum Destination {
 
@@ -38,7 +40,10 @@ public enum Destination {
     HARMONY_ISLAND("Harmony Island"),
     CIVITAS_ILLA_FORTIS("Civitas illa Fortis", Zone.CIVITAS_ILLA_FORTIS);
 
+    @Getter
     private final String displayName;
+    /** The zone this lands in, or null where it has not been walked. */
+    @Getter
     private final Zone zone;
 
     Destination(String displayName) {
@@ -48,14 +53,5 @@ public enum Destination {
     Destination(String displayName, Zone zone) {
         this.displayName = displayName;
         this.zone = zone;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    /** The zone this lands in, or null where it has not been walked. */
-    public Zone getZone() {
-        return zone;
     }
 }

@@ -5,10 +5,8 @@ import com.larryfarming.farming.detection.CapabilityResolver;
 import com.larryfarming.farming.model.Bank;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingCarryItem;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import net.runelite.api.gameval.ItemID;
 
 /**
  * Partway round, the warning on the next stop's card when the bag lacks something the stop
@@ -19,23 +17,18 @@ final class MissingItems {
     private MissingItems() {
     }
 
-    private static final int SPADE = 952;
-    private static final int SEED_DIBBER = 5343;
-    private static final int PLAIN_AXE = 1351;
-    private static final int COINS = 995;
-
     /**
      * What the stop cannot be done without: the spade, the dibber, an axe for a tree to
-     * fell, the gardener's coins, and the seeds. The bucket, the energy potion, the seed box
+     * fell, the gardener's coins, and the seeds. The bucket, the seed box
      * and the like make the stop easier but never stop it, so they raise no warning.
      */
     private static final Set<Integer> NEEDED = needed();
 
     private static Set<Integer> needed() {
-        Set<Integer> ids = new HashSet<>(CarryPlanner.formsOf(PLAIN_AXE));
-        ids.add(SPADE);
-        ids.add(SEED_DIBBER);
-        ids.add(COINS);
+        Set<Integer> ids = new HashSet<>(CarryPlanner.formsOf(ItemID.BRONZE_AXE));
+        ids.add(ItemID.SPADE);
+        ids.add(ItemID.DIBBER);
+        ids.add(ItemID.COINS);
         return ids;
     }
 
@@ -64,12 +57,9 @@ final class MissingItems {
         }
         List<FarmingCarryItem> missing = new ArrayList<>();
         List<FarmingCarryItem> tooFew = new ArrayList<>();
-        for (FarmingCarryItem line : CarryPlanner.plan(standingThere, List.of(), plantedHere,
-                state, resolver, inputs)) {
-            boolean needed = line.getKind() == FarmingCarryItem.Kind.SEED
-                    || NEEDED.contains(line.getItemId());
-            boolean away = line.getAvailability() == FarmingCarryItem.Availability.BANKED
-                    || (!leprechaun
+        for (FarmingCarryItem line : CarryPlanner.plan(standingThere, List.of(), plantedHere, state, resolver, inputs)) {
+            boolean needed = line.getKind() == FarmingCarryItem.Kind.SEED || NEEDED.contains(line.getItemId());
+            boolean away = line.getAvailability() == FarmingCarryItem.Availability.BANKED || (!leprechaun
                             && line.getAvailability() == FarmingCarryItem.Availability.AT_LEPRECHAUN);
             if (!needed || !away) {
                 continue;
@@ -85,8 +75,7 @@ final class MissingItems {
         }
         StringBuilder said = new StringBuilder();
         if (!missing.isEmpty()) {
-            said.append("No ").append(LoadoutPlanner.inSentence(missing, "or"))
-                    .append(" in your bag.");
+            said.append("No ").append(LoadoutPlanner.inSentence(missing, "or")).append(" in your bag.");
         }
         if (!tooFew.isEmpty()) {
             said.append(said.length() == 0 ? "" : " ").append("Not enough ")

@@ -4,15 +4,9 @@ import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.farming.catalogue.FarmingCatalogue;
 import com.larryfarming.farming.detection.CapabilityState;
 import com.larryfarming.farming.detection.DiaryTiers;
-import com.larryfarming.farming.model.FarmingPreferences;
-import com.larryfarming.farming.model.PatchRef;
-import com.larryfarming.farming.model.RunStop;
-import com.larryfarming.farming.model.SeedPolicy;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * The seed policy's diary overrides in force: one patch that takes a crop every other patch
@@ -38,8 +32,7 @@ final class DiaryPlantings {
      */
     static Crop claimedBy(PatchRef patch, PlayerState state, FarmingPreferences prefs) {
         for (SeedPolicy.DiaryOverride override : inForce(state, prefs)) {
-            if (override.getPatch().equals(patch)
-                    && SeedSelector.holdsAny(override.getCrop(), state)) {
+            if (override.getPatch().equals(patch) && SeedSelector.holdsAny(override.getCrop(), state)) {
                 return override.getCrop();
             }
         }
@@ -59,8 +52,7 @@ final class DiaryPlantings {
      * What this stop could be filled from: the run's ladder less the withheld crops, with
      * the stop's own claimed crop put back.
      */
-    static List<Crop> ladderAt(List<Crop> ladder, RunStop stop, PlayerState state,
-            FarmingPreferences prefs) {
+    static List<Crop> ladderAt(List<Crop> ladder, RunStop stop, PlayerState state, FarmingPreferences prefs) {
         List<SeedPolicy.DiaryOverride> overrides = inForce(state, prefs);
         if (overrides.isEmpty()) {
             return ladder;
@@ -74,8 +66,7 @@ final class DiaryPlantings {
         return crops;
     }
 
-    private static boolean withheldFrom(RunStop stop, Crop crop,
-            List<SeedPolicy.DiaryOverride> overrides) {
+    private static boolean withheldFrom(RunStop stop, Crop crop, List<SeedPolicy.DiaryOverride> overrides) {
         boolean withheld = false;
         for (SeedPolicy.DiaryOverride override : overrides) {
             if (override.getCrop() != crop) {
@@ -89,13 +80,10 @@ final class DiaryPlantings {
         return withheld;
     }
 
-    private static List<SeedPolicy.DiaryOverride> inForce(PlayerState state,
-            FarmingPreferences prefs) {
+    private static List<SeedPolicy.DiaryOverride> inForce(PlayerState state, FarmingPreferences prefs) {
         List<SeedPolicy.DiaryOverride> inForce = new ArrayList<>();
-        for (SeedPolicy.DiaryOverride override
-                : FarmingCatalogue.seedPolicy().getDiaryOverrides()) {
-            if (prefs.allows(override.getCrop())
-                    && DiaryTiers.completed(override.getDiaryArea(), override.getDiaryTier(),
+        for (SeedPolicy.DiaryOverride override : FarmingCatalogue.seedPolicy().getDiaryOverrides()) {
+            if (prefs.allows(override.getCrop()) && DiaryTiers.completed(override.getDiaryArea(), override.getDiaryTier(),
                             state) == CapabilityState.HAVE) {
                 inForce.add(override);
             }

@@ -2,11 +2,7 @@ package com.larryfarming.engine;
 
 import net.runelite.api.gameval.VarbitID;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.IntUnaryOperator;
 
 /**

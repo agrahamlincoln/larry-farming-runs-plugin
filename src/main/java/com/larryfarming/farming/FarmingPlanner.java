@@ -2,46 +2,17 @@ package com.larryfarming.farming;
 
 import com.larryfarming.engine.StateEngine;
 import com.larryfarming.engine.EngineListener;
-import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.FarmingTracker;
-import com.larryfarming.engine.farming.FarmingWorldMap;
-import com.larryfarming.farming.detection.ArdougneFarmTeleportWatch;
-import com.larryfarming.farming.detection.BottomlessBucket;
-import com.larryfarming.farming.detection.CapabilitySources;
-import com.larryfarming.farming.detection.DiaryRewards;
-import com.larryfarming.farming.detection.HouseFeature;
-import com.larryfarming.farming.detection.HouseSight;
-import com.larryfarming.farming.detection.PlantingWatch;
-import com.larryfarming.farming.detection.TravelTaken;
-import com.larryfarming.farming.detection.TravelWatch;
-import com.larryfarming.farming.engine.CompostStock;
-import com.larryfarming.farming.engine.DailyTeleportLedger;
-import com.larryfarming.farming.engine.DepositPlanner;
-import com.larryfarming.farming.engine.FarmingAdviceBuilder;
-import com.larryfarming.farming.engine.FarmingInputs;
-import com.larryfarming.farming.engine.PlantingGate;
-import com.larryfarming.farming.model.Capability;
-import com.larryfarming.farming.model.Destination;
-import com.larryfarming.farming.model.FarmingPreferences;
-import com.larryfarming.farming.model.RunId;
-import com.larryfarming.farming.model.Spellbook;
+import com.larryfarming.engine.farming.*;
+import com.larryfarming.farming.detection.*;
+import com.larryfarming.farming.engine.*;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
-import com.larryfarming.report.Journal;
-import com.larryfarming.report.Trace;
-import com.larryfarming.snapshot.FarmingAdvice;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.larryfarming.snapshot.FarmingRunStatus;
-import com.larryfarming.snapshot.FarmingStopAdvice;
+import com.larryfarming.snapshot.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.function.LongSupplier;
+import java.util.*;
 
 /**
  * Plans the farm runs for the account the {@link StateEngine} holds, and publishes the advice
@@ -49,16 +20,14 @@ import java.util.function.LongSupplier;
  *
  * <p>Owns everything the plan needs beyond the engine's player state and patch tracker: the
  * crop settings, the day's spent teleports, the contract crop, what the house was seen to
- * hold, the previewed spellbook, the bottomless bucket's last reading and whether compost
- * upkeep is on.
+ * hold and the previewed spellbook.
  *
  * <p>Listens to the engine, so the plan is rebuilt whenever the account's state changes, on
  * the same thread. Its own inputs only mark it dirty, and {@link #flushIfDirty()} rebuilds
  * once per tick. A rebuild that comes out equal to the last advice publishes nothing, so a
  * quiet tick leaves the panel alone.
  *
- * <p>Client thread only, apart from {@link #getAdvice()} and the patch-hiding predicate,
- * which read volatile fields.
+ * <p>Client thread only, apart from {@link #getAdvice()}, which reads a volatile field.
  */
 @Slf4j
 public class FarmingPlanner implements EngineListener {
@@ -70,8 +39,7 @@ public class FarmingPlanner implements EngineListener {
     }
 
     /** The daily-teleport varbits the game reports, keyed for lookup on every varbit change. */
-    private static final Map<Integer, Capability> DAILY_TELEPORT_VARBITS =
-            CapabilitySources.dailyUsesCapabilitiesByVarbit();
+    private static final Map<Integer, Capability> DAILY_TELEPORT_VARBITS = CapabilitySources.dailyUsesCapabilitiesByVarbit();
 
     /**
      * A run this close is not worth a dedicated wake-up rebuild; the next event will
@@ -87,11 +55,7 @@ public class FarmingPlanner implements EngineListener {
      * Which crops the player is willing to have suggested, as ticked in the panel's settings.
      *
      * <p>Starts at the defaults, so a planner built before the plugin reads its config plans
-     * the default runs.
-     *
-     * <p>Volatile: the config listener writes it on the client thread, and
-     * {@link #hiddenByPreferences} reads it from any thread, the EDT included. The value is
-     * swapped whole.
+     * the default runs. The value is swapped whole.
      */
     private volatile FarmingPreferences preferences = FarmingPreferences.defaults();
 
@@ -110,13 +74,15 @@ public class FarmingPlanner implements EngineListener {
     private final PlantingWatch plantingWatch = new PlantingWatch();
 
     /** A book the player asked to see the farm run planned for, or null for their own. */
-    @Getter
     private Spellbook spellbookPreview;
 
     /** The panel's optional banks are switched off, so no withdrawal is listed at one. */
     private boolean offeredBanksHidden;
 
-    /** What Larry asked for that has been in this account's bag this trip. */
+    /**
+     * What Larry asked for that has been in this account's bag this trip, and the bag's low
+     * marks: state no setting holds.
+     */
     private DepositPlanner.TripRecord tripRecord = DepositPlanner.TripRecord.EMPTY;
 
     /** What the contract asks for, or null while the contract slot is empty. */
@@ -126,21 +92,6 @@ public class FarmingPlanner implements EngineListener {
     /** What the player's own house was last seen to hold. Saved on every change. */
     @Getter
     private HouseSight house = HouseSight.unseen();
-
-    /**
-     * The uses of ultracompost the bottomless bucket was last read to hold, from its dialogue
-     * or from the leprechaun's varbits, less a use for each patch treated from it since.
-     * Null while it has never been read. Saved on every change.
-     */
-    @Getter
-    private Integer bottomlessBucketUses;
-
-    /**
-     * Whether compost upkeep was last on, or null before it has been decided. Saved on every
-     * change, so the gap between the two thresholds keeps its state across a logout.
-     */
-    @Getter
-    private Boolean compostUpkeep;
 
     /**
      * The next second at which a farming run comes ready, or zero when none is waiting.
@@ -153,25 +104,17 @@ public class FarmingPlanner implements EngineListener {
 
     /**
      * The farm run as last planned, or null when there is nothing to plan for. Volatile: the
-     * infobox reads it while rendering.
+     * infobox reads it while rendering, so it is safe from any thread.
      */
+    @Getter
     private volatile FarmingAdvice advice;
 
     /** Moves forward by one each time {@link #advice} changes, and never goes back. */
     @Getter
     private long adviceVersion;
 
-    /** The epoch second now: the wall clock, unless {@link #setClock} fixed it. */
-    private LongSupplier clock = () -> Instant.now().getEpochSecond();
 
-    /** The second the last plan was built at, or zero before the first. */
-    private long plannedAtEpochSec;
-
-    /** Where each published plan and planner input is recorded, or null for nowhere. */
-    private Journal journal;
-
-    private FarmingPlanner(StateEngine engine, FarmingPlannerPersistence persistence,
-            Advisor advisor) {
+    private FarmingPlanner(StateEngine engine, FarmingPlannerPersistence persistence, Advisor advisor) {
         this.engine = engine;
         this.persistence = persistence;
         this.advisor = advisor;
@@ -181,23 +124,14 @@ public class FarmingPlanner implements EngineListener {
      * A planner listening to {@code engine} and hiding the patches its settings switch off.
      * Attach before the engine's first load, so that load's rebuild is planned.
      */
-    public static FarmingPlanner attachTo(StateEngine engine,
-            FarmingPlannerPersistence persistence) {
+    public static FarmingPlanner attachTo(StateEngine engine, FarmingPlannerPersistence persistence) {
         return attachTo(engine, persistence, FarmingAdviceBuilder::forPlayer);
     }
 
-    static FarmingPlanner attachTo(StateEngine engine, FarmingPlannerPersistence persistence,
-            Advisor advisor) {
+    static FarmingPlanner attachTo(StateEngine engine, FarmingPlannerPersistence persistence, Advisor advisor) {
         FarmingPlanner planner = new FarmingPlanner(engine, persistence, advisor);
         engine.setListener(planner);
-        // Installed once: the predicate reads the preferences field on every call.
-        engine.getFarmingTracker().setHidden(planner::hiddenByPreferences);
         return planner;
-    }
-
-    /** The farm run as last published, or null. Safe from any thread. */
-    public FarmingAdvice getAdvice() {
-        return advice;
     }
 
     // ---------------------------------------------------------------
@@ -224,7 +158,7 @@ public class FarmingPlanner implements EngineListener {
             dirty = true;
             return;
         }
-        rebuild(clock.getAsLong());
+        rebuild(now());
     }
 
     /**
@@ -239,13 +173,10 @@ public class FarmingPlanner implements EngineListener {
         plantingWatch.clear();
         contractCrop = null;
         house = HouseSight.unseen();
-        bottomlessBucketUses = null;
-        compostUpkeep = null;
         // The book this account is not on; another account may be on it.
         spellbookPreview = null;
         tripRecord = DepositPlanner.TripRecord.EMPTY;
         wakeAtEpochSec = 0L;
-        plannedAtEpochSec = 0L;
         dirty = false;
         publish(null);
     }
@@ -256,11 +187,8 @@ public class FarmingPlanner implements EngineListener {
         contractCrop = persistence.loadFarmingContract();
 
         house = persistence.loadHouse();
-        bottomlessBucketUses = persistence.loadBottomlessBucket();
-        compostUpkeep = persistence.loadCompostUpkeep();
 
-        FarmingPlannerPersistence.DailyTeleportLedgerState ledgerState =
-                persistence.loadDailyTeleportLedger();
+        FarmingPlannerPersistence.DailyTeleportLedgerState ledgerState = persistence.loadDailyTeleportLedger();
         dailyTeleportLedger.loadPersisted(ledgerState.getDay(), ledgerState.getUsed());
     }
 
@@ -275,15 +203,11 @@ public class FarmingPlanner implements EngineListener {
      * a re-plan.
      */
     public void setPreferences(FarmingPreferences preferences) {
-        FarmingPreferences wanted = preferences != null ? preferences
-                : FarmingPreferences.defaults();
+        FarmingPreferences wanted = preferences != null ? preferences : FarmingPreferences.defaults();
         if (wanted.equals(this.preferences)) {
             return;
         }
         this.preferences = wanted;
-        if (journal != null) {
-            journal.changed("settings", wanted);
-        }
         dirty = true;
     }
 
@@ -298,7 +222,6 @@ public class FarmingPlanner implements EngineListener {
             return;
         }
         spellbookPreview = spellbook;
-        record("spellbookPreview", "book", spellbook != null ? spellbook.name() : null);
         dirty = true;
     }
 
@@ -311,7 +234,6 @@ public class FarmingPlanner implements EngineListener {
             return;
         }
         offeredBanksHidden = !shown;
-        record("showBanks", "shown", String.valueOf(shown));
         dirty = true;
     }
 
@@ -328,7 +250,6 @@ public class FarmingPlanner implements EngineListener {
         }
         contractCrop = crop;
         persistence.saveFarmingContract(crop);
-        record("contract", "crop", crop != null ? crop.name() : null);
         dirty = true;
     }
 
@@ -359,57 +280,11 @@ public class FarmingPlanner implements EngineListener {
         }
     }
 
-    /**
-     * The bottomless bucket said how many uses of ultracompost it holds, on a check or a
-     * fill. Replaces the last reading.
-     */
-    public void bottomlessBucketRead(int uses) {
-        observeBucket(Math.max(0, uses));
-    }
-
-    /**
-     * A patch was treated from the bottomless bucket, so it holds one use fewer. Without a
-     * reading there is nothing to take the use from.
-     */
-    public void bottomlessBucketUsed() {
-        Integer uses = bottomlessBucketUses;
-        if (uses != null && uses > 0) {
-            observeBucket(uses - 1);
-        }
-    }
-
-    /**
-     * The bottomless bucket went into something that changed its uses unseen, such as a
-     * compost bin emptied into it, so its figure is forgotten until the next reading.
-     */
-    public void bottomlessBucketChangedUnseen() {
-        if (bottomlessBucketUses == null) {
-            return;
-        }
-        bottomlessBucketUses = null;
-        persistence.saveBottomlessBucket(null);
-        record("bucket", "uses", null);
-        dirty = true;
-    }
-
-    /** Takes and saves a new figure for the bucket, and re-plans against it. */
-    private void observeBucket(int uses) {
-        if (bottomlessBucketUses != null && bottomlessBucketUses == uses) {
-            return;
-        }
-        bottomlessBucketUses = uses;
-        persistence.saveBottomlessBucket(uses);
-        record("bucket", "uses", String.valueOf(uses));
-        dirty = true;
-    }
 
     /** Takes and saves a new sight of the house, and re-plans against it. */
     private void observeHouse(HouseSight next) {
         house = next;
         persistence.saveHouse(next);
-        if (journal != null) {
-            journal.changed("house", next);
-        }
         dirty = true;
     }
 
@@ -423,7 +298,7 @@ public class FarmingPlanner implements EngineListener {
         if (capability == null) {
             return;
         }
-        dailyTeleportLedger.observeUsesSpent(capability, value, clock.getAsLong());
+        dailyTeleportLedger.observeUsesSpent(capability, value, now());
         saveDailyTeleportLedger();
         dirty = true;
     }
@@ -439,7 +314,7 @@ public class FarmingPlanner implements EngineListener {
         if (state == null || DAILY_TELEPORT_VARBITS.isEmpty()) {
             return;
         }
-        long nowSec = clock.getAsLong();
+        long nowSec = now();
         for (Map.Entry<Integer, Capability> entry : DAILY_TELEPORT_VARBITS.entrySet()) {
             Integer value = state.getVarbits().get(entry.getKey());
             if (value != null) {
@@ -466,25 +341,18 @@ public class FarmingPlanner implements EngineListener {
         if (state == null) {
             return;
         }
-        Capability held = DiaryRewards.bestEarnedTier(
-                Capability.TierFamily.ARDOUGNE_CLOAK, state.getVarbits());
+        Capability held = DiaryRewards.bestEarnedTier(Capability.TierFamily.ARDOUGNE_CLOAK, state.getVarbits());
         if (held == null) {
             return;
         }
-        dailyTeleportLedger.recordUse(held, clock.getAsLong());
-        Trace.debug(log, "Ardougne cloak farm teleport charged against {}", held);
+        dailyTeleportLedger.recordUse(held, now());
+        log.debug("Ardougne cloak farm teleport charged against {}", held);
         saveDailyTeleportLedger();
         dirty = true;
     }
 
     private void saveDailyTeleportLedger() {
-        persistence.saveDailyTeleportLedger(dailyTeleportLedger.exportDay(),
-                dailyTeleportLedger.exportForPersist());
-    }
-
-    /** Whether the player has switched this patch off; see {@link PlantingGate#hidesPatch}. */
-    private boolean hiddenByPreferences(FarmingWorldMap.PatchDef patch) {
-        return PlantingGate.hidesPatch(patch, preferences);
+        persistence.saveDailyTeleportLedger(dailyTeleportLedger.exportDay(), dailyTeleportLedger.exportForPersist());
     }
 
     // ---------------------------------------------------------------
@@ -496,64 +364,12 @@ public class FarmingPlanner implements EngineListener {
      * game tick, after the engine's own flush.
      */
     public void flushIfDirty() {
-        flushIfDirty(clock.getAsLong());
+        flushIfDirty(now());
     }
 
-    // ---------------------------------------------------------------
-    // Bug reports
-    // ---------------------------------------------------------------
-
-    /** Record each published plan and planner input in {@code journal}, or nowhere if null. */
-    public void setJournal(Journal journal) {
-        this.journal = journal;
-    }
-
-    /**
-     * Plan at the second {@code clock} gives rather than the wall clock's.
-     */
-    public void setClock(LongSupplier clock) {
-        this.clock = clock;
-    }
-
-    /**
-     * The second the last plan was built at, or zero before the first. A bug report records
-     * it, so a plan rebuilt from the report counts down as the one on screen did.
-     */
-    public long getPlannedAtEpochSec() {
-        return plannedAtEpochSec;
-    }
-
-    /** What the trip has packed and the bag's low marks: state no setting holds. */
-    public DepositPlanner.TripRecord getTripRecord() {
-        return tripRecord;
-    }
-
-    /** Whether the panel's passed banks are hidden. */
-    public boolean isOfferedBanksHidden() {
-        return offeredBanksHidden;
-    }
-
-    /**
-     * Puts back what a checkpoint held beyond the settings, and plans again at the next
-     * flush.
-     */
-    public void restore(DepositPlanner.TripRecord trip, Spellbook preview, boolean banksHidden,
-            TravelTaken travelTaken, String travelTakenFor) {
-        tripRecord = trip;
-        spellbookPreview = preview;
-        offeredBanksHidden = banksHidden;
-        travelWatch.restore(travelTaken, travelTakenFor);
-        dirty = true;
-    }
-
-    /** The teleport spent on the way to the next stop, for a checkpoint. */
-    public TravelTaken getTravelTaken() {
-        return travelWatch.taken();
-    }
-
-    /** The patch the spent teleport was cast for, or null with none spent. */
-    public String getTravelTakenFor() {
-        return travelWatch.takenFor();
+    /** The epoch second now, from the wall clock. */
+    private static long now() {
+        return Instant.now().getEpochSecond();
     }
 
     /**
@@ -563,30 +379,16 @@ public class FarmingPlanner implements EngineListener {
     public void watchTravel() {
         PlayerState state = engine.getPlayerState();
         FarmingStopAdvice heading = headingStop();
-        if (state == null || !travelWatch.tick(state,
-                heading == null ? null : heading.getPatchName(),
-                heading == null || heading.getLanding() == null ? null
-                        : Destination.valueOf(heading.getLanding()))) {
+        if (state == null || !travelWatch.tick(state, heading == null ? null : heading.getPatchName(),
+                heading == null || heading.getLanding() == null ? null : Destination.valueOf(heading.getLanding()))) {
             return;
         }
         dirty = true;
         TravelTaken taken = travelWatch.taken();
         if (taken.isNone()) {
-            Trace.debug(log, "Teleport no longer paid for: the stop it was spent for is done");
+            log.debug("Teleport no longer paid for: the stop it was spent for is done");
         } else {
-            Trace.debug(log, "Teleport spent on the way to {}: {}", travelWatch.takenFor(),
-                    taken);
-        }
-        if (journal != null) {
-            JsonObject data = new JsonObject();
-            JsonArray places = new JsonArray();
-            taken.getPlaces().forEach(place -> places.add(place.name()));
-            JsonArray items = new JsonArray();
-            taken.getItems().forEach(item -> items.add(item.name()));
-            data.add("places", places);
-            data.add("items", items);
-            data.addProperty("for", travelWatch.takenFor());
-            journal.event("travelTaken", data);
+            log.debug("Teleport spent on the way to {}: {}", travelWatch.takenFor(), taken);
         }
     }
 
@@ -602,9 +404,9 @@ public class FarmingPlanner implements EngineListener {
         boolean was = plantingWatch.holding();
         if (plantingWatch.tick(state, engine.getFarmingTracker().getChanges())) {
             // The flush after this rebuilds; dirty already says so.
-            Trace.debug(log, "A planting showed or its hold ran out; planning again");
+            log.debug("A planting showed or its hold ran out; planning again");
         } else if (!was && plantingWatch.holding()) {
-            Trace.debug(log, "A seed left the bag; holding the plan until the patch shows it");
+            log.debug("A seed left the bag; holding the plan until the patch shows it");
         }
     }
 
@@ -614,21 +416,11 @@ public class FarmingPlanner implements EngineListener {
             return null;
         }
         for (FarmingStopAdvice stop : advice.getStops()) {
-            if (stop.getKind() == FarmingStopAdvice.Kind.PATCH
-                    && stop.getOutcome() == FarmingStopAdvice.Outcome.VISIT) {
+            if (stop.getKind() == FarmingStopAdvice.Kind.PATCH && stop.getOutcome() == FarmingStopAdvice.Outcome.VISIT) {
                 return stop;
             }
         }
         return null;
-    }
-
-    private void record(String type, String field, String value) {
-        if (journal == null) {
-            return;
-        }
-        JsonObject data = new JsonObject();
-        data.addProperty(field, value);
-        journal.event(type, data);
     }
 
     /** {@link #flushIfDirty()} against a stated second rather than the clock. */
@@ -660,16 +452,6 @@ public class FarmingPlanner implements EngineListener {
         return true;
     }
 
-    /** Arms the wake-up directly, without building a run that waits on a crop. */
-    void armWakeAt(long readyAtEpochSec) {
-        wakeAtEpochSec = readyAtEpochSec;
-    }
-
-    /** The second the wake-up is armed for, or zero. */
-    long wakeAt() {
-        return wakeAtEpochSec;
-    }
-
     /**
      * Plan against the engine's player state as it stands, and publish the result if it
      * differs from the last. With no player state there is nothing to plan, and the last
@@ -681,11 +463,9 @@ public class FarmingPlanner implements EngineListener {
         if (state == null) {
             return;
         }
-        plannedAtEpochSec = nowEpochSec;
         // The clock enters the farming layer here and nowhere below it. Everything under
         // the scheduler takes the epoch second as an argument, so the time can be fixed.
         FarmingInputs inputs = inputs(nowEpochSec);
-        inputs = inputs.withCompostStock(compostStock(state, inputs));
         FarmingAdvice next = advisor.advise(state, inputs, nowEpochSec);
         // The trip record reads the advice it feeds. A changed packed set plans once more
         // before publishing, so the next bank's deposits see it at once. Twice is enough:
@@ -694,69 +474,10 @@ public class FarmingPlanner implements EngineListener {
         boolean replan = !record.getPacked().equals(tripRecord.getPacked());
         tripRecord = record;
         if (replan) {
-            next = advisor.advise(state, inputs.withPackedThisTrip(record.getPacked()),
-                    nowEpochSec);
+            next = advisor.advise(state, inputs.withPackedThisTrip(record.getPacked()), nowEpochSec);
         }
         armWake(next, nowEpochSec);
         publish(next);
-    }
-
-    /**
-     * Counts the compost stock and moves the upkeep thermostat on it, saving a change.
-     *
-     * <p>A bucket stored at the leprechaun gives its figure exactly, so it replaces the last
-     * reading and is still known once the player takes it out. A bucket seen empty, with no
-     * filled one anywhere, has been emptied, and its reading is 0.
-     *
-     * <p>A count that reads short once would switch upkeep on and keep it on until the high
-     * threshold. So while the bank has never been seen, or a bucket the player holds has no
-     * figure, the count is only a floor: it can switch upkeep off, never on.
-     */
-    private CompostStock compostStock(PlayerState state, FarmingInputs inputs) {
-        Integer known = BottomlessBucket.isStored(state)
-                ? Integer.valueOf(BottomlessBucket.storedUltracompostUses(state))
-                : CompostStock.bucketSeenEmpty(state) ? Integer.valueOf(0) : null;
-        if (known != null && !known.equals(bottomlessBucketUses)) {
-            bottomlessBucketUses = known;
-            persistence.saveBottomlessBucket(known);
-        }
-        int patches = CompostStock.count(state, bottomlessBucketUses);
-        boolean bucketUnread = CompostStock.bucketUnread(state, bottomlessBucketUses);
-        if (compostUpkeep != null && holdsTheThermostat(advice, inputs)) {
-            return new CompostStock(patches, compostUpkeep, bucketUnread);
-        }
-        boolean whole = state.getBankLastSeen() != null && !bucketUnread;
-        boolean on = CompostStock.upkeepAfter(compostUpkeep, patches, whole, preferences);
-        // A floor decides only "off". Never decided and short of a whole count, upkeep is on
-        // by default, and stays undecided.
-        boolean decided = whole || !on;
-        if (decided && !Boolean.valueOf(on).equals(compostUpkeep)) {
-            Trace.debug(log, "Compost upkeep {} at {} ultracompost", on ? "on" : "off", patches);
-            compostUpkeep = on;
-            persistence.saveCompostUpkeep(on);
-        }
-        return new CompostStock(patches, on, bucketUnread);
-    }
-
-    /**
-     * Whether the trip on screen keeps the upkeep decision where it is.
-     *
-     * <p>Held while the player is at the bins on this trip: the bins are on the trip shown
-     * and one was seen this trip. Emptying a bin into the bucket is how the stock rises
-     * mid-trip, and the bins still ahead stay on. A ready bin nobody has reached yet holds
-     * nothing, so compost bought before setting off still switches upkeep off.
-     *
-     * <p>Held too while the player is partway round, so a stock falling below the low
-     * threshold does not add bins mid-trip. Read off the last advice, so the decision moves
-     * one rebuild after the trip ends.
-     */
-    private static boolean holdsTheThermostat(FarmingAdvice shown, FarmingInputs inputs) {
-        if (shown == null) {
-            return false;
-        }
-        return shown.isUnderway() || shown.getTripRuns() != null
-                && shown.getTripRuns().contains(RunId.ULTRACOMPOST.name())
-                && CompostStock.aBinSeenThisTrip(inputs);
     }
 
     /** Every field of the advice is drawn, so it compares whole. */
@@ -766,9 +487,6 @@ public class FarmingPlanner implements EngineListener {
         }
         advice = next;
         adviceVersion++;
-        if (journal != null) {
-            journal.plan(next, tripRecord.getPacked());
-        }
     }
 
     /**
@@ -780,8 +498,7 @@ public class FarmingPlanner implements EngineListener {
      */
     private FarmingInputs inputs(long nowSec) {
         FarmingTracker tracker = engine.getFarmingTracker();
-        return FarmingInputs.of(spellbookPreview,
-                patch -> {
+        return FarmingInputs.of(spellbookPreview, patch -> {
                     FarmingWorldMap.PatchDef def = patch.resolve();
                     return def != null ? tracker.predict(def, nowSec) : null;
                 },

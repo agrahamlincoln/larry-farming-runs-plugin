@@ -1,37 +1,13 @@
 package com.larryfarming.farming.engine;
 
-import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.CropState;
-import com.larryfarming.engine.farming.FarmingWorldMap;
-import com.larryfarming.engine.farming.PatchPrediction;
-import com.larryfarming.engine.farming.PatchType;
-import com.larryfarming.farming.catalogue.CropData;
-import com.larryfarming.farming.catalogue.FarmingCatalogue;
-import com.larryfarming.farming.catalogue.RunIcons;
-import com.larryfarming.farming.detection.CapabilityResolver;
-import com.larryfarming.farming.detection.CapabilitySources;
-import com.larryfarming.farming.detection.CapabilityState;
-import com.larryfarming.farming.model.FarmingPreferences;
-import com.larryfarming.farming.model.FarmingRun;
-import com.larryfarming.farming.model.Preset;
-import com.larryfarming.farming.model.PatchRef;
-import com.larryfarming.farming.model.RunId;
-import com.larryfarming.farming.model.Requirement;
-import com.larryfarming.farming.model.RunStop;
-import com.larryfarming.farming.model.Spellbook;
-import com.larryfarming.farming.model.TravelOption;
-import com.larryfarming.farming.model.UnlockGate;
+import com.larryfarming.engine.farming.*;
+import com.larryfarming.farming.catalogue.*;
+import com.larryfarming.farming.detection.*;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.model.Skill;
-import com.larryfarming.report.Trace;
-import com.larryfarming.snapshot.FarmingDurations;
-import com.larryfarming.snapshot.FarmingRunStatus;
-import com.larryfarming.snapshot.FarmingSkipReason;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import com.larryfarming.snapshot.*;
+import java.util.*;
 import java.util.function.BooleanSupplier;
 import lombok.extern.slf4j.Slf4j;
 
@@ -80,6 +56,12 @@ public final class RunScheduler {
      */
     private static final int CONTRACT_PRODUCE_VARBIT = CapabilitySources.CONTRACT_PRODUCE_VARBIT;
     private static final int CONTRACT_COMPLETE_VARBIT = CapabilitySources.CONTRACT_COMPLETE_VARBIT;
+    // Whether checking the patch's health completes a contract for it, rather than picking
+    // the produce: PatchType.isHealthCheckRequired. A contract for a crop with a health
+    // check completes on the check, so a jangerberry bush finishes its contract before its
+    // berries are picked. A crop without one completes once the patch is fully harvested. A
+    // crop whose health is already checked cannot satisfy a contract handed out afterwards;
+    // that contract needs one grown from seed.
 
     /** Everywhere a contracted crop could be growing. */
     private static final List<PatchRef> CONTRACT_PATCHES = FarmingCatalogue.contractPatches();
@@ -99,25 +81,6 @@ public final class RunScheduler {
         return matching;
     }
 
-    /**
-     * Whether checking the patch's health completes a contract for it, rather than picking
-     * the produce.
-     *
-     * <p>A contract for a crop with a health check completes on the check, so a
-     * jangerberry bush finishes its contract before its berries are picked. A crop without
-     * one completes once the patch is fully harvested.
-     *
-     * <p>A crop whose health is already checked cannot satisfy a contract handed out
-     * afterwards; that contract needs one grown from seed.
-     */
-    private static boolean completedByCheck(PatchType type) {
-        return type.isHealthCheckRequired();
-    }
-
-    /** The crop for mid-sentence, in lower case: "snape grass", "jangerberry bush". */
-    private static String displayNameOf(Crop crop) {
-        return CropNames.inSentence(CropNames.displayNameOf(crop));
-    }
 
     /**
      * Every run, best first.
@@ -125,8 +88,7 @@ public final class RunScheduler {
      * @param openBook which spellbook the player is on, deciding which variant of a run
      *                 that has two gets scheduled. Null follows neither.
      */
-    public static List<FarmingRunStatus> schedule(PlayerState state, FarmingInputs inputs,
-            Spellbook openBook, long nowEpochSec) {
+    public static List<FarmingRunStatus> schedule(PlayerState state, FarmingInputs inputs, Spellbook openBook, long nowEpochSec) {
         FarmingInputs given = (inputs != null ? inputs : FarmingInputs.none()).seeing(state);
         // One resolver per book, cached across the schedule: a run written for another book
         // is measured on both, and building a resolver is the expensive half.
@@ -142,10 +104,8 @@ public final class RunScheduler {
             }
             // Scoring the variant already planned it, so reuse those plans, and the resolver
             // they were planned with.
-            CapabilityResolver resolver = resolvers.computeIfAbsent(choice.getPlanFor(),
-                    given::resolverOn);
-            statuses.add(statusOf(choice.getRun(), state, given, choice.getPlans(), resolver,
-                    nowEpochSec, tripStart));
+            CapabilityResolver resolver = resolvers.computeIfAbsent(choice.getPlanFor(), given::resolverOn);
+            statuses.add(statusOf(choice.getRun(), state, given, choice.getPlans(), resolver, nowEpochSec, tripStart));
         }
         FarmingPreferences prefs = given.getPreferences();
         statuses.sort(Comparator.comparingInt(status -> rankOf(status, prefs)));
@@ -156,8 +116,7 @@ public final class RunScheduler {
      * One variant of each run. The herb run is in the catalogue once per spellbook, and
      * {@link RunVariants} picks between them on reachable patches.
      */
-    private static List<RunVariants.Choice> oneVariantPerRun(PlayerState state,
-            Spellbook openBook, FarmingInputs inputs,
+    private static List<RunVariants.Choice> oneVariantPerRun(PlayerState state, Spellbook openBook, FarmingInputs inputs,
             Map<Spellbook, CapabilityResolver> resolvers) {
         Map<RunId, List<FarmingRun>> byId = FarmingCatalogue.runsById();
         List<RunVariants.Choice> chosen = new ArrayList<>(byId.size());
@@ -169,9 +128,8 @@ public final class RunScheduler {
 
     /**
      * Due runs first in priority order, then everything waiting in the order it will come
-     * ready, then the unseen, then the locked and those with no route. Those last because
-     * they are the groups the player can do nothing about on the run today. Within a group,
-     * the player's run priority decides.
+     * ready, then the unseen, then the locked, last because the player can do nothing about
+     * them on the run today. Within a group, the player's run priority decides.
      */
     private static int rankOf(FarmingRunStatus status, FarmingPreferences prefs) {
         RunStatus state = RunStatus.valueOf(status.getStatus());
@@ -189,57 +147,32 @@ public final class RunScheduler {
     }
 
     private static FarmingRunStatus statusOf(FarmingRun run, PlayerState state,
-            FarmingInputs inputs, List<StopPlan> plans, CapabilityResolver resolver,
-            long nowEpochSec, long tripStart) {
+            FarmingInputs inputs, List<StopPlan> plans, CapabilityResolver resolver, long nowEpochSec, long tripStart) {
         UnlockGate gate = RunAvailability.gateOf(run, inputs.getPreferences());
         if (RunAvailability.of(gate, state) == CapabilityState.LACK) {
-            return build(run, RunStatus.LOCKED, RunAvailability.shortfall(gate, state), 0L, 0,
-                    false);
+            return build(run, RunStatus.LOCKED, RunAvailability.shortfall(gate, state), 0L, 0, false);
         }
         if (waitsForTheHerbLevel(run, inputs.getPreferences(), state)) {
-            return build(run, RunStatus.PENDING, "from " + Preset.HERB_RUN_LEVEL + " Farming",
-                    0L, 0, false);
+            return build(run, RunStatus.PENDING, "from " + Preset.HERB_RUN_LEVEL + " Farming", 0L, 0, false);
         }
-        // The coral wait holds back new plantings only, so it is applied after the tally.
-        String coralWait = run.getId() == RunId.CORAL
-                ? coralWait(inputs, state, nowEpochSec) : null;
         if (run.getId() == RunId.CONTRACT) {
             // The contract answers from the guild, not from a walk of stops. It needs no
             // reachability guard: the guild chain ends in a minecart rung open to everyone.
             return contractStatus(run, state, inputs, nowEpochSec);
         }
 
-        // With the stock high Larry leaves every bin alone, so the bins wait on the stock
-        // alone, whatever is in them.
-        String stockHigh = PlantingGate.everyStopWorksAbin(run)
-                && run.getStops().stream()
-                        .allMatch(stop -> CompostUpkeep.leavesAlone(stop, inputs, state))
-                ? CompostUpkeep.stockLine(inputs, state) : null;
-        if (stockHigh != null) {
-            return build(run, RunStatus.PENDING, stockHigh, 0L, 0, false);
-        }
-
         String noRoute = noRouteDetail(run, plans, inputs.getPreferences(), state, resolver);
         if (noRoute != null) {
-            return coralWait != null
-                    ? build(run, RunStatus.PENDING, coralWait, 0L, 0, false)
-                    : build(run, RunStatus.NO_ROUTE, noRoute, 0L, 0, false);
+            return build(run, RunStatus.LOCKED, noRoute, 0L, 0, false);
         }
 
         Tally tally = walkPatches(run, plans, inputs, state, nowEpochSec, false, tripStart);
-
-        // Like the sapling wait below, the coral wait gives way to coral already in the
-        // ground: a diseased crop dies on its next growth tick, and ripe coral waits for
-        // no level. Only the empty nurseries wait.
-        if (coralWait != null && tally.ready + tally.needsHelp + tally.needsClearing == 0) {
-            return build(run, RunStatus.PENDING, coralWait, 0L, 0, tally.predicted, false);
-        }
 
         if (tally.seen == 0 && tally.unseen == 0) {
             // Nothing observed, and no unseen patch the player could plant. Nothing seen
             // is also nothing to be halfway round, so the trip is never unfinished, whatever
             // the extras say.
-            return build(run, RunStatus.UNSEEN, UNSEEN_DETAIL, 0L, 0, false, false);
+            return build(run, RunStatus.UNSEEN, UNSEEN_DETAIL, 0L, 0, false);
         }
 
         Tally extras = walkPatches(run, plans, inputs, state, nowEpochSec, true, tripStart);
@@ -247,12 +180,12 @@ public final class RunScheduler {
         boolean unfinished = tally.seen > 0 && tripUnfinished(tally, extras, nowEpochSec);
 
         // Waiting for every patch, one still growing holds the run back. Only a growing
-        // crop can: an unseen patch, a seedless empty one and an idle bin have nothing to
-        // wait for, so each is left out here as it is from the verdict below. A diseased
-        // or dead patch never waits: a diseased crop dies on its next growth tick, and a
-        // dead one is a patch growing nothing until it is cleared. A crop planted on this
-        // trip holds nothing back either, or the run would leave the walkthrough at its
-        // first replanted patch.
+        // crop can: an unseen patch and a seedless empty one have nothing to wait for, so
+        // each is left out here as it is from the verdict below. A diseased or dead patch
+        // never waits: a diseased crop dies on its next growth tick, and a dead one is a
+        // patch growing nothing until it is cleared. A crop planted on this trip holds
+        // nothing back either, or the run would leave the walkthrough at its first
+        // replanted patch.
         boolean waits = inputs.getPreferences().waitsForEveryPatch();
         boolean urgent = tally.needsHelp + tally.needsClearing > 0;
         boolean holding = tally.growing > tally.plantedThisTrip;
@@ -260,80 +193,26 @@ public final class RunScheduler {
         // is diseased or dead.
         String saplings = saplingsShort(run, tally, inputs.getPreferences(), state);
         if (saplings != null && !urgent) {
-            return build(run, RunStatus.PENDING, saplings, 0L, 0, tally.predicted,
-                    unfinished);
+            return build(run, RunStatus.PENDING, saplings, 0L, 0, tally.predicted, unfinished, false);
         }
         if (tally.actionable > 0 && (!waits || !holding || urgent)) {
-            return build(run, RunStatus.DUE, dueDetail(tally), 0L, tally.actionable,
-                    tally.predicted, unfinished);
+            return build(run, RunStatus.DUE, dueDetail(tally), 0L, tally.actionable, tally.predicted, unfinished, false);
         }
         // The run comes due when its last patch does. A crop with no estimate leaves that
         // undated, rather than naming a time the run would still be waiting at.
-        // Ripe fill makes the run due only when nothing holds it, so a held run's date is
-        // its crops' alone.
-        long readyAt = earlier(!waits ? tally.earliestReady
-                : tally.undated > 0 ? 0L : tally.latestReady,
-                waits && holding ? 0L : tally.fillReady);
-        // A bucket with no figure leaves the stock unknown: the row asks for a check.
-        String stock = PlantingGate.everyStopWorksAbin(run)
-                ? CompostUpkeep.stockLine(inputs, state)
-                : null;
-        return build(run, RunStatus.PENDING, stock != null ? stock
-                : pendingDetail(tally, readyAt, waits, nowEpochSec),
-                readyAt, 0, tally.predicted, unfinished);
+        long readyAt = !waits ? tally.earliestReady : tally.undated > 0 ? 0L : tally.latestReady;
+        return build(run, RunStatus.PENDING, pendingDetail(tally, readyAt, waits, nowEpochSec),
+                readyAt, 0, tally.predicted, unfinished, false);
     }
 
     /** Whether the herb run waits for {@link Preset#HERB_RUN_LEVEL} Farming. */
-    static boolean waitsForTheHerbLevel(FarmingRun run, FarmingPreferences prefs,
-            PlayerState state) {
+    static boolean waitsForTheHerbLevel(FarmingRun run, FarmingPreferences prefs, PlayerState state) {
         return run.getId() == RunId.HERB && herbRunsWaitForTheLevel(prefs, state);
     }
 
     /** Whether the player's herb runs wait for {@link Preset#HERB_RUN_LEVEL} Farming. */
     static boolean herbRunsWaitForTheLevel(FarmingPreferences prefs, PlayerState state) {
-        return prefs.herbRunsWaitForLevel() && state != null
-                && state.getSkillLevel(Skill.FARMING) < Preset.HERB_RUN_LEVEL;
-    }
-
-    /**
-     * What the coral run waits for, or null when it waits for nothing: the switch is off,
-     * or the player has {@link Preset#CORAL_LEVEL} Farming and an Attas plant growing.
-     * {@link #statusOf} lifts the wait while a nursery holds coral to pick, cure or clear.
-     *
-     * <p>An anima patch not yet seen holds no Attas as far as Larry knows, so the run waits
-     * until the player passes the patch.
-     */
-    static String coralWait(FarmingInputs inputs, PlayerState state, long nowEpochSec) {
-        if (!inputs.getPreferences().coralWaitsForAttas()) {
-            return null;
-        }
-        // An unread level never holds the run, as with the crop level gates. getSkillLevel
-        // answers 1 for an unread skill, so the map is asked directly.
-        if (state != null && state.getSkills() != null
-                && state.getSkills().containsKey(Skill.FARMING)
-                && state.getSkillLevel(Skill.FARMING) < Preset.CORAL_LEVEL) {
-            return "from " + Preset.CORAL_LEVEL + " Farming";
-        }
-        return attasGrowing(inputs, nowEpochSec) ? null : "until an Attas plant is up";
-    }
-
-    /**
-     * Whether the anima patch was last seen growing an Attas plant that is still alive. A
-     * plant's growth ends in its death, so one whose time has run out no longer counts.
-     */
-    static boolean attasGrowing(FarmingInputs inputs, long nowEpochSec) {
-        for (FarmingWorldMap.PatchDef patch : FarmingWorldMap.allPatches()) {
-            if (patch.getType() != PatchType.ANIMA) {
-                continue;
-            }
-            PatchPrediction seen = inputs.patchAt(PatchRef.of(patch.getRegionId(),
-                    patch.getVarbitId(), patch.displayName()));
-            if (seen != null && seen.getCrop() == Crop.ATTAS
-                    && seen.getState() == CropState.GROWING && !seen.isReadyAt(nowEpochSec)) {
-                return true;
-            }
-        }
-        return false;
+        return prefs.herbRunsWaitForLevel() && state != null && state.getSkillLevel(Skill.FARMING) < Preset.HERB_RUN_LEVEL;
     }
 
     /**
@@ -353,10 +232,8 @@ public final class RunScheduler {
      * checked dragonfruit trees and five saplings, one of them a palm, release the run, which
      * then plants four.
      */
-    private static String saplingsShort(FarmingRun run, Tally tally,
-            FarmingPreferences prefs, PlayerState state) {
-        if (run.getSeedPatchType() != PatchType.FRUIT_TREE
-                || !prefs.fruitTreesWaitForSaplings() || tally.plantedThisTrip > 0) {
+    private static String saplingsShort(FarmingRun run, Tally tally, FarmingPreferences prefs, PlayerState state) {
+        if (run.getSeedPatchType() != PatchType.FRUIT_TREE || !prefs.fruitTreesWaitForSaplings() || tally.plantedThisTrip > 0) {
             return null;
         }
         int patches = tally.bare + tally.needsClearing + tally.grownTrees;
@@ -397,8 +274,8 @@ public final class RunScheduler {
      * @return {@link FarmingSkipReason#NO_FAIRY_RING_ROUTE}'s label when the fairy ring is
      *     the shared blocker; otherwise {@link #NO_ROUTE_DETAIL}
      */
-    // No catalogue run yet has a required stop the player can switch off beside others; the
-    // switched-off rule guards a future one.
+    // No catalogue run has a required stop the player can switch off beside others, so no
+    // run reaches the switched-off rule.
     static String noRouteDetail(FarmingRun run, List<StopPlan> plans,
             FarmingPreferences prefs, PlayerState state, CapabilityResolver resolver) {
         boolean anyStop = false;
@@ -413,8 +290,7 @@ public final class RunScheduler {
                 return null;
             }
             anyStop = true;
-            if (plan.getSkipReason() == FarmingSkipReason.NO_FAIRY_RING_ROUTE
-                    && aRingWouldOpenIt(stop, state, resolver)) {
+            if (plan.getSkipReason() == FarmingSkipReason.NO_FAIRY_RING_ROUTE && aRingWouldOpenIt(stop, state, resolver)) {
                 anyForWantOfAring = true;
             } else if (!shutByItsGate(stop, state, resolver)) {
                 onlyTheRing = false;
@@ -423,9 +299,7 @@ public final class RunScheduler {
         if (!anyStop) {
             return null;
         }
-        return anyForWantOfAring && onlyTheRing
-                ? FarmingSkipReason.NO_FAIRY_RING_ROUTE.getLabel()
-                : NO_ROUTE_DETAIL;
+        return anyForWantOfAring && onlyTheRing ? FarmingSkipReason.NO_FAIRY_RING_ROUTE.getLabel() : NO_ROUTE_DETAIL;
     }
 
     /**
@@ -433,15 +307,13 @@ public final class RunScheduler {
      * stand at a ring. Stricter than the planner's own test, which also accepts a network
      * it cannot read yet.
      */
-    private static boolean aRingWouldOpenIt(RunStop stop, PlayerState state,
-            CapabilityResolver resolver) {
+    private static boolean aRingWouldOpenIt(RunStop stop, PlayerState state, CapabilityResolver resolver) {
         Requirement approach = FarmingCatalogue.toAfairyRing();
         for (TravelOption option : stop.getTravel()) {
             if (option.isCertainOnly() || !option.getRequires().contains(approach)) {
                 continue;
             }
-            if (resolver.evaluateGranting(option.getRequires(), approach, state,
-                    Collections.emptyMap()) == CapabilityState.HAVE) {
+            if (resolver.evaluateGranting(option.getRequires(), approach, state, Collections.emptyMap()) == CapabilityState.HAVE) {
                 return true;
             }
         }
@@ -449,11 +321,8 @@ public final class RunScheduler {
     }
 
     /** Whether the stop's access gate definitely keeps the player out, whatever the route. */
-    private static boolean shutByItsGate(RunStop stop, PlayerState state,
-            CapabilityResolver resolver) {
-        return stop.getAccessGate() != null
-                && resolver.resolve(stop.getAccessGate(), state).getState()
-                        == CapabilityState.LACK;
+    private static boolean shutByItsGate(RunStop stop, PlayerState state, CapabilityResolver resolver) {
+        return stop.getAccessGate() != null && resolver.resolve(stop.getAccessGate(), state).getState() == CapabilityState.LACK;
     }
 
     /**
@@ -466,10 +335,8 @@ public final class RunScheduler {
             return false;
         }
         FarmingSkipReason reason = plan.getSkipReason();
-        return reason == FarmingSkipReason.NO_ROUTE
-                || reason == FarmingSkipReason.NO_ROUTE_LISTED
-                || reason == FarmingSkipReason.NO_FAIRY_RING_ROUTE
-                || reason == FarmingSkipReason.NOT_WORTH_TRIP;
+        return reason == FarmingSkipReason.NO_ROUTE || reason == FarmingSkipReason.NO_ROUTE_LISTED
+                || reason == FarmingSkipReason.NO_FAIRY_RING_ROUTE || reason == FarmingSkipReason.NOT_WORTH_TRIP;
     }
 
     /**
@@ -536,40 +403,35 @@ public final class RunScheduler {
      * decodes which crop it wants. Without the crop, reading the whole guild
      * would report a contract ready whenever any guild crop is.
      */
-    private static FarmingRunStatus contractStatus(FarmingRun run, PlayerState state,
-            FarmingInputs inputs, long nowEpochSec) {
+    private static FarmingRunStatus contractStatus(FarmingRun run, PlayerState state, FarmingInputs inputs, long nowEpochSec) {
         Integer produce = state == null ? null : state.getVarbits().get(CONTRACT_PRODUCE_VARBIT);
         if (produce == null) {
             return build(run, RunStatus.UNSEEN, "contract not checked yet", 0L, 0, false);
         }
         if (produce == 0) {
-            return build(run, RunStatus.DUE, "get a contract from Guildmaster Jane", 0L, 1,
-                    false);
+            return build(run, RunStatus.DUE, "get a contract from Guildmaster Jane", 0L, 1, false);
         }
         // Set when the contract's finishing act is done, not when the crop matures: it goes
         // 0 to 1 as the last snape grass leaves the ground. Only the walk to Jane is left.
         // The act depends on the crop: see completedByCheck.
         Integer complete = state.getVarbits().get(CONTRACT_COMPLETE_VARBIT);
         if (complete != null && complete != 0) {
-            return build(run, RunStatus.DUE, "hand the contract to Guildmaster Jane", 0L, 1,
-                    false);
+            return build(run, RunStatus.DUE, "hand the contract to Guildmaster Jane", 0L, 1, false);
         }
 
         Crop crop = inputs.getContractCrop();
         if (crop == null) {
             // A contract value the decoding table does not know, so the contract's patch is
             // unknown and nothing the player does here changes that.
-            return build(run, RunStatus.UNSEEN, "contract crop not recognised", 0L, 0,
-                    false);
+            return build(run, RunStatus.UNSEEN, "contract crop not recognised", 0L, 0, false);
         }
 
         CropData data = CropData.forCrop(crop);
         if (data == null) {
             // A crop CropData does not carry (easy-tier produce no run plants).
             // Nothing here can find its patch, so say only what is certain.
-            Trace.debug(log, "No crop data for farming contract produce {}", crop);
-            return build(run, RunStatus.PENDING, displayNameOf(crop) + " growing", 0L, 0,
-                    false);
+            log.debug("No crop data for farming contract produce {}", crop);
+            return build(run, RunStatus.PENDING, CropNames.inSentence(crop) + " growing", 0L, 0, false);
         }
         return contractPatchStatus(run, crop, data, state, inputs, nowEpochSec);
     }
@@ -586,8 +448,8 @@ public final class RunScheduler {
      */
     private static FarmingRunStatus contractPatchStatus(FarmingRun run, Crop crop,
             CropData data, PlayerState state, FarmingInputs inputs, long nowEpochSec) {
-        boolean completedByCheck = completedByCheck(data.getPatchType());
-        String name = displayNameOf(crop);
+        boolean completedByCheck = data.getPatchType().isHealthCheckRequired();
+        String name = CropNames.inSentence(crop);
         boolean seen = false;
         boolean predicted = false;
         boolean needsCuring = false;
@@ -628,15 +490,10 @@ public final class RunScheduler {
             }
             if (patch.isReadyAt(nowEpochSec)) {
                 // Not possessive: crop names mix singular and plural ("jangerberries's").
-                return dueAtThePatch(run,
-                        completedByCheck ? "check the health of your " + name
-                                : "harvest your " + name,
-                        predicted);
+                return dueAtThePatch(run, completedByCheck ? "check the health of your " + name : "harvest your " + name, predicted);
             }
             long done = patch.getDoneEstimateEpochSec();
-            if (done > 0 && (soonest == 0 || done < soonest)) {
-                soonest = done;
-            }
+            soonest = earlier(done, soonest);
         }
 
         // Curing first: a diseased patch dies on the next growth tick, and a dead one
@@ -647,40 +504,35 @@ public final class RunScheduler {
         if (needsClearing) {
             // "And replant" only when they have the seed, as in the empty-patch branch
             // below. Still DUE either way: the patch is not free until it is dug.
-            return dueAtThePatch(run, outOfContractSeed(crop, state)
-                    ? "dig up your dead " + name
+            return dueAtThePatch(run, outOfSeedFor(crop, state) ? "dig up your dead " + name
                     : "dig up your dead " + name + " and replant", predicted);
         }
         if (soonest > 0) {
-            return build(run, RunStatus.PENDING, "ready in " + describe(soonest - nowEpochSec),
-                    soonest, 0, predicted);
+            return build(run, RunStatus.PENDING, "ready in " + FarmingDurations.describe(soonest - nowEpochSec), soonest, 0, predicted);
         }
         // The contract's patch is visible and its crop is not growing in it.
         if (seen) {
             // An empty patch is a reason to go only while the player has the seed, as for
             // every other run. Only a definite nothing counts, so an unopened bank still
             // sends them.
-            return outOfContractSeed(crop, state)
-                    ? build(run, RunStatus.PENDING,
-                            "no " + CropNames.inSentence(data.getSeedName()), 0L, 0,
-                            predicted)
-                    : dueAtThePatch(run, "plant " + name + " at the guild", predicted);
+            return outOfSeedFor(crop, state) ? build(run, RunStatus.PENDING, "no " + CropNames.inSentence(data.getSeedName()), 0L, 0,
+                            predicted) : dueAtThePatch(run, "plant " + name + " at the guild", predicted);
         }
         // Not been to the guild since the plugin started, so there is nothing to read.
         return build(run, RunStatus.UNSEEN, "guild patches not checked yet", 0L, 0, false);
     }
 
     /**
-     * Whether the contracted crop is one the player is known to have no seed for.
+     * Whether this one crop is one the player is known to have no seed for: a contract's
+     * crop, or a fixed-crop stop's.
      *
      * <p>Asked of the crop itself rather than through {@link #definitelyOutOfSeeds}: a
      * contract accepts only the crop it names, so preferences and the seed ladder have no
      * say.
      */
-    private static boolean outOfContractSeed(Crop crop, PlayerState state) {
+    static boolean outOfSeedFor(Crop crop, PlayerState state) {
         CropData data = CropData.forCrop(crop);
-        return data != null
-                && SeedSelector.definitelyOutOf(crop, state, data.getSeedsPerPatch());
+        return data != null && SeedSelector.definitelyOutOf(crop, state, data.getSeedsPerPatch());
     }
 
     /** What each of a run's patches is doing, rolled up. */
@@ -714,8 +566,6 @@ public final class RunScheduler {
         long earliestReady;
         /** When the last estimated crop finishes. */
         long latestReady;
-        /** When the first bin's fill finishes, which holds no waiting run back. */
-        long fillReady;
         boolean predicted;
         /** The most recent time any of these patches was actually observed. */
         long lastSeen;
@@ -728,20 +578,18 @@ public final class RunScheduler {
      * and without stops this player cannot reach.
      *
      * <p>The extras are things to do while already out there, not reasons to go. An
-     * allotment feeding a bin no herb visit passes joins the route proper instead
-     * ({@link CompostUpkeep#bringsThePlayer}). An unreachable patch is not somewhere the player can act. Both would otherwise make a
+     * unreachable patch is not somewhere the player can act. Both would otherwise make a
      * run report itself due off a patch nothing can clear.
      *
      * <p>Only reachability filters stops here, unlike the walkthrough. The runs list counts
-     * down to a crop still growing, so dropping it would replace a due date with silence. {@link FarmingRun#requiredStops()} draws the same line for the stop count.
+     * down to a crop still growing, so dropping it would replace a due date with silence.
      *
      * @param extras false for the route proper, which makes the verdict; true for the
      *               woven-in stops alone. Two passes keep every {@link Tally} meaning one
      *               side only.
      */
     private static Tally walkPatches(FarmingRun run, List<StopPlan> plans,
-            FarmingInputs inputs, PlayerState state, long nowEpochSec, boolean extras,
-            long tripStart) {
+            FarmingInputs inputs, PlayerState state, long nowEpochSec, boolean extras, long tripStart) {
         Tally tally = new Tally();
         tally.tripStart = tripStart;
         for (StopPlan plan : plans) {
@@ -749,20 +597,15 @@ public final class RunScheduler {
                 continue;
             }
             RunStop stop = plan.getStop();
-            // An allotment that starts a bin no herb visit passes is a reason to go, so it
-            // joins the route proper.
-            boolean fill = CompostUpkeep.bringsThePlayer(stop, inputs, state);
-            if ((stop.isOptional() && !fill) != extras) {
+            if (stop.isOptional() != extras) {
                 continue;
             }
             // A silenced stop is a patch the player switched off, not an empty patch.
-            if (PlantingGate.silences(run, stop, inputs.getPreferences())
-                    || CompostUpkeep.leavesAlone(stop, inputs, state)) {
+            if (PlantingGate.silences(run, stop, inputs.getPreferences())) {
                 continue;
             }
             boolean seedless = definitelyOutOfSeeds(run, stop, state, inputs.getPreferences());
-            walkPatches(stop, inputs, state, nowEpochSec, seedless,
-                    () -> knowsAseedFor(run, stop, state, inputs.getPreferences()), fill, tally);
+            walkPatches(stop, inputs, state, nowEpochSec, seedless, () -> knowsAseedFor(run, stop, state, inputs.getPreferences()), tally);
         }
         return tally;
     }
@@ -784,9 +627,8 @@ public final class RunScheduler {
      */
     // Package-private: the walkthrough asks the same question of a single stop, and one
     // implementation keeps the two from disagreeing on the same screen.
-    static boolean definitelyOutOfSeeds(FarmingRun run, RunStop stop, PlayerState state,
-            FarmingPreferences prefs) {
-        // A stop that plants nothing, such as a compost bin, cannot be short of seeds.
+    static boolean definitelyOutOfSeeds(FarmingRun run, RunStop stop, PlayerState state, FarmingPreferences prefs) {
+        // A stop that plants nothing, such as the contract errand, cannot be short of seeds.
         if (!stop.isPlanting()) {
             return false;
         }
@@ -794,23 +636,19 @@ public final class RunScheduler {
             // The crop the stop would plant, which has already fallen past every ticked
             // crop the player is out of.
             Crop crop = FixedCrops.cropFor(stop, prefs, state);
-            if (crop == null) {
-                return true;
-            }
-            CropData data = CropData.forCrop(crop);
-            return data != null
-                    && SeedSelector.definitelyOutOf(crop, state, data.getSeedsPerPatch());
+            return crop == null || outOfSeedFor(crop, state);
         }
         PatchType type = stop.patchType();
         if (type == null) {
             return false;
         }
-        return SeedSelector.definitelyOutOfAll(
-                DiaryPlantings.ladderAt(
-                        SeedSelector.plantableFrom(FarmingCatalogue.seedPolicy(), prefs,
-                                run.getSeedPatchType(), type),
-                        stop, state, prefs),
-                state, CropData.seedsPerPatch(type));
+        return SeedSelector.definitelyOutOfAll(ladderAt(run, stop, type, state, prefs), state, CropData.seedsPerPatch(type));
+    }
+
+    /** The crops this stop may take, best first. */
+    private static List<Crop> ladderAt(FarmingRun run, RunStop stop, PatchType type, PlayerState state, FarmingPreferences prefs) {
+        return DiaryPlantings.ladderAt(SeedSelector.plantableFrom(FarmingCatalogue.seedPolicy(),
+                prefs, run.getSeedPatchType(), type), stop, state, prefs);
     }
 
     /**
@@ -818,26 +656,21 @@ public final class RunScheduler {
      * the same choices as {@link #definitelyOutOfSeeds}. With the bank unopened, neither
      * holds.
      */
-    static boolean knowsAseedFor(FarmingRun run, RunStop stop, PlayerState state,
-            FarmingPreferences prefs) {
+    static boolean knowsAseedFor(FarmingRun run, RunStop stop, PlayerState state, FarmingPreferences prefs) {
         if (!stop.isPlanting() || state == null) {
             return false;
         }
         if (stop.isFixedCrop()) {
             Crop crop = FixedCrops.cropFor(stop, prefs, state);
             CropData data = crop == null ? null : CropData.forCrop(crop);
-            return data != null
-                    && SeedSelector.knownToHold(crop, state, data.getSeedsPerPatch());
+            return data != null && SeedSelector.knownToHold(crop, state, data.getSeedsPerPatch());
         }
         PatchType type = stop.patchType();
         if (type == null) {
             return false;
         }
         int needed = CropData.seedsPerPatch(type);
-        for (Crop crop : DiaryPlantings.ladderAt(
-                SeedSelector.plantableFrom(FarmingCatalogue.seedPolicy(), prefs,
-                        run.getSeedPatchType(), type),
-                stop, state, prefs)) {
+        for (Crop crop : ladderAt(run, stop, type, state, prefs)) {
             if (SeedSelector.knownToHold(crop, state, needed)) {
                 return true;
             }
@@ -848,11 +681,9 @@ public final class RunScheduler {
     /**
      * @param known whether Larry knows of a seed for the stop, which an unseen patch needs;
      *     asked only once a patch proves unseen, since the ladder costs a walk per stop
-     * @param fill whether the stop grows a bin's fill, whose growing holds nothing back
      */
     private static void walkPatches(RunStop stop, FarmingInputs inputs, PlayerState state,
-            long nowEpochSec, boolean seedless, BooleanSupplier known, boolean fill,
-            Tally tally) {
+            long nowEpochSec, boolean seedless, BooleanSupplier known, Tally tally) {
         Boolean knownHere = null;
         for (PatchRef patch : stop.getPatches()) {
             PatchPrediction prediction = inputs.patchAt(patch);
@@ -868,8 +699,7 @@ public final class RunScheduler {
             if (nowEpochSec - prediction.getObservedAtEpochSec() > OBSERVED_RECENTLY_SECONDS) {
                 tally.predicted = true;
             }
-            classify(prediction, stop, inputs.getPreferences(), state, tally, nowEpochSec,
-                    seedless, fill);
+            classify(prediction, stop, inputs.getPreferences(), state, tally, nowEpochSec, seedless);
         }
     }
 
@@ -879,8 +709,7 @@ public final class RunScheduler {
      * see the patch would never send the player to see it. Counted apart from the patches
      * seen empty, so the detail can say the emptiness is assumed.
      *
-     * <p>Only a stop that plants: an unseen compost bin is idle, which is no reason to go.
-     * And only with a seed Larry knows of: planting is all there is to do at ground assumed
+     * <p>Only a stop that plants, and only with a seed Larry knows of: planting is all there is to do at ground assumed
      * empty, so without one the patch counts for nothing, neither "nothing to plant" nor
      * ground waiting, and the player is asked to open the seed stores instead.
      *
@@ -901,13 +730,11 @@ public final class RunScheduler {
      * walkthrough on screen beside it agree.
      */
     private static void classify(PatchPrediction prediction, RunStop stop,
-            FarmingPreferences prefs, PlayerState player, Tally tally, long nowEpochSec,
-            boolean seedless, boolean fill) {
+            FarmingPreferences prefs, PlayerState player, Tally tally, long nowEpochSec, boolean seedless) {
         CropState state = prediction.getState();
         // An anima plant dies at the end of its time, seen or not, and is cleared only to
         // plant the next one: with no seed for that, it is ground with nothing to plant.
-        if (stop.patchType() == PatchType.ANIMA
-                && PatchWork.at(prediction, stop, nowEpochSec) == PatchWork.Act.CLEAR_DEAD) {
+        if (stop.patchType() == PatchType.ANIMA && PatchWork.at(prediction, stop, nowEpochSec) == PatchWork.Act.CLEAR_DEAD) {
             if (seedless) {
                 tally.empty++;
                 tally.seedless++;
@@ -932,15 +759,12 @@ public final class RunScheduler {
         // A checked fruit tree the run replants wants a sapling as bare ground does. One still
         // waiting on its check is worth the trip for the check alone, and so is ripe fruit the
         // player picks in passing, so neither is counted.
-        if (prefs.replantsGrownTrees() && stop.patchType() == PatchType.FRUIT_TREE
-                && prediction.isFellable()
-                && !(prefs.picksFruitInPassing()
-                        && PatchWork.at(prediction, stop, nowEpochSec) == PatchWork.Act.HARVEST)) {
+        if (prefs.replantsGrownTrees() && stop.patchType() == PatchType.FRUIT_TREE && prediction.isFellable()
+                && !(prefs.picksFruitInPassing() && PatchWork.at(prediction, stop, nowEpochSec) == PatchWork.Act.HARVEST)) {
             tally.grownTrees++;
         }
         // A ripe or unchecked bush counts as ready below, though it comes out after.
-        if (PatchWork.standsEmpty(prediction, stop, nowEpochSec)
-                || PatchWork.at(prediction, stop, nowEpochSec) == null
+        if (PatchWork.standsEmpty(prediction, stop, nowEpochSec) || PatchWork.at(prediction, stop, nowEpochSec) == null
                         && PatchWork.comesOut(prediction, stop, prefs, player)) {
             // An empty patch is as good a reason to go as a finished crop; see
             // RunStatus.DUE. A checked tree lands here rather than under "ready": it
@@ -961,14 +785,12 @@ public final class RunScheduler {
                 // Named apart from bare ground, which is all "empty" means to the player.
                 if (prediction.isFellable()) {
                     // A calquat bears fruit like a fruit tree, so picked bare it is picked.
-                    if (stop.patchType() == PatchType.FRUIT_TREE
-                            || stop.patchType() == PatchType.CALQUAT) {
+                    if (stop.patchType() == PatchType.FRUIT_TREE || stop.patchType() == PatchType.CALQUAT) {
                         tally.picked++;
                     } else {
                         tally.checked++;
                     }
-                } else if (prediction.getCrop() != Crop.WEEDS
-                        && (stop.patchType() == PatchType.BUSH
+                } else if (prediction.getCrop() != Crop.WEEDS && (stop.patchType() == PatchType.BUSH
                                 || stop.patchType() == PatchType.CACTUS)) {
                     tally.picked++;
                 }
@@ -976,8 +798,6 @@ public final class RunScheduler {
             return;
         }
         if (prediction.isIdle()) {
-            // The rest of idle is a compost bin sitting empty or filling, which never waits
-            // for a seed.
             return;
         }
         if (PatchWork.at(prediction, stop, nowEpochSec) != null) {
@@ -986,23 +806,13 @@ public final class RunScheduler {
             return;
         }
         long done = prediction.getDoneEstimateEpochSec();
-        if (fill) {
-            // A bin's fill gives the run a date but never holds it back: a bin ready to empty
-            // elsewhere does not wait on watermelons for another.
-            if (done > 0 && (tally.fillReady == 0 || done < tally.fillReady)) {
-                tally.fillReady = done;
-            }
-            return;
-        }
         tally.growing++;
         if (done <= 0) {
             tally.undated++;
         } else if (plantedThisTrip(prediction, done, tally.tripStart)) {
             tally.plantedThisTrip++;
         }
-        if (done > 0 && (tally.earliestReady == 0 || done < tally.earliestReady)) {
-            tally.earliestReady = done;
-        }
+        tally.earliestReady = earlier(done, tally.earliestReady);
         tally.latestReady = Math.max(tally.latestReady, done);
     }
 
@@ -1012,8 +822,7 @@ public final class RunScheduler {
      * passed on another run (Catherby's herb patch beside its fruit tree) was planted long
      * before, so it fails the second half.
      */
-    private static boolean plantedThisTrip(PatchPrediction prediction, long done,
-            long tripStart) {
+    private static boolean plantedThisTrip(PatchPrediction prediction, long done, long tripStart) {
         if (tripStart <= 0) {
             return false;
         }
@@ -1042,10 +851,8 @@ public final class RunScheduler {
         long earliest = nowEpochSec - LONGEST_TRIP_SECONDS;
         List<Long> sightings = new ArrayList<>();
         for (FarmingWorldMap.PatchDef patch : FarmingWorldMap.allPatches()) {
-            PatchPrediction seen = inputs.patchAt(PatchRef.of(patch.getRegionId(),
-                    patch.getVarbitId(), patch.displayName()));
-            if (seen != null && seen.getObservedAtEpochSec() > 0
-                    && seen.getObservedAtEpochSec() <= nowEpochSec) {
+            PatchPrediction seen = inputs.patchAt(PatchRef.of(patch.getRegionId(), patch.getVarbitId(), patch.displayName()));
+            if (seen != null && seen.getObservedAtEpochSec() > 0 && seen.getObservedAtEpochSec() <= nowEpochSec) {
                 sightings.add(seen.getObservedAtEpochSec());
             }
         }
@@ -1111,8 +918,7 @@ public final class RunScheduler {
      * @param readyAt when the run comes due, or zero for no date
      * @param waits whether the run waits for every patch
      */
-    private static String pendingDetail(Tally tally, long readyAt, boolean waits,
-            long nowEpochSec) {
+    private static String pendingDetail(Tally tally, long readyAt, boolean waits, long nowEpochSec) {
         if (readyAt <= 0) {
             // A crop growing with no estimate holds a waiting run back without a date.
             if (waits && tally.growing > 0) {
@@ -1122,7 +928,7 @@ public final class RunScheduler {
             // needs seeds, and "nothing waiting" would mislead.
             return tally.seedless > 0 ? NOTHING_TO_PLANT : "nothing waiting";
         }
-        return "ready in " + describe(readyAt - nowEpochSec);
+        return "ready in " + FarmingDurations.describe(readyAt - nowEpochSec);
     }
 
     private static final String NOTHING_TO_PLANT = "nothing to plant";
@@ -1133,39 +939,30 @@ public final class RunScheduler {
     /** Worded for one patch or many: Hespori is a single patch. */
     private static final String UNSEEN_DETAIL = "not checked yet";
 
-    /**
-     * Rounded to the largest useful unit. Shared with the stop rows through
-     * {@link FarmingDurations} so one screen never rounds the same number two ways.
-     */
-    private static String describe(long seconds) {
-        return FarmingDurations.describe(seconds);
-    }
+    // Durations are rounded by FarmingDurations, shared with the stop rows so one screen
+    // never rounds the same number two ways.
 
+    /**
+     * For runs that cannot be a trip in progress: the contract, a locked run, and one with
+     * no route.
+     */
     private static FarmingRunStatus build(FarmingRun run, RunStatus status, String detail,
             long readyAt, int actionable, boolean predicted) {
-        return build(run, status, detail, readyAt, actionable, predicted, false);
+        return build(run, status, detail, readyAt, actionable, predicted, false, false);
     }
 
     /**
-     * The overload above serves runs that cannot be a trip in progress: the contract, a
-     * locked run, and one with no route.
+     * @param aboutThePatch a contract verdict about the guild patch itself; see
+     *                      {@link FarmingRunStatus#isAboutThePatch()}
      */
     private static FarmingRunStatus build(FarmingRun run, RunStatus status, String detail,
-            long readyAt, int actionable, boolean predicted, boolean tripUnfinished) {
+            long readyAt, int actionable, boolean predicted, boolean tripUnfinished, boolean aboutThePatch) {
         return new FarmingRunStatus(run.getId().name(), run.getId().getDisplayName(),
-                status.name(), detail, readyAt, actionable, RunIcons.of(run.getId()),
-                predicted, tripUnfinished, false);
+                status.name(), detail, readyAt, actionable, RunIcons.of(run.getId()), predicted, tripUnfinished, aboutThePatch);
     }
 
-    /**
-     * A contract verdict about the guild patch itself: due now, one patch to work, with
-     * the act named in {@code detail}. See {@link FarmingRunStatus#isAboutThePatch()}.
-     */
-    private static FarmingRunStatus dueAtThePatch(FarmingRun run, String detail,
-            boolean predicted) {
-        return new FarmingRunStatus(run.getId().name(), run.getId().getDisplayName(),
-                RunStatus.DUE.name(), detail, 0L, 1, RunIcons.of(run.getId()),
-                predicted, false, true);
+    /** Due now, one patch to work, with the act named in {@code detail}. */
+    private static FarmingRunStatus dueAtThePatch(FarmingRun run, String detail, boolean predicted) {
+        return build(run, RunStatus.DUE, detail, 0L, 1, predicted, false, true);
     }
-
 }
