@@ -69,9 +69,11 @@ public class FarmingRunStatus {
      *
      * <p>The walkthrough borrows {@link #detail} for the guild's row. A patch-work detail
      * would repeat the row's own harvest clause, so the walkthrough leads with the detail
-     * only for Jane's errands.
+     * only for Jane's errands. A contract waiting on a crop elsewhere can instead name work
+     * in the guild herb patch; that detail starts with {@code RunScheduler.HERB_PATCH_WORK},
+     * and the row never borrows it either.
      *
-     * <p>Set where the verdict is composed, not inferred from the wording.
+     * <p>Set where the verdict is composed.
      */
     boolean aboutThePatch;
 }

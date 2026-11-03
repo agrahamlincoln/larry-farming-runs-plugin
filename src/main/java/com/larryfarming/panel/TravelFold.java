@@ -23,7 +23,7 @@ class TravelFold extends Fold
 	 * Appended while nothing the player uses reaches a ring, so a shut fold still says so.
 	 * It names the rings: the fold holds every travel method, and most still work.
 	 */
-	private static final String BLOCKED = ": no fairy ring access";
+	private static final String BLOCKED = ": no way to a fairy ring";
 
 	private final BiConsumer<String, String> send;
 	private boolean blocked;

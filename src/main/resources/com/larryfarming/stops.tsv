@@ -25,6 +25,8 @@ leg	reach:SALVE_GRAVEYARD	22	CONSUMABLE
 leg	reach:ARCEUUS_LIBRARY	34	CONSUMABLE
 leg	NECKLACE_OF_PASSAGE	39	CHARGE
 leg	ARDOUGNE_CLOAK_1	51	FREE
+leg	all(VARROCK_DIARY_MEDIUM,reach:GRAND_EXCHANGE)	82	CONSUMABLE
+leg	reach:VARROCK	116	CONSUMABLE
 approach	SPIRIT_TREE_DEPARTURE
 leg	POH_SPIRIT_TREE	0	FREE
 leg	all(VARROCK_DIARY_MEDIUM,reach:GRAND_EXCHANGE)	30	CONSUMABLE
@@ -53,6 +55,10 @@ via	QUETZAL_WHISTLE	Quetzal whistle to Tal Teklan, walk north-east to the jetty,
 walks	115	CHARGE
 to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
 walks	130	CONSUMABLE
+via	all(patch:ORTUS_HERB,RENU,QUETZAL_SITE_KASTORI)	Run south from Ortus Farm to the Hunter Guild landing site and ride Renu to Kastori, then run north-east
+walks	93	FREE
+via	all(patch:ORTUS_HERB,RENU)	Run south from Ortus Farm to the Hunter Guild landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	162	FREE
 via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn Valley, then run south along the River Varla to the Gloomthorn Trail jetty and Achilka's boat
 walks	173	FREE
 via	MOKHAIOTL_WAYSTONE	Mokhaiotl waystone to the Ruins of Mokhaiotl, then climb out and run south-east
@@ -536,6 +542,10 @@ via	QUETZAL_WHISTLE	Quetzal whistle to Tal Teklan, walk north-east to the jetty,
 walks	104	CHARGE
 to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
 walks	119	CONSUMABLE
+via	all(patch:ORTUS_HERB,RENU,QUETZAL_SITE_KASTORI)	Run south from Ortus Farm to the Hunter Guild landing site and ride Renu to Kastori, then run north-east
+walks	67	FREE
+via	all(patch:ORTUS_HERB,RENU)	Run south from Ortus Farm to the Hunter Guild landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	151	FREE
 via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn Valley, then run south along the River Varla to the Gloomthorn Trail jetty and Achilka's boat
 walks	162	FREE
 via	MOKHAIOTL_WAYSTONE	Mokhaiotl waystone to the Ruins of Mokhaiotl, then climb out and run south-east
@@ -772,6 +782,10 @@ via	QUETZAL_WHISTLE	Quetzal whistle to Tal Teklan, walk north-east to the jetty,
 walks	89	CHARGE
 to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
 walks	104	CONSUMABLE
+via	all(patch:ORTUS_HERB,RENU,QUETZAL_SITE_KASTORI)	Run south from Ortus Farm to the Hunter Guild landing site and ride Renu to Kastori, then run north-east
+walks	80	FREE
+via	all(patch:ORTUS_HERB,RENU)	Run south from Ortus Farm to the Hunter Guild landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	136	FREE
 via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn Valley, then run south along the River Varla to the Gloomthorn Trail jetty and Achilka's boat
 walks	147	FREE
 via	MOKHAIOTL_WAYSTONE	Mokhaiotl waystone to the Ruins of Mokhaiotl, then climb out and run south-east

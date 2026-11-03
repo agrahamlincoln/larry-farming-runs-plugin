@@ -144,6 +144,15 @@ public final class CapabilityResolver {
         return readsPosition && !taken.isNone();
     }
 
+    /**
+     * Whether this requirement names a travel item used up, or a place already teleported
+     * to, on the way to the stop.
+     */
+    public boolean leansOnTravelTaken(Requirement requirement) {
+        return hasTravelTaken() && (!Collections.disjoint(taken.getItems(), requirement.leafCapabilities())
+                || !Collections.disjoint(taken.getPlaces(), requirement.leaves(Requirement.Kind.DESTINATION, Requirement::getDestination)));
+    }
+
     /** The travel switch that fails this capability, or null while none does. */
     private TravelMethod switchFailing(Capability capability) {
         TravelMethod method = TravelMethod.of(capability);

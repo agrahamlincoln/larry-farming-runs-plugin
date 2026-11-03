@@ -192,7 +192,8 @@ public final class DepositPlanner {
             // No count on the tile: the whole stack goes back, and a count that ticks up with
             // every herb picked would redraw the route mid-harvest.
             deposits.add(new FarmingCarryItem(travel ? FarmingCarryItem.Kind.TRAVEL : FarmingCarryItem.Kind.TOOL,
-                    itemId, names.get(itemId), 0, FarmingCarryItem.Availability.CARRIED, "", "", held.getValue()));
+                    itemId, names.get(itemId), 0, FarmingCarryItem.Availability.CARRIED, CropData.tagForPlantable(itemId), "",
+                    held.getValue()));
         }
         return deposits;
     }

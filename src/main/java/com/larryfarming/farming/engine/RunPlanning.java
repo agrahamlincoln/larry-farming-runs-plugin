@@ -177,8 +177,9 @@ final class RunPlanning {
 
     /**
      * One stop re-asked, if it is being visited and anything about its chain can have
-     * changed since it was routed: it leans on a stop or a position, or the journey before
-     * it left the player at the start of a route ({@code start} not null).
+     * changed since it was routed: it leans on a stop, a position or a teleport already spent
+     * on the way, or the journey before it left the player at the start of a route
+     * ({@code start} not null).
      */
     private static void replanOne(List<StopPlan> settled, int index, RunPlanner planner,
             PlayerState state, Map<PatchRef, CapabilityState> reached, boolean mayStandHere, RunPlanner.Start start) {
@@ -186,9 +187,8 @@ final class RunPlanning {
         // Visits only. A stop written off for having no route stays written off even if a
         // second look could reach it: the standing-crop gates, seed checks and crop
         // allocation never read a non-visit's ground, so resurrecting one would draw a full
-        // visit to a patch nothing has checked. Fixing that means re-running those gates and
-        // re-dealing seeds in this pass.
-        if (plan.isVisit() && (start != null || wantsReplanning(plan.getStop()))) {
+        // visit to a patch nothing has checked.
+        if (plan.isVisit() && (start != null || wantsReplanning(plan.getStop(), planner.resolver()))) {
             settled.set(index, planner.planStop(plan.getStop(), state, reached, mayStandHere, start));
         }
     }
@@ -230,11 +230,11 @@ final class RunPlanning {
      * Whether re-asking this stop can give a different answer from the one it already has.
      *
      * <p>Two ways it can: it leans on another stop and the run has changed underneath it, or
-     * it is answerable from where the player stands and this pass may hand the position
-     * allowance to a different stop than the first pass did. Asked of the whole chain, for
-     * the reason {@link #leansOnApatch} gives.
+     * it is answerable from where the player stands, or from a teleport already spent on the
+     * way there, and this pass may hand the position allowance to a different stop than the
+     * first pass did. Asked of the whole chain, for the reason {@link #leansOnApatch} gives.
      */
-    private static boolean wantsReplanning(RunStop stop) {
+    private static boolean wantsReplanning(RunStop stop, CapabilityResolver resolver) {
         if (leansOnApatch(stop)) {
             return true;
         }
@@ -242,7 +242,7 @@ final class RunPlanning {
             // Covers a zone named outright and a reach(...) leaf to a place whose ground is
             // known. TravelOption.to always builds such a leaf, so the declared destination
             // needs no separate check.
-            if (rung.getRequires().readableFromPosition()) {
+            if (rung.getRequires().readableFromPosition() || resolver.leansOnTravelTaken(rung.getRequires())) {
                 return true;
             }
         }

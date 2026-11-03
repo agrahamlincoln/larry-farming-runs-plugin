@@ -333,8 +333,10 @@ final class CropAssigner {
      * a lumber tree is, except a diseased one. The worst tree goes first, so one sapling
      * upgrades the pineapple rather than the papaya.
      *
-     * <p>Always after the empty ground: a seed in bare soil costs only the seed, while here
-     * it also costs a producing tree.
+     * <p>Upgrades are dealt after the ground Larry has seen bare: a seed in bare soil costs
+     * only the seed, while here it also costs a producing tree. Ground never seen is only a guess, and gives its
+     * seed up to a tree here that finds none spare ({@link #guessHolding}), a kept tree
+     * included: a sure planting now beats one that may send the player back later.
      *
      * @param from the seat number the ground ran to, so the two draws share one allocation
      *             rather than each dealing the best seed again
@@ -380,12 +382,52 @@ final class CropAssigner {
                 }
             }
             if (pick < 0) {
-                // The tree stays. Seats run worst-standing-first, so later ones are harder
-                // still to improve on.
+                // No spare sapling, but one may sit on a patch never seen, dealt as bare ground
+                // only because nothing is known of it. A guess never outbids a tree the player
+                // can see and replant: otherwise the sapling leaves this patch the moment it is
+                // seen, and comes back once the guesses turn out to hold trees too, sending the
+                // player back to a patch they already left.
+                Seat guess = guessHolding(landed, candidate.patch, floor, inputs);
+                if (guess != null) {
+                    landed.put(candidate, landed.remove(guess));
+                }
+                // Otherwise the tree stays. Seats run worst-standing-first, so later ones are
+                // harder still to improve on.
                 continue;
             }
             landed.put(candidate, spare.remove(pick));
         }
+    }
+
+    /**
+     * The unseen patch to take a crop from for {@code patch}: the one holding the worst crop
+     * that still serves there, as the spare pool picks, and of those the worst home.
+     *
+     * @param landed the ground seats in the order they were dealt, best home first, then the
+     *               upgrades dealt so far this pass, which stand on a tree and are skipped
+     * @param patch  the seen patch whose tree finds no spare crop
+     * @param floor  the worst tier {@code patch} accepts, as {@link #dealOutUpgrades} reckons it
+     * @param inputs what Larry has seen; a seat with no reading is a guess
+     * @return the seat to take the crop from, or null when no guess holds one that serves
+     */
+    private static Seat guessHolding(Map<Seat, Crop> landed, PatchRef patch, int floor, FarmingInputs inputs) {
+        Seat worst = null;
+        int worstTier = -1;
+        for (Map.Entry<Seat, Crop> entry : landed.entrySet()) {
+            Seat seat = entry.getKey();
+            int tier = tierOf(entry.getValue(), patch);
+            // A crop of another family has no tier here, and must never pass a floor that an
+            // unranked standing crop leaves at the same no-tier value.
+            if (seat.standing != null || inputs.patchAt(seat.patch) != null || tier == Integer.MAX_VALUE || tier > floor) {
+                continue;
+            }
+            // At equal tiers the later seat wins, the worse home.
+            if (tier >= worstTier) {
+                worst = seat;
+                worstTier = tier;
+            }
+        }
+        return worst;
     }
 
     /**

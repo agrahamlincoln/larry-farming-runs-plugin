@@ -98,7 +98,7 @@ final class StopRowWriter {
         // patches before hearing her can fill the very patch it wants. The sentence is
         // borrowed from RunScheduler so the two never disagree.
         if (visiting && anErrandIsBeingRun(group, plans) && !theWorkLineAlreadySaysIt(waiting, patchesPerCrop.keySet(), inputs)
-                && !inputs.contractDetail().isEmpty()) {
+                && !inputs.contractDetail().isEmpty() && !inputs.contractDetail().startsWith(RunScheduler.HERB_PATCH_WORK)) {
             actions.add(0, capitalise(inputs.contractDetail()));
         }
 
@@ -573,7 +573,7 @@ final class StopRowWriter {
      *
      * <p>Counts patches, not plans: one Fossil Island stop is three hardwood patches.
      */
-    private static String nameOfGroup(List<Integer> group, List<StopPlan> plans) {
+    static String nameOfGroup(List<Integer> group, List<StopPlan> plans) {
         PatchRef primary = plans.get(group.get(0)).getStop().primaryPatch();
         int patches = 0;
         for (int index : group) {

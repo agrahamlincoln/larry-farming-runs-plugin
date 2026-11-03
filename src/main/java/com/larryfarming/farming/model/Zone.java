@@ -27,11 +27,12 @@ public enum Zone {
      * Where the Civitas illa Fortis teleport lands: the landing, not the whole city.
      *
      * <p>A zone on a destination claims that arriving costs nothing, which holds only near
-     * the landing. Sunrise Palace ({@code 1681,3136}) and the quetzal landing site where the
-     * Renu rungs depart ({@code 1697,3140}) both fall in region 6705.
+     * the landing. Sunrise Palace ({@code 1681,3136}) and the city's quetzal landing site,
+     * where the Renu rungs after a Civitas illa Fortis cast depart ({@code 1697,3140}), both
+     * fall in region 6705.
      *
-     * <p>{@code FarmingWorldMap}'s six ids for this name cover the Ortus Farm cluster (x
-     * 1536–1663), which stops short of the palace and is 100 tiles from the quetzal site.
+     * <p>{@code FarmingWorldMap}'s six Ortus Farm ids (x 1536–1663) stop short of the palace,
+     * and the farm itself is 100 tiles from the quetzal site.
      *
      * <p>The palace lands on the region's southern edge ({@code y == 3136} is its first
      * row), so the zone extends east and north along the run to Renu. The city's west bank

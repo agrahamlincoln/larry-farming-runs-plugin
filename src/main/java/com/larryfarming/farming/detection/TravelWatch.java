@@ -18,14 +18,16 @@ import java.util.*;
  * <p><b>Spent, then landed.</b> A tick whose losses match one teleport's whole cost, and fit
  * no other spell or tablet, marks it spent at once, so the bank row never flashes the runes
  * back while the player is in the air. The player must then land: a jump to a region that
- * does not border the last one within {@link #LANDING_TICKS}. Runes or a ring that leave without one went somewhere else,
- * and the mark is dropped.
+ * does not border the last one within {@link #LANDING_TICKS}. Runes or a ring that leave
+ * without one went somewhere else, and the mark is dropped.
  *
  * <p><b>Paid until the stop is worked.</b> Once landed, the teleport stays paid while the
- * plan's next patch is the one it was cast for, or lands where it did. A route can go on from
- * the landing by a glider or a fairy ring, which a jump alone would read as a second
- * teleport. Another spent teleport replaces the mark, the trip ending forgets it, and
- * {@link #MAX_TICKS} ends one the player wandered off from.
+ * plan's next patch is the one it was cast for, or that patch's route lands where the cast
+ * did while the player is still in or beside the region it landed in. A player who has
+ * walked off to a patch is no longer where the cast put them, so the next stop prices its
+ * own way there. A route can go on from the landing by a glider or a fairy ring, which a
+ * jump alone would read as a second teleport. Another spent teleport replaces the mark, the
+ * trip ending forgets it, and {@link #MAX_TICKS} ends one the player wandered off from.
  *
  * <p>Losses in a tick when the bank changed are never a teleport: that is the player
  * banking.
@@ -58,10 +60,16 @@ public final class TravelWatch {
     private Integer regionBefore;
 
     private TravelTaken spent = TravelTaken.NONE;
-    /** The next patch when the teleport was spent; the mark lasts while it stays next. */
+    /** The patch the teleport pays for: the next patch when it was spent, or a later one whose route lands where the cast did. */
     private String spentFor;
     private int ticksSinceSpent;
     private boolean landed;
+    /**
+     * The region the teleport landed in: non-null exactly while {@link #landed} is true. A tick
+     * with no region reads as away from it, so the mark never moves on to another stop
+     * unchecked.
+     */
+    private Integer landedIn;
 
     /** The teleport spent on the way to the next stop, or {@link TravelTaken#NONE}. */
     public TravelTaken taken() {
@@ -91,8 +99,9 @@ public final class TravelWatch {
      *
      * @param heading the patch the plan sends the player to next, or null for none
      * @param landing where that stop's route lands, or null for a route taken on an item.
-     *     A teleport spent for one stop stays paid for the next while this is its place:
-     *     the Falador park tree and the Falador farm are a walk apart, not two casts
+     *     A teleport spent for one stop stays paid for the next while this is its place and
+     *     the player is in or beside the region it landed in: the Falador park tree and the
+     *     Falador farm are a walk apart, not two casts
      * @return whether {@link #taken()} or {@link #takenFor()} changed
      */
     public boolean tick(PlayerState state, String heading, Destination landing) {
@@ -105,16 +114,10 @@ public final class TravelWatch {
 
         if (!spent.isNone()) {
             ticksSinceSpent++;
-            // Before the landing, no next patch says nothing: the plan may not be rebuilt yet.
-            // After it, no next patch means the trip is done, and a mark left over would pay
-            // for the first stop of the next one.
-            boolean movedOn = heading == null ? landed : !heading.equals(spentFor);
-            if (movedOn && landed && landing != null && spent.reached(landing)) {
-                spentFor = heading;
-                movedOn = false;
-            }
+            boolean movedOn = !stillPaidFor(heading, landing, region);
             if (!landed && jumped) {
                 landed = true;
+                landedIn = region;
             } else if (!landed && ticksSinceSpent > LANDING_TICKS || movedOn || ticksSinceSpent > MAX_TICKS) {
                 forget();
             }
@@ -126,6 +129,7 @@ public final class TravelWatch {
                 spentFor = heading;
                 ticksSinceSpent = 0;
                 landed = jumped;
+                landedIn = jumped ? region : null;
             }
         }
 
@@ -135,11 +139,45 @@ public final class TravelWatch {
         return !spent.equals(was) || !Objects.equals(spentFor, wasFor);
     }
 
+    /**
+     * Judges the mark again against the next stop of a plan built this tick, with no tick
+     * counted. {@link #tick} judged it against the stop on screen, before the plan was built.
+     * A stop the mark no longer pays for prices its own teleport in that same tick's plan.
+     *
+     * @return whether the mark went
+     */
+    public boolean retarget(PlayerState state, String heading, Destination landing) {
+        if (spent.isNone() || stillPaidFor(heading, landing, state.getRegionId())) {
+            return false;
+        }
+        forget();
+        return true;
+    }
+
+    /**
+     * Whether the mark still pays for this next stop. It moves the mark on to that stop when
+     * the stop's route lands where the cast did and the player is in or beside the region it
+     * landed in.
+     */
+    private boolean stillPaidFor(String heading, Destination landing, Integer region) {
+        // Before the landing, no next patch says nothing: the plan may not be rebuilt yet.
+        // After it, no next patch means the trip is done, and a mark left over would pay for
+        // the first stop of the next one.
+        boolean movedOn = heading == null ? landed : !heading.equals(spentFor);
+        if (movedOn && landed && landing != null && spent.reached(landing) && region != null
+                && bordering(landedIn, region)) {
+            spentFor = heading;
+            return true;
+        }
+        return !movedOn;
+    }
+
     private void forget() {
         spent = TravelTaken.NONE;
         spentFor = null;
         ticksSinceSpent = 0;
         landed = false;
+        landedIn = null;
     }
 
     /**

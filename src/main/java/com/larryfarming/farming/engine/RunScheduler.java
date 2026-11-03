@@ -63,6 +63,13 @@ public final class RunScheduler {
     // crop whose health is already checked cannot satisfy a contract handed out afterwards;
     // that contract needs one grown from seed.
 
+    /**
+     * How a contract waiting on a crop elsewhere begins its detail when its reserved herb patch
+     * has work. The guild row's own work line already names that work, so the row never
+     * borrows a detail that starts with this.
+     */
+    static final String HERB_PATCH_WORK = "guild herb patch: ";
+
     /** Everywhere a contracted crop could be growing. */
     private static final List<PatchRef> CONTRACT_PATCHES = FarmingCatalogue.contractPatches();
 
@@ -156,9 +163,19 @@ public final class RunScheduler {
             return build(run, RunStatus.PENDING, "from " + Preset.HERB_RUN_LEVEL + " Farming", 0L, 0, false);
         }
         if (run.getId() == RunId.CONTRACT) {
-            // The contract answers from the guild, not from a walk of stops. It needs no
+            // The contract answers from the guild's varbits, and walks its stop only for the
+            // herb patch a contract waiting elsewhere leaves owed a filler herb. It needs no
             // reachability guard: the guild chain ends in a minecart rung open to everyone.
-            return contractStatus(run, state, inputs, nowEpochSec);
+            FarmingRunStatus contract = contractStatus(run, state, inputs, nowEpochSec);
+            CropData wanted = CropData.forCrop(inputs.getContractCrop());
+            if (!RunStatus.PENDING.name().equals(contract.getStatus()) || wanted == null || wanted.getPatchType() == PatchType.HERB) {
+                return contract;
+            }
+            // A contract waiting on a crop outside the herb patch leaves that patch owed a
+            // filler herb, and the contract's stop is the only one that visits it.
+            Tally tally = walkPatches(run, plans, inputs, state, nowEpochSec, false, tripStart);
+            return tally.actionable == 0 ? contract : build(run, RunStatus.DUE,
+                    HERB_PATCH_WORK + dueDetail(tally), 0L, tally.actionable, tally.predicted);
         }
 
         String noRoute = noRouteDetail(run, plans, inputs.getPreferences(), state, resolver);

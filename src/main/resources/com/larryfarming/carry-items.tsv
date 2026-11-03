@@ -60,8 +60,8 @@ SAILORS_AMULET	Sailors' amulet	32399	SAILORS_AMULET
 # whistle is drawn.
 QUETZAL_WHISTLE	Quetzal whistle	29271 29273 29275 33120	HG_QUETZALWHISTLE_BASIC HG_QUETZALWHISTLE_ENHANCED HG_QUETZALWHISTLE_PERFECTED HG_QUETZALWHISTLE_PERFECTED_INFINITE
 
-# Teleports beside the Wizards' Tower fairy ring, which is how an account with no
-# Ardougne diary gets onto the network at all.
+# Teleports beside the Wizards' Tower fairy ring, a way onto the network without the
+# Ardougne cloak.
 NECKLACE_OF_PASSAGE	Necklace of passage	21146 21149 21151 21153 21155	NECKLACE_OF_PASSAGE_5 NECKLACE_OF_PASSAGE_4 NECKLACE_OF_PASSAGE_3 NECKLACE_OF_PASSAGE_2 NECKLACE_OF_PASSAGE_1
 
 # One-off transport items.

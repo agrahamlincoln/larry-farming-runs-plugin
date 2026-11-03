@@ -157,14 +157,16 @@ public class RunStop {
     boolean standingCrop;
 
     /**
-     * Why this stop's patch does not decide whether to go, or null for an ordinary stop.
+     * Why this stop's patch does not, on its own, decide whether to go, or null for an
+     * ordinary stop.
      *
      * <p>Used only by the farming contract, whose work is an errand with Guildmaster Jane.
      * The stop still names the guild herb patch, which the contract replants.
      *
-     * <p>Keep this narrow: an errand stop is visited when its run says so rather than when
-     * its patch does, but everything else stays patch work. It still plants, counts toward
-     * the bag and draws seeds from the rotation.
+     * <p>An errand stop is visited when its run says so. The contract's run also comes due
+     * for herb patch work while the contract waits on a crop elsewhere. Everything else stays
+     * patch work: the stop still plants, counts toward the bag and draws seeds from the
+     * rotation.
      */
     String errandReason;
 

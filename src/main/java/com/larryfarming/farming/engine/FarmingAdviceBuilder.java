@@ -86,8 +86,8 @@ public final class FarmingAdviceBuilder {
 
     /**
      * Whether nothing the player uses reaches a fairy ring, while the network itself is
-     * open to them. Asked on the book the run is planned for, since the Arceuus spells are
-     * approaches too.
+     * open to them. Asked on the book the run is planned for, since spells are approaches
+     * too: Varrock on the standard book, Salve graveyard and the library on Arceuus.
      */
     private static boolean fairyRingBlocked(FarmingAdvice advice, PlayerState state, FarmingInputs inputs) {
         Spellbook book = advice.getCarryFor() != null ? Spellbook.valueOf(advice.getCarryFor()) : Spellbook.STANDARD;
@@ -294,9 +294,10 @@ public final class FarmingAdviceBuilder {
         // Merged, then routed again against the merged order. Each run chose its routes
         // knowing only its own stops in its own order; the circuit interleaves families
         // and lifts best homes forward, so a rung leaning on a patch can now come before it.
-        // The Monastery bushes move first, so the leg they start is routed from them.
-        Itinerary.Trip trip = RunPlanning.replanAcrossTheCircuit(
-                CloakToTheRings.bushesBeforeTheFirstRing(Itinerary.merge(planned, state, planFor), resolver, state), planner, state);
+        // The Monastery bushes move first, so the leg they start is routed from them. Once a
+        // trip is underway, it then starts from the stop the player is already heading to.
+        Itinerary.Trip trip = RunPlanning.replanAcrossTheCircuit(headingFirst(
+                CloakToTheRings.bushesBeforeTheFirstRing(Itinerary.merge(planned, state, planFor), resolver, state), inputs), planner, state);
         // The respawn suggestion follows the family the ranking puts first.
         return drawTrip(trip, true, runName, due.get(0).getRun(), plantedIn, seeds, state, planner, inputs, planFor);
     }
@@ -365,6 +366,26 @@ public final class FarmingAdviceBuilder {
         List<String> tripRuns = merged ? namesOf(covered) : List.of(respawnFor.getId().name());
         return walkthrough(runName, tripRuns, respawnFor, stops, made, rowOf, trip.getPlans(),
                 trip.getCropFor(), seeds, underway, state, resolver, inputs, planFor);
+    }
+
+    /**
+     * The trip walked on from the arrival the player is already on the way to. A run that
+     * comes due partway round takes its seat on the circuit, which can lie behind the player,
+     * and would turn them round. Rotated rather than moved, so the stops behind the player go
+     * to the end. Once the player works the heading stop, the next plan heads for the stop
+     * after it, and the trip starts from that one. Before the trip is underway the circuit's
+     * order stands.
+     */
+    private static Itinerary.Trip headingFirst(Itinerary.Trip trip, FarmingInputs inputs) {
+        List<List<Integer>> visits = new ArrayList<>(trip.getVisits());
+        for (int i = 1; i < visits.size(); i++) {
+            if (StopRowWriter.nameOfGroup(visits.get(i), trip.getPlans()).equals(inputs.getHeading())
+                    && underway(visits, trip.getPlans(), trip.getRunFor(), inputs)) {
+                Collections.rotate(visits, -i);
+                return trip.revisited(visits);
+            }
+        }
+        return trip;
     }
 
     /** Run ids as the snapshot speaks them, immutable, in the given (circuit) order. */

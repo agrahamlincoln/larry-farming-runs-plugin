@@ -92,13 +92,16 @@ public final class FarmingInputs {
     private final Set<Integer> packedThisTrip;
     /** The teleport the player has spent on the way to the next stop; see {@code TravelWatch}. */
     private final TravelTaken travelTaken;
+    /** The stop the plan on screen sends the player to next, or null. Once a trip is underway, the trip starts from it. */
+    private final String heading;
 
     // On the constructor rather than the class, so every builder path goes through the
     // null normalisations below.
     @Builder(access = AccessLevel.PRIVATE)
     private FarmingInputs(Spellbook previewBook, Function<PatchRef, PatchPrediction> patches, DailyTeleportLedger ledger, long nowEpochSec,
             Crop contractCrop, FarmingRunStatus contractRun,
-            FarmingPreferences preferences, HouseSight house, boolean offeredBanksHidden, Set<Integer> packedThisTrip, TravelTaken travelTaken) {
+            FarmingPreferences preferences, HouseSight house, boolean offeredBanksHidden, Set<Integer> packedThisTrip, TravelTaken travelTaken,
+            String heading) {
         this.packedThisTrip = packedThisTrip != null ? Set.copyOf(packedThisTrip) : Set.of();
         this.travelTaken = travelTaken != null ? travelTaken : TravelTaken.NONE;
         this.previewBook = previewBook;
@@ -111,6 +114,7 @@ public final class FarmingInputs {
         this.preferences = preferences != null ? preferences : FarmingPreferences.defaults();
         this.house = house != null ? house : HouseSight.unseen();
         this.offeredBanksHidden = offeredBanksHidden;
+        this.heading = heading;
     }
 
     /** Nothing chosen, nothing seen. */
@@ -163,7 +167,7 @@ public final class FarmingInputs {
         return contractRun != null && RunStatus.PENDING.name().equals(contractRun.getStatus());
     }
 
-    /** The contract's one-line instruction — "done — hand it in to Jane" — or "". */
+    /** The contract's one-line instruction, such as "hand the contract to Guildmaster Jane", or "". */
     public String contractDetail() {
         String detail = contractRun == null ? null : contractRun.getDetail();
         return detail == null ? "" : detail;

@@ -164,17 +164,20 @@ public final class EventApplier {
 
     /**
      * Case-insensitive name match with an optional trailing "s": the box says "Potato cactus
-     * seed" when filled and "3 potato cactus seeds were taken" when planted from.
+     * seed" when filled and "3 potato cactus seeds were taken" when planted from. A bush seed
+     * planted from the box gains the word "bush": "A whiteberry bush seed was taken" for the
+     * item "Whiteberry seed".
      */
     private static boolean namesTheSameItem(String held, String spoken) {
         if (held == null || spoken == null) {
             return false;
         }
-        if (held.equalsIgnoreCase(spoken)) {
+        String said = spoken.replace(" bush seed", " seed");
+        if (held.equalsIgnoreCase(said)) {
             return true;
         }
-        return spoken.length() > 1 && (spoken.endsWith("s") || spoken.endsWith("S"))
-                && held.equalsIgnoreCase(spoken.substring(0, spoken.length() - 1));
+        return said.length() > 1 && (said.endsWith("s") || said.endsWith("S"))
+                && held.equalsIgnoreCase(said.substring(0, said.length() - 1));
     }
 
     /**

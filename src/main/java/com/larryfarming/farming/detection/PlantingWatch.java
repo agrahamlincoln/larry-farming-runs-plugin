@@ -75,13 +75,18 @@ public final class PlantingWatch {
         return false;
     }
 
-    /** Every seed and sapling on the player, the seed box included. */
+    /**
+     * Each crop's planting item on the player, the seed box included: the sapling for a crop
+     * planted as one, otherwise the seed.
+     */
     private static Map<Integer, Integer> seedsCarried(PlayerState state) {
         Map<Integer, Integer> carried = new HashMap<>();
         for (CropData data : CropData.values()) {
-            int held = ItemCounts.countCarried(state, data.getSeedItemId(), null);
+            // A crop planted as a sapling goes in as the sapling, not its seed.
+            int planted = data.isSaplingPlanted() ? data.getSaplingItemId() : data.getSeedItemId();
+            int held = ItemCounts.countCarried(state, planted, null);
             if (held > 0) {
-                carried.merge(data.getSeedItemId(), held, Math::max);
+                carried.merge(planted, held, Math::max);
             }
         }
         return carried;

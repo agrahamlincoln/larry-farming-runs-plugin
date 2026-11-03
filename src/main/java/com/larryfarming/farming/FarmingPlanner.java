@@ -378,9 +378,8 @@ public class FarmingPlanner implements EngineListener {
      */
     public void watchTravel() {
         PlayerState state = engine.getPlayerState();
-        FarmingStopAdvice heading = headingStop();
-        if (state == null || !travelWatch.tick(state, heading == null ? null : heading.getPatchName(),
-                heading == null || heading.getLanding() == null ? null : Destination.valueOf(heading.getLanding()))) {
+        FarmingStopAdvice heading = headingStop(advice);
+        if (state == null || !travelWatch.tick(state, nameOf(heading), landingOf(heading))) {
             return;
         }
         dirty = true;
@@ -410,8 +409,16 @@ public class FarmingPlanner implements EngineListener {
         }
     }
 
-    /** The stop the advice on screen sends the player to next, or null for none. */
-    private FarmingStopAdvice headingStop() {
+    private static String nameOf(FarmingStopAdvice stop) {
+        return stop == null ? null : stop.getPatchName();
+    }
+
+    private static Destination landingOf(FarmingStopAdvice stop) {
+        return stop == null || stop.getLanding() == null ? null : Destination.valueOf(stop.getLanding());
+    }
+
+    /** The stop this advice sends the player to next, or null for none. */
+    private static FarmingStopAdvice headingStop(FarmingAdvice advice) {
         if (advice == null || advice.getStops() == null) {
             return null;
         }
@@ -467,8 +474,17 @@ public class FarmingPlanner implements EngineListener {
         // the scheduler takes the epoch second as an argument, so the time can be fixed.
         FarmingInputs inputs = inputs(nowEpochSec);
         FarmingAdvice next = advisor.advise(state, inputs, nowEpochSec);
+        // The watch judged its teleport against the stop on screen. A plan that moves on to
+        // another stop is judged again now, so the new stop never shows the old one's
+        // teleport as paid. This runs before the trip record, which reads the final plan.
+        FarmingStopAdvice heading = headingStop(next);
+        if (travelWatch.retarget(state, nameOf(heading), landingOf(heading))) {
+            log.debug("Teleport no longer paid for: the next stop is {}", nameOf(heading));
+            inputs = inputs(nowEpochSec);
+            next = advisor.advise(state, inputs, nowEpochSec);
+        }
         // The trip record reads the advice it feeds. A changed packed set plans once more
-        // before publishing, so the next bank's deposits see it at once. Twice is enough:
+        // before publishing, so the next bank's deposits see it at once. One more is enough:
         // the deposits feed no list the record reads.
         DepositPlanner.TripRecord record = DepositPlanner.record(state, next, tripRecord);
         boolean replan = !record.getPacked().equals(tripRecord.getPacked());
@@ -491,7 +507,8 @@ public class FarmingPlanner implements EngineListener {
 
     /**
      * What the farm run is planned against beyond the player state: the previewed book, the
-     * contract, preferences, and the patches' and the house's last-seen contents.
+     * contract, preferences, the patches' and the house's last-seen contents, what this trip
+     * has packed and spent, and the stop the plan on screen heads for.
      *
      * <p>The patch lookup reads through to the tracker, so a run planned mid-tick sees the
      * same patches the timers do.
@@ -509,7 +526,8 @@ public class FarmingPlanner implements EngineListener {
                 .withHouse(house)
                 .withOfferedBanksHidden(offeredBanksHidden)
                 .withPackedThisTrip(tripRecord.getPacked())
-                .withTravelTaken(travelWatch.taken());
+                .withTravelTaken(travelWatch.taken())
+                .withHeading(nameOf(headingStop(advice)));
     }
 
     /**

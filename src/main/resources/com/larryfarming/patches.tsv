@@ -33,7 +33,7 @@ patch	-	4773	FARMING_TRANSMIT_C	FLOWER	CATHERBY_FLOWER
 patch	-	4774	FARMING_TRANSMIT_D	HERB	CATHERBY_HERB
 patch	-	4775	FARMING_TRANSMIT_E	COMPOST	-
 
-region	Civitas illa Fortis	6192	6191 6193 6447 6448 6449	ANYWHERE
+region	Ortus Farm	6192	6191 6193 6447 6448 6449	ANYWHERE
 patch	North	4771	FARMING_TRANSMIT_A	ALLOTMENT	-
 patch	South	4772	FARMING_TRANSMIT_B	ALLOTMENT	-
 patch	-	4773	FARMING_TRANSMIT_C	FLOWER	-
@@ -93,7 +93,9 @@ patch	-	7910	FARMING_TRANSMIT_L	CELASTRUS	FARMING_GUILD_CELASTRUS
 patch	-	7907	FARMING_TRANSMIT_I	REDWOOD	FARMING_GUILD_REDWOOD
 patch	-	7912	FARMING_TRANSMIT_N	BIG_COMPOST	-
 
-region	Farming Guild	5021	-	ANYWHERE
+# The plant beside the cave entrance (object 34707) blooms from the patch's varbit, so the
+# guild's map region sends it too, and the patch reads without entering the cave.
+region	Farming Guild	5021	4922	ANYWHERE
 patch	Hespori	7908	FARMING_TRANSMIT_J	HESPORI	HESPORI
 
 # --- Tree patches ---

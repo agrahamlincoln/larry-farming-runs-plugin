@@ -65,7 +65,7 @@ public class FarmingPanel extends JPanel
 	private static final String STATUS_PENDING = "PENDING";
 
 	/** Appended to the settings header while no fairy ring can be reached. */
-	private static final String SETTINGS_NO_FAIRY_RING = ": no fairy ring access";
+	private static final String SETTINGS_NO_FAIRY_RING = ": no way to a fairy ring";
 
 	/** The settings fold's last control, which puts every setting back. */
 	static final String RESET_LABEL = "Reset to the default route";
