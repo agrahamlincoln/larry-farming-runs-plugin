@@ -227,8 +227,7 @@ public class RunStop {
      * refuses mixed patch types, so the first patch answers for all.
      */
     public PatchType patchType() {
-        FarmingWorldMap.PatchDef def = primaryPatch().resolve();
-        return def != null ? def.getType() : null;
+        return primaryPatch().type();
     }
 
     public boolean isOptional() {

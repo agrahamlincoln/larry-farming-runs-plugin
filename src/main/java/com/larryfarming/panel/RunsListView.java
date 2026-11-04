@@ -200,18 +200,16 @@ class RunsListView extends JPanel
 		}
 
 		JPanel text = PanelText.stack();
-		JLabel name = new JLabel(run.getRunName());
-		name.setFont(onTrip || due ? FontManager.getRunescapeBoldFont() : FontManager.getRunescapeSmallFont());
-		name.setForeground(switchedOff ? COLOR_OFF : runColour(run.getStatus(), onTrip));
+		JLabel name = PanelText.label(run.getRunName(),
+			onTrip || due ? FontManager.getRunescapeBoldFont() : FontManager.getRunescapeSmallFont(),
+			switchedOff ? COLOR_OFF : runColour(run.getStatus(), onTrip));
 		name.setAlignmentX(LEFT_ALIGNMENT);
 		text.add(name);
 
 		// Always added, even when empty, so showDetails can fill it in place later. Its
 		// colour depends on status, which is in the signature. A run not due yet keeps a
 		// quieter status line, but grey only when the run is not possible.
-		JLabel detail = new JLabel();
-		detail.setFont(FontManager.getRunescapeSmallFont());
-		detail.setForeground(switchedOff ? COLOR_OFF : due ? COLOR_ROUTE : impossible ? COLOR_SKIPPED : COLOR_QUIET);
+		JLabel detail = PanelText.label("", switchedOff ? COLOR_OFF : due ? COLOR_ROUTE : impossible ? COLOR_SKIPPED : COLOR_QUIET);
 		detail.setAlignmentX(LEFT_ALIGNMENT);
 		text.add(detail);
 		runDetails.put(run.getRunId(), detail);
@@ -301,8 +299,7 @@ class RunsListView extends JPanel
 	private JCheckBox runSwitch(FarmingSettingChoice only, String runId, JLabel name, JLabel detail, JLabel icon)
 	{
 		Icon builtIcon = icon != null ? icon.getIcon() : null;
-		JCheckBox box = FarmingPanel.checkbox(null);
-		box.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+		JCheckBox box = FarmingPanel.checkbox(null, 0);
 		box.setSelected(only.isOn());
 		box.setToolTipText(switchTip(only.isOn()));
 		// The row as built, put back by a re-tick. Untick then re-tick before the re-plan
@@ -404,8 +401,7 @@ class RunsListView extends JPanel
 		}
 		for (FarmingSettingChoice choice : PanelText.listOf(settings.getSwitches()))
 		{
-			JCheckBox box = FarmingPanel.checkbox(choice.getLabel());
-			box.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+			JCheckBox box = FarmingPanel.checkbox(choice.getLabel(), 5);
 			box.setSelected(choice.isOn());
 			box.setToolTipText(choice.getTip());
 			box.addActionListener(e -> send.accept(choice.getKey(), String.valueOf(box.isSelected())));

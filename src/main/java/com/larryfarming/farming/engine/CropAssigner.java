@@ -55,8 +55,7 @@ final class CropAssigner {
         }
         Crop crop = inputs.getContractCrop();
         CropData data = crop == null ? null : CropData.forCrop(crop);
-        FarmingWorldMap.PatchDef def = patch.resolve();
-        if (data == null || def == null || def.getType() != data.getPatchType()) {
+        if (data == null || patch.type() != data.getPatchType()) {
             return null;
         }
         PatchPrediction seen = inputs.patchAt(patch);
@@ -447,8 +446,7 @@ final class CropAssigner {
     }
 
     private static boolean isFruitTree(PatchRef patch) {
-        FarmingWorldMap.PatchDef def = patch.resolve();
-        return def != null && def.getType() == PatchType.FRUIT_TREE;
+        return patch.type() == PatchType.FRUIT_TREE;
     }
 
     /**
@@ -459,11 +457,11 @@ final class CropAssigner {
      * is replaced rather than protected.
      */
     private static int tierOf(Crop crop, PatchRef patch) {
-        FarmingWorldMap.PatchDef def = patch.resolve();
-        if (crop == null || def == null) {
+        PatchType type = patch.type();
+        if (crop == null || type == null) {
             return Integer.MAX_VALUE;
         }
-        int index = CropData.plantableIn(def.getType()).indexOf(crop);
+        int index = CropData.plantableIn(type).indexOf(crop);
         return index < 0 ? Integer.MAX_VALUE : index;
     }
 
@@ -495,7 +493,7 @@ final class CropAssigner {
      * tie-break must then be walk order, so the k-th patch reached takes the k-th seed out
      * of the seed box.
      *
-     * <p>Walk position, not plan-list position: a trip walks its book's {@link Arrivals}
+     * <p>Walk position, not plan-list position: a trip walks the circuit's {@link Arrivals}
      * seats across every family's plans, so where a plan sits in the list says nothing about
      * when the player gets there. {@link #walkPositions} gives the same order
      * {@link Itinerary#bestHomesFirst} is handed its visits in. Plan and patch index make the
@@ -516,14 +514,15 @@ final class CropAssigner {
      * {@code bestHomesFirst} breaks ties on the order it is handed, so it and this must be
      * handed the same one.
      *
-     * @param tripBook the book of the merged trip the run is walked on, whose seats the trip
-     *     follows, or null for a run walked on its own
+     * @param tripBook set when the run is walked on a merged trip, which follows the
+     *     circuit's seats, or null for a run walked on its own; only whether it is null
+     *     matters
      */
     static int[] walkPositions(List<StopPlan> plans, Spellbook tripBook) {
         int[] position = new int[plans.size()];
         if (tripBook != null) {
             for (int i = 0; i < plans.size(); i++) {
-                position[i] = Arrivals.seat(tripBook, plans.get(i).getStop().getArrival());
+                position[i] = Arrivals.seat(plans.get(i).getStop().getArrival());
             }
             return position;
         }

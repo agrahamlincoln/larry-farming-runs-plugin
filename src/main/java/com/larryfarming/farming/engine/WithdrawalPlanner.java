@@ -190,9 +190,6 @@ public final class WithdrawalPlanner {
         return lines;
     }
 
-    /** The seed box holds this many seed types in one inventory slot. */
-    private static final int SEED_TYPES_A_BOX_HOLDS = 6;
-
     /**
      * The trip's seeds, taken in one go at the first bank, when a seed box makes that free.
      *
@@ -290,7 +287,7 @@ public final class WithdrawalPlanner {
                 loose.add(type);
             }
         }
-        int room = SEED_TYPES_A_BOX_HOLDS - held.size();
+        int room = SeedBox.KINDS_HELD - held.size();
         if (loose.size() <= room) {
             boxed.addAll(loose);
             return boxed;
@@ -495,7 +492,7 @@ public final class WithdrawalPlanner {
             }
             boolean stock = line.getQuantity() > 0;
             int wants = stock ? line.getQuantity() : 1;
-            int has = bagHolds.containsKey(line.getItemId()) ? bagHolds.get(line.getItemId()) : line.getCarriedCount();
+            int has = bagHolds.getOrDefault(line.getItemId(), line.getCarriedCount());
             if (has < wants) {
                 // Ask for the shortfall, not the whole want.
                 withdraw.add(line.withQuantity(stock ? wants - has : 0));

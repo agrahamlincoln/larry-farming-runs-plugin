@@ -113,7 +113,7 @@ final class StopRowWriter {
                     plan.getSkipReason(), plan.getBecause(), plan.getReadyAtEpochSec()));
         }
 
-        return FarmingStopAdvice.builder().patchName(nameOfGroup(group, plans)).outcome(outcome)
+        return FarmingStopAdvice.builder().patchName(nameOfGroup(group, plans)).arrival(lead.getStop().getArrival().name()).outcome(outcome)
                 // The planner's composed sentence. A destination-named rung stores only its
                 // tail ("then run east"); the teleport clause is added at planning time.
                 .instruction(visiting ? travel.getBecause() : "").actions(actions).iconItemId(iconItemId).because(travel.getBecause())
@@ -138,7 +138,7 @@ final class StopRowWriter {
     }
 
     /** The stops at this arrival the player is visiting, in the arrival's order. */
-    private static List<StopPlan> visitsIn(List<Integer> group, List<StopPlan> plans) {
+    static List<StopPlan> visitsIn(List<Integer> group, List<StopPlan> plans) {
         List<StopPlan> visits = new ArrayList<>(group.size());
         for (int index : group) {
             if (plans.get(index).isVisit()) {
@@ -544,7 +544,7 @@ final class StopRowWriter {
         String kind = kindOf(def.getType());
         String name = def.getPatchName();
         if (name == null || name.isEmpty()) {
-            return Character.toUpperCase(kind.charAt(0)) + kind.substring(1);
+            return capitalise(kind);
         }
         // Hespori, anima and mushroom patches are named for their kind: "Hespori patch",
         // never "Hespori hespori".
@@ -555,7 +555,7 @@ final class StopRowWriter {
     }
 
     /** A patch kind as a player says it: "hardwood tree", "allotment". */
-    private static String kindOf(PatchType type) {
+    static String kindOf(PatchType type) {
         return type.name().toLowerCase(Locale.ROOT).replace('_', ' ');
     }
 
@@ -573,7 +573,7 @@ final class StopRowWriter {
      *
      * <p>Counts patches, not plans: one Fossil Island stop is three hardwood patches.
      */
-    static String nameOfGroup(List<Integer> group, List<StopPlan> plans) {
+    private static String nameOfGroup(List<Integer> group, List<StopPlan> plans) {
         PatchRef primary = plans.get(group.get(0)).getStop().primaryPatch();
         int patches = 0;
         for (int index : group) {

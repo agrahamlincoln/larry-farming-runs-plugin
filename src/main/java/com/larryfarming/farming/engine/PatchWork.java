@@ -143,9 +143,6 @@ final class PatchWork {
         if (state == CropState.DEAD || state == CropState.DISEASED || StopSkipRules.isStillGrowing(seen)) {
             return false;
         }
-        if (FixedCrops.ticked(stop, prefs).isEmpty()) {
-            return false;
-        }
         Crop next = FixedCrops.cropFor(stop, prefs, player);
         CropData data = next == null ? null : CropData.forCrop(next);
         return data != null && !FixedCrops.belowLevel(player, data) && !SeedSelector.definitelyOutOf(next, player, data.getSeedsPerPatch());

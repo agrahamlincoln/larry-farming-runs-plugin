@@ -6,6 +6,7 @@ import com.larryfarming.farming.detection.*;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingRunStatus;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import lombok.*;
@@ -92,8 +93,11 @@ public final class FarmingInputs {
     private final Set<Integer> packedThisTrip;
     /** The teleport the player has spent on the way to the next stop; see {@code TravelWatch}. */
     private final TravelTaken travelTaken;
-    /** The stop the plan on screen sends the player to next, or null. Once a trip is underway, the trip starts from it. */
-    private final String heading;
+    /**
+     * The arrivals the plan on screen sends the player to, by constant name, in its order.
+     * Once a trip is underway, the trip keeps that order. Never null.
+     */
+    private final List<String> ahead;
 
     // On the constructor rather than the class, so every builder path goes through the
     // null normalisations below.
@@ -101,7 +105,7 @@ public final class FarmingInputs {
     private FarmingInputs(Spellbook previewBook, Function<PatchRef, PatchPrediction> patches, DailyTeleportLedger ledger, long nowEpochSec,
             Crop contractCrop, FarmingRunStatus contractRun,
             FarmingPreferences preferences, HouseSight house, boolean offeredBanksHidden, Set<Integer> packedThisTrip, TravelTaken travelTaken,
-            String heading) {
+            List<String> ahead) {
         this.packedThisTrip = packedThisTrip != null ? Set.copyOf(packedThisTrip) : Set.of();
         this.travelTaken = travelTaken != null ? travelTaken : TravelTaken.NONE;
         this.previewBook = previewBook;
@@ -114,16 +118,12 @@ public final class FarmingInputs {
         this.preferences = preferences != null ? preferences : FarmingPreferences.defaults();
         this.house = house != null ? house : HouseSight.unseen();
         this.offeredBanksHidden = offeredBanksHidden;
-        this.heading = heading;
+        this.ahead = ahead != null ? List.copyOf(ahead) : List.of();
     }
 
     /** Nothing chosen, nothing seen. */
     public static FarmingInputs none() {
         return NONE;
-    }
-
-    public static FarmingInputs of(Spellbook previewBook, Function<PatchRef, PatchPrediction> patches) {
-        return of(previewBook, patches, null, 0);
     }
 
     /**

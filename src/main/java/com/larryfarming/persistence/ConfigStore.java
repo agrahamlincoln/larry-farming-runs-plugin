@@ -20,8 +20,6 @@ public interface ConfigStore {
 
     void setConfiguration(String group, String key, String value);
 
-    void unsetConfiguration(String group, String key);
-
     /** The live client's store. */
     static ConfigStore of(ConfigManager configManager) {
         return new ConfigStore() {
@@ -48,11 +46,6 @@ public interface ConfigStore {
             @Override
             public void setConfiguration(String group, String key, String value) {
                 configManager.setConfiguration(group, key, value);
-            }
-
-            @Override
-            public void unsetConfiguration(String group, String key) {
-                configManager.unsetConfiguration(group, key);
             }
         };
     }

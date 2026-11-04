@@ -27,6 +27,9 @@ package com.larryfarming.engine.farming;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Value;
 
 /**
  * Tracks every observed farming patch (herbs, trees, bushes, and the other timed
@@ -71,28 +74,11 @@ public class FarmingTracker {
     private static final int OFFSET_RESOLUTION_SECONDS = 1;
 
     /** Persisted per-patch record: raw varbit byte + when we observed it. */
-    public static final class PersistedEntry {
-        private final String configKey;
-        private final int varbitValue;
-        private final long observedAtEpochSec;
-
-        public PersistedEntry(String configKey, int varbitValue, long observedAtEpochSec) {
-            this.configKey = configKey;
-            this.varbitValue = varbitValue;
-            this.observedAtEpochSec = observedAtEpochSec;
-        }
-
-        public String getConfigKey() {
-            return configKey;
-        }
-
-        public int getVarbitValue() {
-            return varbitValue;
-        }
-
-        public long getObservedAtEpochSec() {
-            return observedAtEpochSec;
-        }
+    @Value
+    public static class PersistedEntry {
+        String configKey;
+        int varbitValue;
+        long observedAtEpochSec;
     }
 
     /**
@@ -100,6 +86,7 @@ public class FarmingTracker {
      * time so the per-frame render-loop queries never re-decode or allocate. A
      * new instance replaces the old one on change; the map publishes the swap.
      */
+    @AllArgsConstructor
     private static final class Observation {
         final int varbitValue;
         final long observedAtEpochSec;
@@ -117,14 +104,6 @@ public class FarmingTracker {
          * no planting was seen. Live only: not persisted.
          */
         final long plantedAtEpochSec;
-
-        Observation(int varbitValue, long observedAtEpochSec, DecodedPatch decoded, long firstSeenAtEpochSec, long plantedAtEpochSec) {
-            this.varbitValue = varbitValue;
-            this.observedAtEpochSec = observedAtEpochSec;
-            this.decoded = decoded;
-            this.firstSeenAtEpochSec = firstSeenAtEpochSec;
-            this.plantedAtEpochSec = plantedAtEpochSec;
-        }
     }
 
     /**
@@ -160,12 +139,20 @@ public class FarmingTracker {
     /** How long a held 0 waits for the scan that confirms it. Scans come every tick. */
     private static final long HOLD_CONFIRM_SECONDS = 2;
 
-    // Counts the scans that stored a change, so a watcher can tell a planting has shown.
+    /**
+     * How many patch values have changed so far, re-stamps of an unchanged value aside, so a
+     * watcher can tell a planting has shown.
+     */
+    @Getter
     private volatile long changes;
 
     // volatile: written on the client thread, read on the EDT / render thread.
+    @Getter
     private volatile int tickOffsetSeconds = OFFSET_UNKNOWN;
+    @Getter
     private volatile int tickOffsetPrecisionMins = OFFSET_UNKNOWN;
+    /** How coarsely the stored offset was recorded; one second once self-learned. */
+    @Getter
     private volatile int tickOffsetResolutionSeconds = OFFSET_RESOLUTION_SECONDS;
     private volatile boolean offsetDirty;
 
@@ -571,24 +558,6 @@ public class FarmingTracker {
             out.add(new PersistedEntry(e.getKey().configKey(), e.getValue().varbitValue, e.getValue().observedAtEpochSec));
         }
         return out;
-    }
-
-    /** How many patch values have changed so far, re-stamps of an unchanged value aside. */
-    public long getChanges() {
-        return changes;
-    }
-
-    public int getTickOffsetSeconds() {
-        return tickOffsetSeconds;
-    }
-
-    public int getTickOffsetPrecisionMins() {
-        return tickOffsetPrecisionMins;
-    }
-
-    /** How coarsely the stored offset was recorded; one second once self-learned. */
-    public int getTickOffsetResolutionSeconds() {
-        return tickOffsetResolutionSeconds;
     }
 
     /**

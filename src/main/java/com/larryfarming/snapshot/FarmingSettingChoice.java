@@ -70,18 +70,6 @@ public class FarmingSettingChoice {
 
     /** A control drawn as an item, or as a plain checkbox for item 0. */
     public FarmingSettingChoice(String key, String label, int itemId, String tag, int level, boolean on, boolean missing, boolean locked) {
-        this(key, label, itemId, tag, level, on, missing, locked, 0);
-    }
-
-    /** The same, drawn as a game sprite where {@code spriteId} is not 0. */
-    public FarmingSettingChoice(String key, String label, int itemId, String tag, int level,
-            boolean on, boolean missing, boolean locked, int spriteId) {
-        this(key, label, itemId, tag, level, on, missing, locked, spriteId, null, false, null);
-    }
-
-    /** The same, with a missing item's reason. */
-    public FarmingSettingChoice(String key, String label, int itemId, String tag, int level,
-            boolean on, boolean missing, boolean locked, int spriteId, String missingNote) {
-        this(key, label, itemId, tag, level, on, missing, locked, spriteId, missingNote, false, null);
+        this(key, label, itemId, tag, level, on, missing, locked, 0, null, false, null);
     }
 }

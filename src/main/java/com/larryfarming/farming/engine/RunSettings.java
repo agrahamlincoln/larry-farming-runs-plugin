@@ -27,14 +27,6 @@ public final class RunSettings {
     /** A switched-off run's status in {@code FarmingAdvice.switchedOff}. */
     public static final String STATUS_OFF = "OFF";
 
-    /** Each herb's name on its square in the herb grid, short enough for an item square. */
-    private static final Map<Crop, String> HERB_TAGS = Map.ofEntries(Map.entry(Crop.GUAM, "GUAM"), Map.entry(Crop.MARRENTILL, "MAR"),
-            Map.entry(Crop.TARROMIN, "TAR"), Map.entry(Crop.HARRALANDER, "HAR"),
-            Map.entry(Crop.RANARR, "RAN"), Map.entry(Crop.TOADFLAX, "TOAD"), Map.entry(Crop.IRIT, "IRIT"), Map.entry(Crop.AVANTOE, "AVA"),
-            Map.entry(Crop.KWUARM, "KWU"), Map.entry(Crop.SNAPDRAGON, "SNAP"),
-            Map.entry(Crop.CADANTINE, "CAD"), Map.entry(Crop.LANTADYME, "LANT"),
-            Map.entry(Crop.DWARF_WEED, "DWF"), Map.entry(Crop.TORSTOL, "TORS"));
-
     private RunSettings() {
     }
 
@@ -51,7 +43,7 @@ public final class RunSettings {
             RunId id = entry.getKey();
             // Named, so a run whose crop switches are still on does not read as plainly off.
             String detail = prefs.dropsEverySiteOf(FarmingCatalogue.siteKeys(id)) ? "no patches on" : "off";
-            off.add(new FarmingRunStatus(id.name(), id.getDisplayName(), STATUS_OFF, detail, 0L, 0, RunIcons.of(id), false, false, false));
+            off.add(new FarmingRunStatus(id.name(), id.getDisplayName(), STATUS_OFF, detail, 0L, 0, id.getIconItemId(), false, false, false));
         }
         off.sort(Comparator.comparingInt(s -> RunId.valueOf(s.getRunId()).getPriority()));
         return off;
@@ -145,7 +137,7 @@ public final class RunSettings {
         // are longer than the bag's one-letter ones, since here they are the only name.
         List<FarmingSettingChoice> seeds = new ArrayList<>();
         for (Crop herb : byLevel(FarmingPreferences.HERB_CHOICES)) {
-            seeds.add(toggle(herb, herb.getItemId(), prefs, level, HERB_TAGS.get(herb)));
+            seeds.add(toggle(herb, herb.getItemId(), prefs, level, CropData.forCrop(herb).getGridTag()));
         }
         // The inventory's own tags. Only herbs and saplings draw one in the bag, but here each
         // extra stands beside the herbs and wants a name.
@@ -327,7 +319,7 @@ public final class RunSettings {
      * The player's Farming level, or no ceiling at all when the game has not reported it,
      * so an unread level locks nothing.
      */
-    private static int farmingLevel(PlayerState state) {
+    static int farmingLevel(PlayerState state) {
         if (state == null || state.getSkills() == null || !state.getSkills().containsKey(Skill.FARMING)) {
             return Integer.MAX_VALUE;
         }
@@ -363,7 +355,7 @@ public final class RunSettings {
         boolean missing = !owns(method, state, house, prefs.houseDeclared());
         return new FarmingSettingChoice(method.getKey(), method.getLabel(),
                 sprite > 0 ? 0 : itemFor(method), tagFor(method), 0, prefs.uses(method), missing, false, sprite,
-                missing && isSeenAbsent(method, house) ? notBuilt(method) : null);
+                missing && isSeenAbsent(method, house) ? notBuilt(method) : null, false, null);
     }
 
     /**
@@ -371,15 +363,8 @@ public final class RunSettings {
      * square can say so rather than "None seen yet".
      */
     private static boolean isSeenAbsent(TravelMethod method, HouseSight house) {
-        if (method.getCapabilities().isEmpty()) {
-            return false;
-        }
-        for (Capability capability : method.getCapabilities()) {
-            if (CapabilitySources.houseSighting(capability, house) != HouseSighting.ABSENT) {
-                return false;
-            }
-        }
-        return true;
+        return !method.getCapabilities().isEmpty() && method.getCapabilities().stream()
+                .allMatch(capability -> CapabilitySources.houseSighting(capability, house) == HouseSighting.ABSENT);
     }
 
     private static String notBuilt(TravelMethod method) {
@@ -450,12 +435,7 @@ public final class RunSettings {
     }
 
     private static boolean ownsAnyTablet(PlayerState state) {
-        for (int tablet : TABLETS) {
-            if (ItemCounts.ownsAny(state, tablet)) {
-                return true;
-            }
-        }
-        return false;
+        return Arrays.stream(TABLETS).anyMatch(tablet -> ItemCounts.ownsAny(state, tablet));
     }
 
     /**

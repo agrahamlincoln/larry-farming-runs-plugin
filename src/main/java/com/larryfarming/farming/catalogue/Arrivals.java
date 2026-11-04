@@ -1,7 +1,7 @@
 package com.larryfarming.farming.catalogue;
 
 import com.larryfarming.farming.model.*;
-import java.util.List;
+import java.util.*;
 
 /**
  * The arrival table: each arrival's seat on the circuit, and how to reach it when more than
@@ -23,19 +23,31 @@ public final class Arrivals {
     private Arrivals() {
     }
 
-    private static final Seats SEATS = Seats.circuit(CatalogueLoader.loaded().circuit);
+    /** Every arrival's seat on the one circuit, which every book walks. */
+    private static final Map<Arrival, Integer> SEATS = seats(CatalogueLoader.loaded().circuit);
 
-    /** Every book's seats, for a caller that walks one order against another. */
-    public static Seats seats() {
-        return SEATS;
+    /** The circuit's seats, refusing an arrival listed twice or never. */
+    private static Map<Arrival, Integer> seats(List<Arrival> circuit) {
+        Map<Arrival, Integer> seats = new EnumMap<>(Arrival.class);
+        for (int i = 0; i < circuit.size(); i++) {
+            if (seats.put(circuit.get(i), i) != null) {
+                throw new IllegalStateException(circuit.get(i) + " has two seats");
+            }
+        }
+        for (Arrival arrival : Arrival.values()) {
+            if (!seats.containsKey(arrival)) {
+                throw new IllegalStateException(arrival + " has no seat");
+            }
+        }
+        return Collections.unmodifiableMap(seats);
     }
 
     /**
-     * Where this arrival sits in this book's order. Lower comes first. Seats run 0..n-1 with
-     * no gaps, and the table refuses to load if an {@link Arrival} has none.
+     * Where this arrival sits on the circuit. Lower comes first. Seats run 0..n-1 with no
+     * gaps, and the table refuses to load if an {@link Arrival} has none.
      */
-    public static int seat(Spellbook book, Arrival arrival) {
-        return SEATS.seat(book, arrival);
+    public static int seat(Arrival arrival) {
+        return SEATS.get(arrival);
     }
 
     /**

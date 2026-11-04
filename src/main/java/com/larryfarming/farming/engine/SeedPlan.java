@@ -84,29 +84,16 @@ public class SeedPlan {
 
     /** How many patches the trip is trying to fill, across both ends of every run. */
     public static int wanted(List<SeedPlan> plans) {
-        int wanted = 0;
-        for (SeedPlan plan : plans) {
-            wanted += plan.good.getWanted() + plan.bad.getWanted();
-        }
-        return wanted;
+        return plans.stream().mapToInt(plan -> plan.good.getWanted() + plan.bad.getWanted()).sum();
     }
 
     /** How many of them the stock actually covers. */
     public static int planted(List<SeedPlan> plans) {
-        int planted = 0;
-        for (SeedPlan plan : plans) {
-            planted += plan.good.getPerPatch().size() + plan.bad.getPerPatch().size();
-        }
-        return planted;
+        return plans.stream().mapToInt(plan -> plan.good.getPerPatch().size() + plan.bad.getPerPatch().size()).sum();
     }
 
     /** False as soon as one run's answer rests on a container we have not been shown. */
     public static boolean confident(List<SeedPlan> plans) {
-        for (SeedPlan plan : plans) {
-            if (!plan.isConfident()) {
-                return false;
-            }
-        }
-        return true;
+        return plans.stream().allMatch(SeedPlan::isConfident);
     }
 }

@@ -5,7 +5,6 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.util.function.BiConsumer;
 import javax.swing.*;
-import net.runelite.client.ui.FontManager;
 
 /**
  * A setting's label beside its control. Every such row in the panel is built here, so the
@@ -30,9 +29,7 @@ final class SettingRow
 		row.setOpaque(false);
 		row.setAlignmentX(JComponent.LEFT_ALIGNMENT);
 		row.setBorder(BorderFactory.createEmptyBorder(3, 2, 0, 0));
-		JLabel name = new JLabel(label);
-		name.setFont(FontManager.getRunescapeSmallFont());
-		name.setForeground(PanelColors.HEADER);
+		JLabel name = PanelText.label(label, PanelColors.HEADER);
 		name.setPreferredSize(new Dimension(LABEL_WIDTH, ROW_HEIGHT - 3));
 		row.add(name, BorderLayout.WEST);
 		row.add(control, BorderLayout.CENTER);

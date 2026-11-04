@@ -2,6 +2,7 @@ package com.larryfarming.panel;
 
 import com.larryfarming.snapshot.FarmingAdvice;
 import com.larryfarming.snapshot.FarmingSettingGroup;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
 
@@ -28,11 +29,8 @@ class TravelFold extends Fold
 	private final BiConsumer<String, String> send;
 	private boolean blocked;
 
-	/** The groups the squares were last built from. */
-	private List<FarmingSettingGroup> shown = List.of();
-
-	/** The icons the squares were last drawn with, so a provider arriving later redraws them. */
-	private IconProvider shownIcons;
+	/** Keyed on the groups and the icons, so a provider arriving later redraws the squares. */
+	private final RebuildGuard guard = new RebuildGuard();
 
 	/** @param send receives each switched square as its config key and new value */
 	TravelFold(BiConsumer<String, String> send)
@@ -57,12 +55,10 @@ class TravelFold extends Fold
 			blocked = advice.isFairyRingBlocked();
 			setHeader(blocked ? BLOCKED : "", blocked ? FarmingPanel.COLOR_DUE : PanelColors.HEADER);
 		}
-		if (groups.equals(shown) && icons == shownIcons)
+		if (!guard.shouldRebuild(Arrays.asList(groups, icons)))
 		{
 			return;
 		}
-		shown = groups;
-		shownIcons = icons;
 
 		content().removeAll();
 		for (FarmingSettingGroup group : groups)

@@ -2,6 +2,9 @@ package com.larryfarming.farming.detection;
 
 import java.util.Locale;
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 /**
  * How a click leads into a house: the player's own, someone else's, or a way in whose
@@ -26,6 +29,8 @@ import java.util.regex.Pattern;
  * <p>An op renamed in a game update falls to unknown, or to no match, and an unknown entry
  * learns nothing. So a rename can stop the scan but never credit a friend's house.
  */
+@Getter
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class HouseEntry {
 
     /** Whose house the click leads into. */
@@ -53,24 +58,11 @@ public final class HouseEntry {
     private static final String HOUSE_TELEPORT = "teleport to house";
 
     private final Owner owner;
-    private final String signal;
-
-    private HouseEntry(Owner owner, String signal) {
-        this.owner = owner;
-        this.signal = signal;
-    }
-
-    public Owner getOwner() {
-        return owner;
-    }
-
     /**
      * Which rule matched, in fixed words. Never a target's own text, so logging it can
      * never write a player's name.
      */
-    public String getSignal() {
-        return signal;
-    }
+    private final String signal;
 
     /**
      * The house a click leads into, or null when it is no way into a house at all.

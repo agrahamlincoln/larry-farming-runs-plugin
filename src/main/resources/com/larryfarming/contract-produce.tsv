@@ -1,0 +1,64 @@
+# The farming contract varbit (7963): each value and the Crop constant the contract asks for.
+# Values follow RuneLite's Time Tracking plugin, which decodes the same varbit
+# (farming/Produce.java; Copyright (c) 2018 Abex; Copyright (c) 2018, NotFoxtrot; BSD
+# 2-Clause License). Every value from 1 is listed in order; 0 is the empty contract slot.
+#
+# value	crop
+# Bushes
+1	REDBERRIES
+2	CADAVABERRIES
+3	DWELLBERRIES
+4	JANGERBERRIES
+5	WHITEBERRIES
+6	POISON_IVY
+# Trees
+7	OAK
+8	WILLOW
+9	MAPLE
+10	YEW
+11	MAGIC
+# Fruit trees
+12	APPLE
+13	BANANA
+14	ORANGE
+15	CURRY
+16	PINEAPPLE
+17	PAPAYA
+18	PALM
+19	DRAGONFRUIT
+# Herbs
+20	GUAM
+21	MARRENTILL
+22	TARROMIN
+23	HARRALANDER
+24	RANARR
+25	TOADFLAX
+26	IRIT
+27	AVANTOE
+28	KWUARM
+29	SNAPDRAGON
+30	CADANTINE
+31	LANTADYME
+32	DWARF_WEED
+33	TORSTOL
+# Flowers
+34	MARIGOLD
+35	ROSEMARY
+36	NASTURTIUM
+37	WOAD
+38	LIMPWURT
+39	WHITE_LILY
+# Allotments
+40	POTATO
+41	ONION
+42	CABBAGE
+43	TOMATO
+44	SWEETCORN
+45	STRAWBERRY
+46	WATERMELON
+47	SNAPE_GRASS
+# Cacti and the special trees
+48	CACTUS
+49	POTATO_CACTUS
+50	REDWOOD
+51	CELASTRUS

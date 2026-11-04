@@ -91,7 +91,7 @@ public final class Teleports {
                     case "spell":
                     case "swap":
                         TeleportMeans spell = TeleportMeans.spell(row.requireWidth(9).text(2),
-                                row.constant(Spellbook.class, 3), row.integer(4), nullable(row, 5), row.integer(6), runes(row, 8));
+                                row.constant(Spellbook.class, 3), row.integer(4), row.optionalText(5), row.integer(6), runes(row, 8));
                         if (row.text(0).equals("swap")) {
                             if (swapRow != null) {
                                 throw row.error("a second swap row");
@@ -103,7 +103,7 @@ public final class Teleports {
                         break;
                     case "tablet":
                         byPlace.computeIfAbsent(row.requireWidth(6).constant(Destination.class, 1),
-                                place -> new ArrayList<>()).add(TeleportMeans.tablet(row.text(2), row.integer(3), nullable(row, 5)));
+                                place -> new ArrayList<>()).add(TeleportMeans.tablet(row.text(2), row.integer(3), row.optionalText(5)));
                         break;
                     case "same":
                         List<TeleportMeans> shared = byPlace.get(row.requireWidth(3).constant(Destination.class, 2));
@@ -113,12 +113,8 @@ public final class Teleports {
                         byPlace.put(row.constant(Destination.class, 1), shared);
                         break;
                     case "runes":
-                        Object[] pairs = runes(row.requireWidth(3), 2);
-                        Map<Rune, Integer> cost = new EnumMap<>(Rune.class);
-                        for (int i = 0; i < pairs.length; i += 2) {
-                            cost.put((Rune) pairs[i], (Integer) pairs[i + 1]);
-                        }
-                        byCapability.put(row.constant(Capability.class, 1), Collections.unmodifiableMap(cost));
+                        byCapability.put(row.constant(Capability.class, 1),
+                                Collections.unmodifiableMap(runes(row.requireWidth(3), 2)));
                         break;
                     default:
                         throw row.error("no kind " + row.text(0));
@@ -135,27 +131,21 @@ public final class Teleports {
             swap = swapRow;
         }
 
-        private static String nullable(Tables.Row row, int column) {
-            String text = row.text(column);
-            return text.isEmpty() ? null : text;
-        }
-
-        /** The cell's rune-count pairs, as {@link TeleportMeans#spell} takes them. */
-        private static Object[] runes(Tables.Row row, int column) {
+        /** The cell's rune-count pairs, each rune with its count. */
+        private static Map<Rune, Integer> runes(Tables.Row row, int column) {
             String[] words = row.text(column).split(" ");
             if (words.length % 2 != 0) {
                 throw row.error("runes come in rune-count pairs: " + row.text(column));
             }
-            Object[] pairs = new Object[words.length];
+            Map<Rune, Integer> runes = new EnumMap<>(Rune.class);
             for (int i = 0; i < words.length; i += 2) {
                 try {
-                    pairs[i] = Rune.valueOf(words[i]);
-                    pairs[i + 1] = Integer.parseInt(words[i + 1]);
+                    runes.put(Rune.valueOf(words[i]), Integer.parseInt(words[i + 1]));
                 } catch (IllegalArgumentException e) {
                     throw row.error("not a rune and a count: " + words[i] + " " + words[i + 1]);
                 }
             }
-            return pairs;
+            return runes;
         }
     }
 }

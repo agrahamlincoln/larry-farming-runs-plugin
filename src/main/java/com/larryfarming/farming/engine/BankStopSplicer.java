@@ -28,7 +28,7 @@ final class BankStopSplicer {
      * <p>The first leg never gets one: the player packs before setting out, so leg zero
      * begins at a bank. A later leg with no bank is the sim reporting that the bag fills
      * with nothing in reach to empty it into; it draws an overflow row and is detailed by
-     * {@link InventorySim.Plan#getOverflows()}.
+     * {@link InventorySim.Leg#getOverflow()}.
      *
      * @param rowOf where each arrival the bag was planned over sits in {@code stops}. Leg
      *     indices count only arrivals being made, while {@code stops} also holds skipped
@@ -286,13 +286,8 @@ final class BankStopSplicer {
 
     /** Whether every leg is one the player just walks, with nothing to say in front of it. */
     private static boolean nothingToSplice(InventorySim.Plan bag) {
-        for (InventorySim.Leg leg : bag.getLegs()) {
-            // Offered banks count: a trip needing no stop still offers the banks it passes.
-            if (leg.getBankAt() != null || leg.getOverflow() != null || !leg.getPassableBanks().isEmpty()) {
-                return false;
-            }
-        }
-        return true;
+        // Offered banks count: a trip needing no stop still offers the banks it passes.
+        return bag.getLegs().stream().allMatch(leg -> leg.getBankAt() == null && leg.getOverflow() == null && leg.getPassableBanks().isEmpty());
     }
 
     /**

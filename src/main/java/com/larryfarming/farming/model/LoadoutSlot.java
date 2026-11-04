@@ -20,12 +20,6 @@ public class LoadoutSlot {
     List<GearPick> tiers;
 
     /**
-     * Why this slot is worth filling, shown as a heading. Written about the slot rather
-     * than any one item, so it stays true across tiers.
-     */
-    String purpose;
-
-    /**
      * True when leaving the slot empty costs only convenience: a missing cape costs a
      * walk, while missing magic secateurs cost yield on every patch they work on.
      */

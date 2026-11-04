@@ -14,18 +14,18 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum HouseItem {
-    WEISS_PORTAL(Group.PORTALS, "Weiss", FarmingKeys.DECLARE_WEISS_PORTAL, Capability.POH_PORTAL_WEISS),
+    WEISS_PORTAL(Group.PORTALS, "Weiss", "declareWeissPortal", Capability.POH_PORTAL_WEISS),
     TROLL_STRONGHOLD_PORTAL(Group.PORTALS, "Troll Stronghold",
-            FarmingKeys.DECLARE_TROLL_STRONGHOLD_PORTAL, Capability.POH_PORTAL_TROLL_STRONGHOLD),
-    KOUREND_PORTAL(Group.PORTALS, "Kourend", FarmingKeys.DECLARE_KOUREND_PORTAL, Capability.POH_PORTAL_KOUREND),
-    FENKENSTRAIN_PORTAL(Group.PORTALS, "Fenkenstrain's", FarmingKeys.DECLARE_FENKENSTRAIN_PORTAL, Capability.POH_PORTAL_FENKENSTRAIN),
-    HARMONY_PORTAL(Group.PORTALS, "Harmony", FarmingKeys.DECLARE_HARMONY_PORTAL, Capability.POH_PORTAL_HARMONY),
-    WEISS_IN_NEXUS(Group.NEXUS, "Weiss", FarmingKeys.DECLARE_WEISS_IN_NEXUS, Capability.POH_NEXUS_WEISS),
+            "declareTrollStrongholdPortal", Capability.POH_PORTAL_TROLL_STRONGHOLD),
+    KOUREND_PORTAL(Group.PORTALS, "Kourend", "declareKourendPortal", Capability.POH_PORTAL_KOUREND),
+    FENKENSTRAIN_PORTAL(Group.PORTALS, "Fenkenstrain's", "declareFenkenstrainPortal", Capability.POH_PORTAL_FENKENSTRAIN),
+    HARMONY_PORTAL(Group.PORTALS, "Harmony", "declareHarmonyPortal", Capability.POH_PORTAL_HARMONY),
+    WEISS_IN_NEXUS(Group.NEXUS, "Weiss", "declareWeissInNexus", Capability.POH_NEXUS_WEISS),
     TROLL_STRONGHOLD_IN_NEXUS(Group.NEXUS, "Troll Stronghold",
-            FarmingKeys.DECLARE_TROLL_STRONGHOLD_IN_NEXUS, Capability.POH_NEXUS_TROLL_STRONGHOLD),
-    HARMONY_IN_NEXUS(Group.NEXUS, "Harmony", FarmingKeys.DECLARE_HARMONY_IN_NEXUS, Capability.POH_NEXUS_HARMONY),
-    SPIRIT_TREE(Group.GARDEN, "Spirit tree", FarmingKeys.DECLARE_HOUSE_SPIRIT_TREE, Capability.POH_SPIRIT_TREE),
-    FAIRY_RING(Group.GARDEN, "Fairy ring", FarmingKeys.DECLARE_HOUSE_FAIRY_RING, Capability.POH_FAIRY_RING);
+            "declareTrollStrongholdInNexus", Capability.POH_NEXUS_TROLL_STRONGHOLD),
+    HARMONY_IN_NEXUS(Group.NEXUS, "Harmony", "declareHarmonyInNexus", Capability.POH_NEXUS_HARMONY),
+    SPIRIT_TREE(Group.GARDEN, "Spirit tree", "declareHouseSpiritTree", Capability.POH_SPIRIT_TREE),
+    FAIRY_RING(Group.GARDEN, "Fairy ring", "declareHouseFairyRing", Capability.POH_FAIRY_RING);
 
     /** Where in the house an item stands, as the settings caption it. */
     @Getter
@@ -43,7 +43,11 @@ public enum HouseItem {
     private final Group group;
     /** Short enough for two columns at sidebar width, beside its group's caption. */
     private final String label;
-    /** The config key that holds the declaration, true while the player says it is built. */
+    /**
+     * The config key that holds the declaration, true while the player says it is built. A
+     * declaration counts only until Larry has seen the item. Players' saved settings sit
+     * under these keys.
+     */
     private final String key;
     private final Capability capability;
 

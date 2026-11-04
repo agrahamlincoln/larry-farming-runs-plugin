@@ -1,8 +1,8 @@
 package com.larryfarming.farming.detection;
 
+import com.larryfarming.data.Tables;
 import java.util.*;
 import java.util.function.IntUnaryOperator;
-import net.runelite.api.gameval.VarbitID;
 
 /**
  * What the Portal Nexus is attuned to, read from its slot varbits.
@@ -30,51 +30,26 @@ public final class PortalNexus {
     /** Added to a key for the destination's alternate arrival. */
     private static final int ALTERNATE_ARRIVAL = 150;
 
+    /** Each slot's saved and working-copy varbits, slots 1 to 45 in order. */
+    private static final List<Tables.Row> TABLE = Tables.read("/com/larryfarming/portal-nexus.tsv", 5);
+
     /** The saved attunement, slots 1 to 45 in order. */
-    private static final int[] SLOTS = {
-        VarbitID.POH_NEXUS_TELE_1, VarbitID.POH_NEXUS_TELE_2, VarbitID.POH_NEXUS_TELE_3,
-        VarbitID.POH_NEXUS_TELE_4, VarbitID.POH_NEXUS_TELE_5, VarbitID.POH_NEXUS_TELE_6,
-        VarbitID.POH_NEXUS_TELE_7, VarbitID.POH_NEXUS_TELE_8, VarbitID.POH_NEXUS_TELE_9,
-        VarbitID.POH_NEXUS_TELE_10, VarbitID.POH_NEXUS_TELE_11, VarbitID.POH_NEXUS_TELE_12,
-        VarbitID.POH_NEXUS_TELE_13, VarbitID.POH_NEXUS_TELE_14, VarbitID.POH_NEXUS_TELE_15,
-        VarbitID.POH_NEXUS_TELE_16, VarbitID.POH_NEXUS_TELE_17, VarbitID.POH_NEXUS_TELE_18,
-        VarbitID.POH_NEXUS_TELE_19, VarbitID.POH_NEXUS_TELE_20, VarbitID.POH_NEXUS_TELE_21,
-        VarbitID.POH_NEXUS_TELE_22, VarbitID.POH_NEXUS_TELE_23, VarbitID.POH_NEXUS_TELE_24,
-        VarbitID.POH_NEXUS_TELE_25, VarbitID.POH_NEXUS_TELE_26, VarbitID.POH_NEXUS_TELE_27,
-        VarbitID.POH_NEXUS_TELE_28, VarbitID.POH_NEXUS_TELE_29, VarbitID.POH_NEXUS_TELE_30,
-        VarbitID.POH_NEXUS_TELE_31, VarbitID.POH_NEXUS_TELE_32, VarbitID.POH_NEXUS_TELE_33,
-        VarbitID.POH_NEXUS_TELE_34, VarbitID.POH_NEXUS_TELE_35, VarbitID.POH_NEXUS_TELE_36,
-        VarbitID.POH_NEXUS_TELE_37, VarbitID.POH_NEXUS_TELE_38, VarbitID.POH_NEXUS_TELE_39,
-        VarbitID.POH_NEXUS_TELE_40, VarbitID.POH_NEXUS_TELE_41, VarbitID.POH_NEXUS_TELE_42,
-        VarbitID.POH_NEXUS_TELE_43, VarbitID.POH_NEXUS_TELE_44, VarbitID.POH_NEXUS_TELE_45,
-    };
+    private static final int[] SLOTS = column(1);
 
     /** The interfaces' working copy, in the same slot order. */
-    private static final int[] WORKING_COPY = {
-        VarbitID.POH_NEXUS_TELE_1_TEMP, VarbitID.POH_NEXUS_TELE_2_TEMP,
-        VarbitID.POH_NEXUS_TELE_3_TEMP, VarbitID.POH_NEXUS_TELE_4_TEMP,
-        VarbitID.POH_NEXUS_TELE_5_TEMP, VarbitID.POH_NEXUS_TELE_6_TEMP,
-        VarbitID.POH_NEXUS_TELE_7_TEMP, VarbitID.POH_NEXUS_TELE_8_TEMP,
-        VarbitID.POH_NEXUS_TELE_9_TEMP, VarbitID.POH_NEXUS_TELE_10_TEMP,
-        VarbitID.POH_NEXUS_TELE_11_TEMP, VarbitID.POH_NEXUS_TELE_12_TEMP,
-        VarbitID.POH_NEXUS_TELE_13_TEMP, VarbitID.POH_NEXUS_TELE_14_TEMP,
-        VarbitID.POH_NEXUS_TELE_15_TEMP, VarbitID.POH_NEXUS_TELE_16_TEMP,
-        VarbitID.POH_NEXUS_TELE_17_TEMP, VarbitID.POH_NEXUS_TELE_18_TEMP,
-        VarbitID.POH_NEXUS_TELE_19_TEMP, VarbitID.POH_NEXUS_TELE_20_TEMP,
-        VarbitID.POH_NEXUS_TELE_21_TEMP, VarbitID.POH_NEXUS_TELE_22_TEMP,
-        VarbitID.POH_NEXUS_TELE_23_TEMP, VarbitID.POH_NEXUS_TELE_24_TEMP,
-        VarbitID.POH_NEXUS_TELE_25_TEMP, VarbitID.POH_NEXUS_TELE_26_TEMP,
-        VarbitID.POH_NEXUS_TELE_27_TEMP, VarbitID.POH_NEXUS_TELE_28_TEMP,
-        VarbitID.POH_NEXUS_TELE_29_TEMP, VarbitID.POH_NEXUS_TELE_30_TEMP,
-        VarbitID.POH_NEXUS_TELE_31_TEMP, VarbitID.POH_NEXUS_TELE_32_TEMP,
-        VarbitID.POH_NEXUS_TELE_33_TEMP, VarbitID.POH_NEXUS_TELE_34_TEMP,
-        VarbitID.POH_NEXUS_TELE_35_TEMP, VarbitID.POH_NEXUS_TELE_36_TEMP,
-        VarbitID.POH_NEXUS_TELE_37_TEMP, VarbitID.POH_NEXUS_TELE_38_TEMP,
-        VarbitID.POH_NEXUS_TELE_39_TEMP, VarbitID.POH_NEXUS_TELE_40_TEMP,
-        VarbitID.POH_NEXUS_TELE_41_TEMP, VarbitID.POH_NEXUS_TELE_42_TEMP,
-        VarbitID.POH_NEXUS_TELE_43_TEMP, VarbitID.POH_NEXUS_TELE_44_TEMP,
-        VarbitID.POH_NEXUS_TELE_45_TEMP,
-    };
+    private static final int[] WORKING_COPY = column(3);
+
+    private static int[] column(int column) {
+        int[] ids = new int[TABLE.size()];
+        for (int i = 0; i < ids.length; i++) {
+            Tables.Row row = TABLE.get(i);
+            if (row.integer(0) != i + 1) {
+                throw row.error("slot out of order");
+            }
+            ids[i] = row.integer(column);
+        }
+        return ids;
+    }
 
     /** {@link #SLOTS}, sorted for lookup on every varbit change. */
     private static final int[] SLOTS_SORTED = sorted(SLOTS);

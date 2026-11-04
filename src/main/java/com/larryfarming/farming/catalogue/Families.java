@@ -52,9 +52,8 @@ final class Families {
             Skill skill = row.optionalConstant(Skill.class, 2);
             UnlockGate unlock = seeds != null && skill == null ? plantsFrom(seeds) : UnlockGate.builder().skill(skill).level(row.integer(3))
                             .boostedFromLevel(row.integer(4)).recommendedFromLevel(row.integer(5)).build();
-            String town = row.text(6);
             families.add(Family.builder().id(row.constant(RunId.class, 0)).book(row.constant(Spellbook.class, 1)).unlock(unlock)
-                    .respawnTown(town.isEmpty() ? null : town).seedPatchType(seeds).build());
+                    .respawnTown(row.optionalText(6)).seedPatchType(seeds).build());
         }
         return List.copyOf(families);
     }

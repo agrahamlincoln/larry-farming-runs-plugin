@@ -20,6 +20,7 @@ import com.larryfarming.snapshot.FarmingRunStatus;
 import java.time.*;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
@@ -591,29 +592,14 @@ public class LarryPlugin extends Plugin
 		}
 		loginLoadFailures = 0;
 
-		Map<String, EventApplier.SkillSnapshot> skills = new LinkedHashMap<>();
+		Map<String, SkillState> skills = new LinkedHashMap<>();
 		for (Skill skill : Skill.values())
 		{
 			if (skill == Skill.OVERALL)
 			{
 				continue;
 			}
-			skills.put(skill.getName(), new EventApplier.SkillSnapshot(client.getRealSkillLevel(skill), client.getSkillExperience(skill)));
-		}
-
-		List<String> completedQuests = new ArrayList<>();
-		List<String> startedQuests = new ArrayList<>();
-		for (Quest quest : Quest.values())
-		{
-			QuestState qs = questState(quest);
-			if (qs == QuestState.FINISHED)
-			{
-				completedQuests.add(quest.getName());
-			}
-			else if (qs == QuestState.IN_PROGRESS)
-			{
-				startedQuests.add(quest.getName());
-			}
+			skills.put(skill.getName(), new SkillState(client.getRealSkillLevel(skill), client.getSkillExperience(skill)));
 		}
 
 		List<ItemStack> inventory = new ArrayList<>();
@@ -627,7 +613,13 @@ public class LarryPlugin extends Plugin
 		Map<EquipmentSlot, ItemStack> equipment = eqContainer != null ? readEquipment(eqContainer.getItems())
 			: new EnumMap<>(EquipmentSlot.class);
 
-		stateEngine.onLogin(skills, completedQuests, startedQuests, inventory, equipment);
+		stateEngine.onLogin(skills, inventory, equipment);
+
+		// Records never-started quests too: absence is not "no". A capability behind an
+		// unrecorded quest resolves unsure, which keeps offering a route the player cannot
+		// take. Outside the var scan's try, so a failed varbit read still leaves every quest
+		// written; questState swallows its own failures.
+		seedQuestStates(stateEngine.getPlayerState(), this::questState);
 
 		// Read the vars the planner reads, so values set before this session count at once.
 		// Writes the player state directly, then asks for a single re-plan.
@@ -638,11 +630,6 @@ public class LarryPlugin extends Plugin
 			{
 				readVarbitIntoState(ps, varbitId);
 			}
-
-			// Records never-started quests too: absence is not "no". A capability behind an
-			// unrecorded quest resolves unsure, which keeps offering a route the player
-			// cannot take.
-			seedQuestStates(ps);
 
 			// The scan writes the state directly, bypassing the engine's varbit events, so
 			// the daily-teleport ledger must be primed explicitly. Otherwise an allowance
@@ -695,12 +682,15 @@ public class LarryPlugin extends Plugin
 	 *
 	 * <p>Called from the login snapshot, because the player state is created lazily and can be
 	 * replaced by a saved one. Only by then is {@code ps} certainly the live instance.
+	 *
+	 * @param ps      the live player state the quests are written into
+	 * @param stateOf each quest's state as the client reports it, or null when unreadable
 	 */
-	private void seedQuestStates(PlayerState ps)
+	static void seedQuestStates(PlayerState ps, Function<Quest, QuestState> stateOf)
 	{
 		for (Quest quest : Quest.values())
 		{
-			QuestStatus status = toQuestStatus(questState(quest));
+			QuestStatus status = toQuestStatus(stateOf.apply(quest));
 			if (status != null)
 			{
 				ps.getQuests().put(quest.getName(), status);
@@ -1570,9 +1560,9 @@ public class LarryPlugin extends Plugin
 		{
 			if (slot.getId() != -1)
 			{
-				CanonicalItem item = resolveCanonicalItem(slot.getId());
-				itemStacks.add(new ItemStack(item.itemId, slot.getQuantity(), item.name));
-				rememberItemId(itemIdsByName, item);
+				ItemComposition item = resolveCanonicalItem(slot.getId());
+				itemStacks.add(new ItemStack(item.getId(), slot.getQuantity(), item.getName()));
+				rememberItemId(item);
 			}
 		}
 		return itemStacks;
@@ -1584,58 +1574,32 @@ public class LarryPlugin extends Plugin
 	 *
 	 * <p>Placeholders are skipped. A bank placeholder reports the real item's name with its
 	 * own id, which would overwrite a good entry with an id the player owns none of.
-	 *
-	 * @param known the session's name-to-id map
 	 */
-	static void rememberItemId(Map<String, Integer> known, CanonicalItem item)
+	private void rememberItemId(ItemComposition item)
 	{
-		if (item.placeholder || item.name == null || item.name.isEmpty())
+		if (item.getPlaceholderTemplateId() != -1 || item.getName() == null || item.getName().isEmpty())
 		{
 			return;
 		}
-		known.put(item.name.toLowerCase(Locale.ROOT), item.itemId);
+		itemIdsByName.put(item.getName().toLowerCase(Locale.ROOT), item.getId());
 	}
 
 	/**
-	 * Canonical identity of an item: its un-noted base ID and name.
+	 * The item's canonical form: a noted item's un-noted base, otherwise the item itself.
+	 * A composition's id is the id it was asked for, so the result carries the base id.
 	 *
 	 * <p>Noted items have their own ids, and the planner matches items by exact base id, so
 	 * every snapshot must collapse notes to their base before reaching the player state.
 	 *
-	 * <p>Bank placeholders are not collapsed: they pass through with quantity 0, which counts
-	 * as nothing. They are flagged for {@link #rememberItemId}, which reads names, not
-	 * quantities.
+	 * <p>A bank placeholder passes through unresolved, with quantity 0, which counts as
+	 * nothing. Its id must reach the bank snapshot unchanged: the seed box and rune pouch are
+	 * looked for in the bank by id regardless of quantity, so a resolved placeholder would
+	 * read as a container the player still owns.
 	 */
-	static final class CanonicalItem
-	{
-		final int itemId;
-		final String name;
-		final boolean placeholder;
-
-		CanonicalItem(int itemId, String name, boolean placeholder)
-		{
-			this.itemId = itemId;
-			this.name = name;
-			this.placeholder = placeholder;
-		}
-	}
-
-	/**
-	 * Resolves an item ID to its canonical (un-noted) base ID and name.
-	 *
-	 * <p>A bank placeholder is flagged, never resolved. Its id must reach the bank snapshot
-	 * unchanged: the seed box and rune pouch are looked for in the bank by id regardless of
-	 * quantity, so a resolved placeholder would read as a container the player still owns.
-	 */
-	private CanonicalItem resolveCanonicalItem(int itemId)
+	private ItemComposition resolveCanonicalItem(int itemId)
 	{
 		ItemComposition comp = itemManager.getItemComposition(itemId);
-		if (comp.getNote() != -1)
-		{
-			ItemComposition linked = itemManager.getItemComposition(comp.getLinkedNoteId());
-			return new CanonicalItem(linked.getId(), linked.getName(), false);
-		}
-		return new CanonicalItem(itemId, comp.getName(), comp.getPlaceholderTemplateId() != -1);
+		return comp.getNote() != -1 ? itemManager.getItemComposition(comp.getLinkedNoteId()) : comp;
 	}
 
 	// ---------------------------------------------------------------

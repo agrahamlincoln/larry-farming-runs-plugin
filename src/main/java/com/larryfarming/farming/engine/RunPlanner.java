@@ -125,16 +125,6 @@ public final class RunPlanner {
     }
 
     /**
-     * Picks a route for one stop, with position allowed.
-     *
-     * <p>Package-private because it grants position: a caller outside this package must
-     * use the overload that names the allowance.
-     */
-    StopPlan planStop(RunStop stop, PlayerState state, Map<PatchRef, CapabilityState> reached) {
-        return planStop(stop, state, reached, true);
-    }
-
-    /**
      * Picks a route for one stop.
      *
      * <p>Takes the first rung the player certainly has. Failing that, it takes the best
@@ -166,17 +156,27 @@ public final class RunPlanner {
             return shutOut;
         }
         CapabilityResolver asked = resolverFor(mayStandHere);
-        List<TravelOption> ladder = ladderFor(stop.getTravel(), start, state, reached, asked);
+        StopPlan routed = routeBy(stop, stop.getTravel(), start, state, reached, asked);
+        if (routed != null) {
+            return routed;
+        }
+        StopPlan unread = waitingOnAfact(stop, state, reached, asked);
+        return unread != null ? unread : giveUp(stop, state, asked);
+    }
+
+    /**
+     * A visit to the stop by the first rung of this ladder the player certainly has, else
+     * by the best rung that might work, or null when every rung is a definite no.
+     */
+    private StopPlan routeBy(RunStop stop, List<TravelOption> travel, Start start, PlayerState state,
+            Map<PatchRef, CapabilityState> reached, CapabilityResolver asked) {
+        List<TravelOption> ladder = ladderFor(travel, start, state, reached, asked);
         TravelOption certain = firstCertain(ladder, state, reached, asked);
         if (certain != null) {
             return visit(stop, certain, CapabilityState.HAVE, state, reached, asked);
         }
         TravelOption guess = bestGuess(ladder, state, reached, asked);
-        if (guess != null) {
-            return visit(stop, guess, CapabilityState.UNKNOWN, state, reached, asked);
-        }
-        StopPlan unread = waitingOnAfact(stop, state, reached, asked);
-        return unread != null ? unread : giveUp(stop, state, asked);
+        return guess == null ? null : visit(stop, guess, CapabilityState.UNKNOWN, state, reached, asked);
     }
 
     /**
@@ -199,14 +199,6 @@ public final class RunPlanner {
     }
 
     /**
-     * Plans an arrival with position allowed. Package-private for the reason the matching
-     * {@link #planStop} overload is.
-     */
-    StopPlan planArrival(RunStop lead, PlayerState state, Map<PatchRef, CapabilityState> reached) {
-        return planArrival(lead, state, reached, true);
-    }
-
-    /**
      * How to reach a place when the visit works several of its patches, or null when the
      * arrival has no ranking of its own or the player can take none of its rungs.
      *
@@ -219,21 +211,10 @@ public final class RunPlanner {
      * chain still has its own terminal. Falling back is the caller's job.
      *
      * @param mayStandHere as on {@link #planStop(RunStop, PlayerState, Map, boolean)}
+     * @param start as on {@link #planStop(RunStop, PlayerState, Map, boolean, Start)}
      */
-    public StopPlan planArrival(RunStop lead, PlayerState state, Map<PatchRef, CapabilityState> reached, boolean mayStandHere) {
-        return planArrival(lead, state, reached, mayStandHere, null);
-    }
-
-    /** The same, with what the previous stop gives this one, as on {@link #planStop}. */
     StopPlan planArrival(RunStop lead, PlayerState state, Map<PatchRef, CapabilityState> reached, boolean mayStandHere, Start start) {
-        CapabilityResolver asked = resolverFor(mayStandHere);
-        List<TravelOption> combined = ladderFor(FarmingCatalogue.combinedRoute(lead.getArrival()), start, state, reached, asked);
-        TravelOption certain = firstCertain(combined, state, reached, asked);
-        if (certain != null) {
-            return visit(lead, certain, CapabilityState.HAVE, state, reached, asked);
-        }
-        TravelOption guess = bestGuess(combined, state, reached, asked);
-        return guess == null ? null : visit(lead, guess, CapabilityState.UNKNOWN, state, reached, asked);
+        return routeBy(lead, FarmingCatalogue.combinedRoute(lead.getArrival()), start, state, reached, resolverFor(mayStandHere));
     }
 
     /**
@@ -519,8 +500,8 @@ public final class RunPlanner {
             return patch.getLabel();
         }
         // Hespori is a name, so it keeps its capital.
-        String kind = def.getType() == PatchType.HESPORI ? def.getType().getDisplayName()
-                : def.getType().name().toLowerCase().replace('_', ' ');
+        String kind = def.getType() == PatchType.HESPORI ? "Hespori"
+                : StopRowWriter.kindOf(def.getType());
         return def.getLocation() + " " + kind;
     }
 
@@ -533,7 +514,10 @@ public final class RunPlanner {
      * bare shortfall, and the heading is written from {@link FarmingSkipReason}.
      */
     private StopPlan giveUp(RunStop stop, PlayerState state, CapabilityResolver asked) {
-        boolean noRing = lostForWantOfAring(stop, state, asked);
+        // Lost for want of a ring when a ring rung would reach the stop but for a way to stand
+        // at a ring. Not when the network itself is shut (Fairytale II, or no staff): that
+        // rung reads LACK even with the approach granted, so its own reason stands.
+        boolean noRing = withAwayToAring(stop, state, asked) != CapabilityState.LACK;
         String shortfall = noRing ? NO_RING_BECAUSE : shortfallOf(stop, state, asked);
         StopPlan.Outcome outcome;
         FarmingSkipReason reason;
@@ -557,21 +541,19 @@ public final class RunPlanner {
     private static final String NO_RING_BECAUSE = "nothing you own and have switched on reaches a fairy ring. " + "See Travel";
 
     /**
-     * Whether a fairy ring rung would have reached this stop but for a way to stand at a
-     * ring. Not when the network itself is shut (Fairytale II, or no staff): that rung reads
-     * LACK even with the approach granted, so its own reason stands.
+     * How surely this stop's fairy ring rungs would reach it, given a way to stand at a ring:
+     * the best of them with that approach granted, or LACK when it has none. A rung that
+     * states an account fact is left out, as the planner never guesses one.
      */
-    private static boolean lostForWantOfAring(RunStop stop, PlayerState state, CapabilityResolver asked) {
+    static CapabilityState withAwayToAring(RunStop stop, PlayerState state, CapabilityResolver asked) {
         Requirement approach = FarmingCatalogue.toAfairyRing();
+        List<CapabilityState> rungs = new ArrayList<>();
         for (TravelOption option : stop.getTravel()) {
-            if (option.isCertainOnly() || !option.getRequires().contains(approach)) {
-                continue;
-            }
-            if (asked.evaluateGranting(option.getRequires(), approach, state, Collections.emptyMap()) != CapabilityState.LACK) {
-                return true;
+            if (!option.isCertainOnly() && option.getRequires().contains(approach)) {
+                rungs.add(asked.evaluateGranting(option.getRequires(), approach, state, Collections.emptyMap()));
             }
         }
-        return false;
+        return CapabilityState.any(rungs);
     }
 
     /**

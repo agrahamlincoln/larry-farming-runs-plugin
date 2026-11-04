@@ -1,5 +1,6 @@
 package com.larryfarming.engine;
 
+import com.larryfarming.data.Tables;
 import com.larryfarming.model.*;
 import lombok.Value;
 import net.runelite.api.gameval.ItemID;
@@ -32,7 +33,7 @@ public final class ItemCounts {
             return 0;
         }
         SideContainerCounts side = sideContainerCounts(state, itemId, itemName);
-        return countIn(state.getInventory(), itemId, itemName) + countInEquipment(state.getEquipment(), itemId, itemName)
+        return countIn(state.getInventory(), itemId, itemName) + countItemInStorage(state.getEquipment().values(), itemId, itemName)
                 + countIn(state.getBank(), itemId, itemName) + side.carried + side.banked + side.stored;
     }
 
@@ -45,7 +46,7 @@ public final class ItemCounts {
         if (state == null || (itemId == 0 && itemName == null)) {
             return 0;
         }
-        return countIn(state.getInventory(), itemId, itemName) + countInEquipment(state.getEquipment(), itemId, itemName)
+        return countIn(state.getInventory(), itemId, itemName) + countItemInStorage(state.getEquipment().values(), itemId, itemName)
                 + sideContainerCounts(state, itemId, itemName).carried;
     }
 
@@ -73,8 +74,13 @@ public final class ItemCounts {
         return countOwned(state, itemId, null) > 0;
     }
 
+    /** Whether the player owns at least one of any of these items anywhere. */
+    public static boolean ownsAny(PlayerState state, Collection<Integer> itemIds) {
+        return itemIds.stream().anyMatch(id -> ownsAny(state, id));
+    }
+
     /** Counts items matching {@code itemId}/{@code itemName} in one container's snapshot. */
-    static int countItemInStorage(List<ItemStack> storage, int itemId, String itemName) {
+    static int countItemInStorage(Collection<ItemStack> storage, int itemId, String itemName) {
         if (storage == null) {
             return 0;
         }
@@ -99,14 +105,17 @@ public final class ItemCounts {
         return countItemInStorage(items, itemId, itemName) + countContainerContents(items, itemId);
     }
 
-    private static int countInEquipment(Map<EquipmentSlot, ItemStack> equipment, int itemId, String itemName) {
-        int total = 0;
-        for (ItemStack item : equipment.values()) {
-            if (itemMatches(item, itemId, itemName)) {
-                total += item.getQuantity();
+    /** Whether any of these stacks is one of the items. */
+    static boolean holdsAny(Collection<ItemStack> items, Set<Integer> itemIds) {
+        if (items == null) {
+            return false;
+        }
+        for (ItemStack item : items) {
+            if (item != null && itemIds.contains(item.getItemId())) {
+                return true;
             }
         }
-        return total;
+        return false;
     }
 
     // ---------------------------------------------------------------
@@ -142,7 +151,7 @@ public final class ItemCounts {
         if (pouched > 0) {
             if (isPouchCarried(state)) {
                 carried += pouched;
-            } else if (holdsPouch(state.getBank())) {
+            } else if (holdsAny(state.getBank(), RunePouch.POUCH_ITEM_IDS)) {
                 banked += pouched;
             }
         }
@@ -179,27 +188,7 @@ public final class ItemCounts {
 
     /** True when a rune pouch is in the inventory, or defensively worn. */
     private static boolean isPouchCarried(PlayerState state) {
-        if (holdsPouch(state.getInventory())) {
-            return true;
-        }
-        for (ItemStack item : state.getEquipment().values()) {
-            if (RunePouch.POUCH_ITEM_IDS.contains(item.getItemId())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean holdsPouch(List<ItemStack> items) {
-        if (items == null) {
-            return false;
-        }
-        for (ItemStack item : items) {
-            if (RunePouch.POUCH_ITEM_IDS.contains(item.getItemId())) {
-                return true;
-            }
-        }
-        return false;
+        return holdsAny(state.getInventory(), RunePouch.POUCH_ITEM_IDS) || holdsAny(state.getEquipment().values(), RunePouch.POUCH_ITEM_IDS);
     }
 
     // ---------------------------------------------------------------
@@ -220,18 +209,15 @@ public final class ItemCounts {
         int maxCount;
     }
 
-    private static final List<ContainerType> CONTAINER_TYPES = List.of(
-            // Sacks (capacity 10)
-            new ContainerType(1942, 5420, 10),  // Potato  → Potatoes(1..10)
-            new ContainerType(1957, 5440, 10),  // Onion   → Onions(1..10)
-            new ContainerType(1965, 5460, 10),  // Cabbage → Cabbages(1..10)
-            // Baskets (capacity 5)
-            new ContainerType(1955, 5378, 5),   // Cooking apple → Apples(1..5)
-            new ContainerType(2108, 5388, 5),   // Orange        → Oranges(1..5)
-            new ContainerType(5504, 5400, 5),   // Strawberry    → Strawberries(1..5)
-            new ContainerType(1963, 5408, 5),   // Banana        → Bananas(1..5)
-            new ContainerType(1982, 5960, 5)    // Tomato        → Tomatoes(1..5)
-    );
+    private static final List<ContainerType> CONTAINER_TYPES = containerTypes();
+
+    private static List<ContainerType> containerTypes() {
+        List<ContainerType> types = new ArrayList<>();
+        for (Tables.Row row : Tables.read("/com/larryfarming/sacks-and-baskets.tsv", 5)) {
+            types.add(new ContainerType(row.integer(0), row.integer(2), row.integer(4)));
+        }
+        return List.copyOf(types);
+    }
 
     private static int countContainerContents(List<ItemStack> items, int itemId) {
         if (itemId == 0) {
@@ -265,8 +251,8 @@ public final class ItemCounts {
      * One slice of a tool-leprechaun stored count: a varbit, and where its value sits in
      * the assembled total.
      *
-     * <p>The game splits each slot's count across two or three varbits: a narrow low field in
-     * the original farming varp, plus "extra" varbits added when the storage caps were raised.
+     * <p>The game holds each slot's count in one to three varbits: one wide field, or a narrow
+     * low field in the farming varp plus "extra" varbits that carry the higher bits.
      */
     @Value
     private static class StoredSlice {
@@ -281,26 +267,18 @@ public final class ItemCounts {
      *
      * <p>Varbit IDs are RuneLite's gameval FARMING_TOOLS_*. Each slice's shift is the width of
      * everything below it, and the slices compose to the documented caps: 1000 for supplies,
-     * 100 for tools. The comments below state the low field's width, which the next slice's
-     * shift must match.
+     * 100 for tools. The table's comments state each low field's width; the next slice's
+     * shift equals it.
      */
-    private static final Map<Integer, List<StoredSlice>> LEPRECHAUN_STORAGE_VARBITS = Map.ofEntries(
-            // Supplies. Ultracompost and plant cure each have a single ten-bit varbit (0-1023).
-            Map.entry(21483, List.of(new StoredSlice(5732, 0))),   // Ultracompost
-            Map.entry(6036, List.of(new StoredSlice(6268, 0))),    // Plant cure
-            Map.entry(6034, List.of(new StoredSlice(1443, 0),      // Supercompost, 8 bits
-                    new StoredSlice(6267, 8))), Map.entry(6032, List.of(new StoredSlice(1442, 0),      // Compost, 8 bits
-                    new StoredSlice(6266, 8))),
-            // The bucket takes three slices: 5 bits, then 3, then 2.
-            Map.entry(1925, List.of(new StoredSlice(1441, 0),      // Bucket
-                    new StoredSlice(4731, 5), new StoredSlice(6265, 8))),
-            // Tools: a one-bit low field, the low bit of a seven-bit count.
-            Map.entry(952, List.of(new StoredSlice(1437, 0),       // Spade
-                    new StoredSlice(8361, 1))), Map.entry(5343, List.of(new StoredSlice(1436, 0),      // Seed dibber
-                    new StoredSlice(8358, 1))), Map.entry(5341, List.of(new StoredSlice(1435, 0),      // Rake
-                    new StoredSlice(8357, 1))), Map.entry(5325, List.of(new StoredSlice(1440, 0),      // Gardening trowel
-                    new StoredSlice(8360, 1)))
-    );
+    private static final Map<Integer, List<StoredSlice>> LEPRECHAUN_STORAGE_VARBITS = leprechaunSlices();
+
+    private static Map<Integer, List<StoredSlice>> leprechaunSlices() {
+        Map<Integer, List<StoredSlice>> slices = new HashMap<>();
+        for (Tables.Row row : Tables.read("/com/larryfarming/leprechaun-storage.tsv", 5)) {
+            slices.computeIfAbsent(row.integer(0), k -> new ArrayList<>()).add(new StoredSlice(row.integer(2), row.integer(4)));
+        }
+        return slices;
+    }
 
     /**
      * Varbit slices holding the shared secateurs count. Plain and magic secateurs occupy

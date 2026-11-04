@@ -1,0 +1,14 @@
+# Produce that fills sacks and baskets, whose contents count toward the loose produce. Each
+# container's filled variants step by 2 from its first id: holding n of the produce is
+# first id + (n - 1) * 2. Sacks hold 10, baskets 5. Each id has RuneLite's ItemID constant in
+# the column after.
+#
+# produce id	ItemID name	first container id	ItemID name	capacity
+1942	POTATO	5420	SACK_POTATO_1	10
+1957	ONION	5440	SACK_ONION_1	10
+1965	CABBAGE	5460	SACK_CABBAGE_1	10
+1955	COOKING_APPLE	5378	BASKET_APPLE_1	5
+2108	ORANGE	5388	BASKET_ORANGE_1	5
+5504	STRAWBERRY	5398	BASKET_STRAWBERRY_1	5
+1963	BANANA	5408	BASKET_BANANA_1	5
+1982	TOMATO	5960	BASKET_TOMATO_1	5

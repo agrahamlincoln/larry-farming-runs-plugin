@@ -1,6 +1,8 @@
 package com.larryfarming.farming.model;
 
 import java.util.List;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * The repeatable farming activities.
@@ -9,17 +11,19 @@ import java.util.List;
  * grouped by category, each with its own travel chains. The scheduler
  * combines runs that fall due together.
  */
+@Getter
+@RequiredArgsConstructor
 public enum RunId {
 
-    HARDWOOD("Hardwood run"),
-    CONTRACT("Farming contract"),
-    HESPORI("Hespori"),
-    ANIMA("Anima plant"),
-    CALQUAT("Calquat run"),
-    FRUIT_TREE("Fruit tree run"),
-    HERB("Herb run"),
-    REGULAR_TREE("Tree run"),
-    SEAWEED("Seaweed run");
+    HARDWOOD("Hardwood run", 6332),       // Mahogany logs
+    CONTRACT("Farming contract", 22993),  // Seed pack
+    HESPORI("Hespori", 22875),            // Hespori seed
+    ANIMA("Anima plant", 22881),          // Attas seed
+    CALQUAT("Calquat run", 5980),         // Calquat fruit
+    FRUIT_TREE("Fruit tree run", 5972),   // Papaya fruit
+    HERB("Herb run", 207),                // Grimy ranarr weed
+    REGULAR_TREE("Tree run", 1515),       // Yew logs
+    SEAWEED("Seaweed run", 21504);        // Giant seaweed
 
     /**
      * The order the side panel lists the runs in, fixed so no row moves when a run comes
@@ -30,13 +34,15 @@ public enum RunId {
 
     private final String displayName;
 
-    RunId(String displayName) {
-        this.displayName = displayName;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
+    /**
+     * The item that stands for this run, for the infobox and the run list: one fixed piece
+     * of what it harvests, whatever the player has ticked. Seed piles all look alike in a
+     * list, and produce does not. Hespori keeps its seed, which is the one sprite players
+     * know it by, and the anima plant shows the Attas seed. The contract shows the seed pack
+     * it pays in. Ids come from the game's item table ({@code gameval.ItemID}), unnoted forms
+     * throughout.
+     */
+    private final int iconItemId;
 
     /**
      * Lower sorts first when several runs are due at once. Follows each run's value, not

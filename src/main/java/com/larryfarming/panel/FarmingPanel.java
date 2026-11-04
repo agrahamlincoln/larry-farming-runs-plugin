@@ -4,8 +4,10 @@ import com.larryfarming.snapshot.*;
 import java.awt.*;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.*;
+import java.util.stream.Collectors;
 import javax.swing.*;
 import javax.swing.border.Border;
 import net.runelite.api.gameval.SpriteID;
@@ -201,9 +203,7 @@ public class FarmingPanel extends JPanel
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 		setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
-		titleLabel = new JLabel();
-		titleLabel.setFont(FontManager.getRunescapeBoldFont());
-		titleLabel.setForeground(Color.WHITE);
+		titleLabel = PanelText.label("", FontManager.getRunescapeBoldFont(), Color.WHITE);
 		titleLabel.setAlignmentX(LEFT_ALIGNMENT);
 
 		brandHeader = new BrandHeader();
@@ -212,15 +212,13 @@ public class FarmingPanel extends JPanel
 
 		spellbookPicker = new SpellbookPicker();
 
-		showSkippedBox = checkbox(null);
-		showSkippedBox.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
+		showSkippedBox = checkbox(null, 6);
 		showSkippedBox.setVisible(false);
 		// ActionListener, not ItemListener: setSelected() fires an ItemEvent, so an
 		// ItemListener would treat restoring the saved value as a click and re-save it.
 		showSkippedBox.addActionListener(e -> toggleShowSkipped(showSkippedBox.isSelected()));
 
-		showBanksBox = checkbox(null);
-		showBanksBox.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+		showBanksBox = checkbox(null, 0);
 		showBanksBox.setVisible(false);
 		// Sync the box to showBanks, which starts true while a JCheckBox starts unselected.
 		showBanksBox.setSelected(showBanks);
@@ -232,9 +230,7 @@ public class FarmingPanel extends JPanel
 		herbNote = PanelText.small("", COLOR_UNCERTAIN);
 		herbNote.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
 
-		nextRunLabel = new JLabel();
-		nextRunLabel.setFont(FontManager.getRunescapeFont());
-		nextRunLabel.setForeground(Color.WHITE);
+		nextRunLabel = PanelText.label("", FontManager.getRunescapeFont(), Color.WHITE);
 		nextRunLabel.setAlignmentX(LEFT_ALIGNMENT);
 		nextRunLabel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
 
@@ -262,12 +258,12 @@ public class FarmingPanel extends JPanel
 		nowHeading = sectionHeading("First stop");
 		nowContainer = PanelText.stack();
 		stopsHeading = sectionHeading("Then");
-		stopsContainer = container();
+		stopsContainer = PanelColors.container(new JPanel());
 
 		goalsHeading = sectionHeading("Between runs");
 		goalsList = new GearList(FarmingUpgrade.Kind.GOAL);
 
-		runsList = new RunsListView(sectionHeading("Runs"), container(), this::sendSetting);
+		runsList = new RunsListView(sectionHeading("Runs"), PanelColors.container(new JPanel()), this::sendSetting);
 		idleRunsSlot = PanelText.stack();
 
 		runFirstCaption = SiteList.caption("", 0);
@@ -275,8 +271,7 @@ public class FarmingPanel extends JPanel
 		runFirstChips.setAlignmentX(LEFT_ALIGNMENT);
 		runFirstChips.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 0));
 
-		waitBox = checkbox(null);
-		waitBox.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
+		waitBox = checkbox(null, 6);
 		waitBox.addActionListener(e -> sendSetting(waitKey, String.valueOf(waitBox.isSelected())));
 
 		planning = PanelText.stack();
@@ -467,8 +462,11 @@ public class FarmingPanel extends JPanel
 		house.setOpenCallback(callback);
 	}
 
-	/** The panel's one checkbox style, for the fold boxes and the farming settings alike. */
-	static JCheckBox checkbox(String text)
+	/**
+	 * The panel's one checkbox style, for the fold boxes and the farming settings alike,
+	 * with {@code top} pixels of space above it.
+	 */
+	static JCheckBox checkbox(String text, int top)
 	{
 		JCheckBox box = new JCheckBox(text);
 		box.setFont(FontManager.getRunescapeSmallFont());
@@ -477,6 +475,7 @@ public class FarmingPanel extends JPanel
 		box.setFocusPainted(false);
 		box.setAlignmentX(LEFT_ALIGNMENT);
 		box.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		box.setBorder(BorderFactory.createEmptyBorder(top, 0, 0, 0));
 		return box;
 	}
 
@@ -520,7 +519,7 @@ public class FarmingPanel extends JPanel
 			nowContainer.removeAll();
 			stopsContainer.removeAll();
 			runsList.clear();
-			carryView.rebuild(null, icons, 0);
+			carryView.rebuild(null, icons);
 			laterContainer.removeAll();
 			wearList.rebuild(null, icons, 0);
 			goalsList.rebuild(null, icons, 0);
@@ -565,7 +564,11 @@ public class FarmingPanel extends JPanel
 		String nextRun = nextRunText(advice.getRuns(), Instant.now().getEpochSecond());
 		nextRunLabel.setText(nextRun);
 
-		showSkippedBox.setText(foldLabel(foldedStops, foldedPatches));
+		// The same text whether open or shut, so the label does not change under the cursor.
+		// One number counts skipped stops and set-aside patches together, and the box shows
+		// only while that total is above zero. Counting stops alone could read "0 skipped"
+		// while patches are set aside.
+		showSkippedBox.setText((foldedStops + foldedPatches) + " skipped");
 		// The optional banks still ahead. Recommended bank stops are always drawn.
 		int banks = countFrom(advice, from, stop -> stop.getKind() == FarmingStopAdvice.Kind.BANK_OPTIONAL);
 		showBanksBox.setText(banks == 1 ? "1 bank you may pass" : banks + " banks you may pass");
@@ -694,7 +697,7 @@ public class FarmingPanel extends JPanel
 		List<FarmingCarryItem> carry = advice.getCarry();
 		// Split at the first later bank: what to pack now, then what each bank hands over.
 		boolean split = !carryNow(advice).isEmpty();
-		carryView.rebuild(phase == Phase.PACKING ? (split ? carryNow(advice) : carry) : null, icons, width);
+		carryView.rebuild(phase == Phase.PACKING ? (split ? carryNow(advice) : carry) : null, icons);
 		carryHeading.setVisible(carry != null && !carry.isEmpty());
 		rebuildLater(phase == Phase.PACKING && split ? stops : null, drawBanks, icons, width);
 
@@ -751,9 +754,7 @@ public class FarmingPanel extends JPanel
 	/** "LATER: BANK AT CATHERBY" on a filled strip, so the band reads apart from the bag. */
 	private static JPanel laterBand(String bank)
 	{
-		JLabel label = new JLabel(sectionLabel("Later: " + bank));
-		label.setFont(FontManager.getRunescapeSmallFont());
-		label.setForeground(PanelColors.META);
+		JLabel label = PanelText.label(sectionLabel("Later: " + bank), PanelColors.META);
 		JPanel strip = new JPanel(new BorderLayout());
 		strip.setBackground(PanelColors.CONTAINER_BG);
 		strip.setBorder(BorderFactory.createEmptyBorder(3, 4, 3, 4));
@@ -909,18 +910,7 @@ public class FarmingPanel extends JPanel
 
 	private static boolean anyRunIn(List<FarmingRunStatus> runs, String status)
 	{
-		if (runs == null)
-		{
-			return false;
-		}
-		for (FarmingRunStatus run : runs)
-		{
-			if (status.equals(run.getStatus()))
-			{
-				return true;
-			}
-		}
-		return false;
+		return runs != null && runs.stream().anyMatch(run -> status.equals(run.getStatus()));
 	}
 
 	/**
@@ -931,23 +921,9 @@ public class FarmingPanel extends JPanel
 	 */
 	static String nextRunText(List<FarmingRunStatus> runs, long now)
 	{
-		if (runs == null)
-		{
-			return "";
-		}
-		FarmingRunStatus soonest = null;
-		for (FarmingRunStatus run : runs)
-		{
-			if (run.getReadyAtEpochSec() > now && (soonest == null || run.getReadyAtEpochSec() < soonest.getReadyAtEpochSec()))
-			{
-				soonest = run;
-			}
-		}
-		if (soonest == null)
-		{
-			return "";
-		}
-		return soonest.getRunName() + " ready in " + FarmingDurations.until(soonest.getReadyAtEpochSec(), now);
+		return PanelText.listOf(runs).stream().filter(run -> run.getReadyAtEpochSec() > now)
+			.min(Comparator.comparingLong(FarmingRunStatus::getReadyAtEpochSec))
+			.map(run -> run.getRunName() + " ready in " + FarmingDurations.until(run.getReadyAtEpochSec(), now)).orElse("");
 	}
 
 	/**
@@ -1040,8 +1016,7 @@ public class FarmingPanel extends JPanel
 	/** Every kind of bank row. All get the same margin mark. */
 	private static boolean isBankRow(FarmingStopAdvice stop)
 	{
-		return stop.getKind() == FarmingStopAdvice.Kind.BANK || stop.getKind() == FarmingStopAdvice.Kind.BANK_OPTIONAL
-			|| stop.getKind() == FarmingStopAdvice.Kind.BANK_START;
+		return stop.getKind() == FarmingStopAdvice.Kind.BANK || isUnnumberedBankRow(stop);
 	}
 
 	/**
@@ -1065,36 +1040,13 @@ public class FarmingPanel extends JPanel
 	/** Counts the stops from {@code from} on that {@code which} picks. */
 	private static int countFrom(FarmingAdvice advice, int from, Predicate<FarmingStopAdvice> which)
 	{
-		int count = 0;
 		List<FarmingStopAdvice> stops = advice.getStops();
-		for (int i = from; i < stops.size(); i++)
-		{
-			if (which.test(stops.get(i)))
-			{
-				count++;
-			}
-		}
-		return count;
-	}
-
-	private static JPanel container()
-	{
-		JPanel container = new JPanel();
-		container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
-		container.setBackground(PanelColors.CONTAINER_BG);
-		container.setAlignmentX(LEFT_ALIGNMENT);
-		container.setBorder(BorderFactory.createLineBorder(PanelColors.CONTAINER_BORDER, 1));
-		return container;
+		return (int) stops.subList(from, stops.size()).stream().filter(which).count();
 	}
 
 	private static JLabel sectionHeading(String text)
 	{
-		JLabel heading = new JLabel(sectionLabel(text));
-		heading.setFont(FontManager.getRunescapeSmallFont());
-		heading.setForeground(PanelColors.HEADER);
-		heading.setAlignmentX(LEFT_ALIGNMENT);
-		heading.setBorder(BorderFactory.createEmptyBorder(10, 2, 3, 0));
-		return heading;
+		return SiteList.caption(sectionLabel(text), 10);
 	}
 
 	/** A section heading's text as drawn: every section label is upper case. */
@@ -1140,28 +1092,8 @@ public class FarmingPanel extends JPanel
 	 */
 	private static int foldedPatches(FarmingAdvice advice)
 	{
-		int folded = 0;
-		for (FarmingStopAdvice stop : advice.getStops())
-		{
-			if (stop.getOutcome() == FarmingStopAdvice.Outcome.VISIT)
-			{
-				folded += setAside(stop).size();
-			}
-		}
-		return folded;
-	}
-
-	/**
-	 * The fold label, e.g. "12 skipped", under the SHOW ON THE ROUTE heading. The same text
-	 * whether open or shut, so the label does not change under the cursor.
-	 *
-	 * <p>One number for skipped stops plus set-aside patches, so the label names neither.
-	 * The box shows when either is non-zero, so counting stops alone could read "0 skipped".
-	 * The caller hides the box when the total is zero.
-	 */
-	private static String foldLabel(int stops, int patches)
-	{
-		return (stops + patches) + " skipped";
+		return advice.getStops().stream().filter(stop -> stop.getOutcome() == FarmingStopAdvice.Outcome.VISIT)
+			.mapToInt(stop -> setAside(stop).size()).sum();
 	}
 
 	/**
@@ -1408,23 +1340,8 @@ public class FarmingPanel extends JPanel
 		line.setOpaque(false);
 		line.setAlignmentX(LEFT_ALIGNMENT);
 
-		GridBagConstraints gbc = new GridBagConstraints();
-		gbc.gridy = 0;
-		gbc.anchor = GridBagConstraints.NORTHWEST;
-
-		int col = 0;
-		ImageIcon sprite = travelIcon(stop, icons);
-		if (sprite != null)
-		{
-			JLabel icon = new JLabel(sprite);
-			icon.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
-			gbc.gridx = col++;
-			gbc.weightx = 0;
-			gbc.fill = GridBagConstraints.NONE;
-			line.add(icon, gbc);
-		}
-
-		PanelText.addFill(line, gbc, col, PanelText.small(detail, detailColour(stop)));
+		PanelText.addIconAndFill(line, GridBagConstraints.NORTHWEST, travelIcon(stop, icons), 4,
+			PanelText.small(detail, detailColour(stop)));
 		return line;
 	}
 
@@ -1459,14 +1376,8 @@ public class FarmingPanel extends JPanel
 		{
 			return null;
 		}
-		List<FarmingPlantAdvice> pictured = new ArrayList<>();
-		for (FarmingPlantAdvice plant : plants(stop))
-		{
-			if (plant.getProduceItemId() > 0)
-			{
-				pictured.add(plant);
-			}
-		}
+		List<FarmingPlantAdvice> pictured = plants(stop).stream().filter(plant -> plant.getProduceItemId() > 0)
+			.collect(Collectors.toList());
 		if (pictured.isEmpty())
 		{
 			int harvest = stop.getIconItemId();
@@ -1663,11 +1574,7 @@ public class FarmingPanel extends JPanel
 	 */
 	private static List<Object> shapeOf(FarmingStopAdvice stop)
 	{
-		List<Integer> deposit = new ArrayList<>(stop.getDeposit().size());
-		for (FarmingCarryItem item : stop.getDeposit())
-		{
-			deposit.add(item.getItemId());
-		}
+		List<Integer> deposit = stop.getDeposit().stream().map(FarmingCarryItem::getItemId).collect(Collectors.toList());
 		return List.of(stop.toBuilder().landing(null)
 			// The list changes while the player stands at the bank, so the guard must see it.
 			.withdraw(shapesOf(PanelText.listOf(stop.getWithdraw()))).deposit(List.of()).build(), deposit);
@@ -1679,12 +1586,7 @@ public class FarmingPanel extends JPanel
 	 */
 	private static List<FarmingCarryItem> shapesOf(List<FarmingCarryItem> items)
 	{
-		List<FarmingCarryItem> shapes = new ArrayList<>(items.size());
-		for (FarmingCarryItem item : items)
-		{
-			shapes.add(item.withCarriedCount(0));
-		}
-		return shapes;
+		return items.stream().map(item -> item.withCarriedCount(0)).collect(Collectors.toList());
 	}
 
 	@Override

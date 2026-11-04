@@ -16,19 +16,7 @@ public final class FarmingKeys {
     // Switches that plant nothing.
     public static final String PICK_FRUIT_IN_PASSING = "pickFruitInPassing";
     // Travel methods' keys come from the travel methods table: TravelMethod.getKey().
-
-    // What the player says their house holds, see HouseItem, each true while declared built.
-    // A declaration counts only until Larry has seen the item.
-    public static final String DECLARE_WEISS_PORTAL = "declareWeissPortal";
-    public static final String DECLARE_TROLL_STRONGHOLD_PORTAL = "declareTrollStrongholdPortal";
-    public static final String DECLARE_KOUREND_PORTAL = "declareKourendPortal";
-    public static final String DECLARE_FENKENSTRAIN_PORTAL = "declareFenkenstrainPortal";
-    public static final String DECLARE_HARMONY_PORTAL = "declareHarmonyPortal";
-    public static final String DECLARE_WEISS_IN_NEXUS = "declareWeissInNexus";
-    public static final String DECLARE_TROLL_STRONGHOLD_IN_NEXUS = "declareTrollStrongholdInNexus";
-    public static final String DECLARE_HARMONY_IN_NEXUS = "declareHarmonyInNexus";
-    public static final String DECLARE_HOUSE_SPIRIT_TREE = "declareHouseSpiritTree";
-    public static final String DECLARE_HOUSE_FAIRY_RING = "declareHouseFairyRing";
+    // What the player says their house holds is keyed by each HouseItem: HouseItem.getKey().
 
     /**
      * Every site's key, each true while the run includes the site, in the stops table's
@@ -64,7 +52,7 @@ public final class FarmingKeys {
     private static Map<Crop, String> cropKeys() {
         Map<Crop, String> keys = new EnumMap<>(Crop.class);
         Set<String> seen = new HashSet<>();
-        for (Tables.Row row : Tables.read("/com/larryfarming/crop-data.tsv", 14)) {
+        for (Tables.Row row : Tables.read("/com/larryfarming/crop-data.tsv", 15)) {
             String key = row.text(13);
             if (key.isEmpty()) {
                 continue;

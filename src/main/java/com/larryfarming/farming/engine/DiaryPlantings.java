@@ -32,7 +32,7 @@ final class DiaryPlantings {
      */
     static Crop claimedBy(PatchRef patch, PlayerState state, FarmingPreferences prefs) {
         for (SeedPolicy.DiaryOverride override : inForce(state, prefs)) {
-            if (override.getPatch().equals(patch) && SeedSelector.holdsAny(override.getCrop(), state)) {
+            if (override.getPatch().equals(patch) && SeedSelector.knownToHold(override.getCrop(), state, 1)) {
                 return override.getCrop();
             }
         }

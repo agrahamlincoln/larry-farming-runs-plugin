@@ -1,8 +1,9 @@
 package com.larryfarming.farming.detection;
 
 import java.util.*;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Value;
 
 /**
  * What the player's own house was last seen to hold, for the rules that answer a house
@@ -15,8 +16,8 @@ import lombok.ToString;
  *
  * <p>Immutable. Each observation returns a new sight.
  */
-@EqualsAndHashCode
-@ToString
+@Value
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class HouseSight {
 
     /** A stamp meaning "never". Real stamps are epoch seconds, so always above it. */
@@ -24,17 +25,13 @@ public final class HouseSight {
 
     private static final HouseSight UNSEEN = new HouseSight(Collections.emptySet(), NEVER, Collections.emptySet(), NEVER);
 
-    private final Set<HouseFeature> built;
-    private final long scannedAtEpochSec;
-    private final Set<Integer> attuned;
-    private final long nexusReadAtEpochSec;
-
-    private HouseSight(Set<HouseFeature> built, long scannedAtEpochSec, Set<Integer> attuned, long nexusReadAtEpochSec) {
-        this.built = built;
-        this.scannedAtEpochSec = scannedAtEpochSec;
-        this.attuned = attuned;
-        this.nexusReadAtEpochSec = nexusReadAtEpochSec;
-    }
+    Set<HouseFeature> built;
+    /** When the furniture was last scanned, or 0 for never. */
+    long scannedAtEpochSec;
+    /** The destination keys known to be attuned, in key order. */
+    Set<Integer> attuned;
+    /** When the Nexus was last read in full, or 0 for never. */
+    long nexusReadAtEpochSec;
 
     /** A house never seen, which is every house until its owner walks in. */
     public static HouseSight unseen() {
@@ -101,25 +98,6 @@ public final class HouseSight {
      */
     public boolean isAttuned(int destination) {
         return attuned.contains(destination) && !(isScanned() && !built.contains(HouseFeature.PORTAL_NEXUS));
-    }
-
-    public Set<HouseFeature> getBuilt() {
-        return built;
-    }
-
-    /** When the furniture was last scanned, or 0 for never. */
-    public long getScannedAtEpochSec() {
-        return scannedAtEpochSec;
-    }
-
-    /** The destination keys known to be attuned, in key order. */
-    public Set<Integer> getAttuned() {
-        return attuned;
-    }
-
-    /** When the Nexus was last read in full, or 0 for never. */
-    public long getNexusReadAtEpochSec() {
-        return nexusReadAtEpochSec;
     }
 
     /** Stamps an observation. A clock at or before the epoch would read as "never". */

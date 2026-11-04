@@ -28,7 +28,6 @@ class SettingSquare extends JPanel
 	private static final AlphaComposite DIM_TAG = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.45f);
 
 	private static final Color COLOR_TAG = Color.WHITE;
-	private static final Color COLOR_SHADOW = Color.BLACK;
 	private static final Color COLOR_LEVEL = PanelColors.LEVEL;
 	private static final Color COLOR_LOCK = ColorScheme.LIGHT_GRAY_COLOR;
 	private static final Color COLOR_LOCK_BACK = new Color(0, 0, 0, 160);
@@ -73,16 +72,6 @@ class SettingSquare extends JPanel
 	boolean isOn()
 	{
 		return on;
-	}
-
-	boolean isLocked()
-	{
-		return locked;
-	}
-
-	boolean isMissing()
-	{
-		return missing;
 	}
 
 	/** Whether the sprite is drawn drained of colour: locked, or not owned. */
@@ -136,10 +125,7 @@ class SettingSquare extends JPanel
 			if (locked)
 			{
 				int ascent = g2.getFontMetrics().getAscent();
-				g2.setColor(COLOR_SHADOW);
-				g2.drawString(level, 4, ascent + 2);
-				g2.setColor(COLOR_LEVEL);
-				g2.drawString(level, 3, ascent + 1);
+				PanelText.drawShadowed(g2, level, 3, ascent + 1, COLOR_LEVEL);
 				drawLock(g2, getWidth() - 12, 3);
 			}
 			else if (tag != null && !tag.isEmpty())
@@ -148,11 +134,7 @@ class SettingSquare extends JPanel
 				{
 					g2.setComposite(DIM_TAG);
 				}
-				int y = getHeight() - 3;
-				g2.setColor(COLOR_SHADOW);
-				g2.drawString(tag, 4, y + 1);
-				g2.setColor(COLOR_TAG);
-				g2.drawString(tag, 3, y);
+				PanelText.drawShadowed(g2, tag, 3, getHeight() - 3, COLOR_TAG);
 			}
 		}
 		finally

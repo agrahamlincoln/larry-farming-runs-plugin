@@ -81,18 +81,6 @@ class Fold extends JPanel
 		showOpen();
 	}
 
-	/** The header as drawn. */
-	String headerText()
-	{
-		return toggle.getText();
-	}
-
-	/** The header's colour as drawn. */
-	Color headerColour()
-	{
-		return toggle.getForeground();
-	}
-
 	private void showOpen()
 	{
 		content.setVisible(open);

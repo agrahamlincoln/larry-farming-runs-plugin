@@ -2,8 +2,8 @@ package com.larryfarming.panel;
 
 import com.larryfarming.snapshot.FarmingUpgrade;
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.swing.*;
 import net.runelite.client.ui.ColorScheme;
 
@@ -23,10 +23,7 @@ class GearList extends JPanel
 	GearList(FarmingUpgrade.Kind kind)
 	{
 		this.kind = kind;
-		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		setBackground(PanelColors.CONTAINER_BG);
-		setAlignmentX(LEFT_ALIGNMENT);
-		setBorder(BorderFactory.createLineBorder(PanelColors.CONTAINER_BORDER, 1));
+		PanelColors.container(this);
 		setVisible(false);
 	}
 
@@ -40,17 +37,8 @@ class GearList extends JPanel
 	boolean rebuild(List<FarmingUpgrade> upgrades, IconProvider icons, int width)
 	{
 		removeAll();
-		List<FarmingUpgrade> rows = new ArrayList<>();
-		if (upgrades != null)
-		{
-			for (FarmingUpgrade upgrade : upgrades)
-			{
-				if (upgrade.getKind() == kind)
-				{
-					rows.add(upgrade);
-				}
-			}
-		}
+		List<FarmingUpgrade> rows = PanelText.listOf(upgrades).stream().filter(upgrade -> upgrade.getKind() == kind)
+			.collect(Collectors.toList());
 		setVisible(!rows.isEmpty());
 		boolean divider = false;
 		for (FarmingUpgrade upgrade : rows)
@@ -75,28 +63,12 @@ class GearList extends JPanel
 		row.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 4));
 		row.setAlignmentX(LEFT_ALIGNMENT);
 
-		GridBagConstraints gbc = new GridBagConstraints();
-		gbc.gridy = 0;
-		gbc.anchor = GridBagConstraints.CENTER;
-
-		int col = 0;
-		if (icons != null && upgrade.getItemId() > 0)
-		{
-			// Colour if owned, grey if not.
-			ImageIcon sprite = icons.getGearIcon(upgrade.getItemId(), ROW_ICON, equip);
-			if (sprite != null)
-			{
-				JLabel icon = new JLabel(sprite);
-				icon.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
-				gbc.gridx = col++;
-				gbc.weightx = 0;
-				gbc.fill = GridBagConstraints.NONE;
-				row.add(icon, gbc);
-			}
-		}
-
+		// Colour if owned, grey if not.
+		ImageIcon sprite = icons != null && upgrade.getItemId() > 0
+			? icons.getGearIcon(upgrade.getItemId(), ROW_ICON, equip, false) : null;
 		// The engine words the whole sentence, so the row adds nothing to it.
-		PanelText.addFill(row, gbc, col, PanelText.small(upgrade.getDetail(), equip ? COLOR_EQUIP : PanelColors.HEADER));
+		PanelText.addIconAndFill(row, GridBagConstraints.CENTER, sprite, 5,
+			PanelText.small(upgrade.getDetail(), equip ? COLOR_EQUIP : PanelColors.HEADER));
 		return FarmingPanel.sized(row, width);
 	}
 

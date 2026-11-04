@@ -1,6 +1,7 @@
 package com.larryfarming.farming.model;
 
 import com.larryfarming.engine.farming.FarmingWorldMap;
+import com.larryfarming.engine.farming.PatchType;
 import lombok.*;
 
 /**
@@ -49,5 +50,11 @@ public class PatchRef {
     /** The registry entry this points at, or null if it names no known patch. */
     public FarmingWorldMap.PatchDef resolve() {
         return FarmingWorldMap.byConfigKey(configKey());
+    }
+
+    /** The type of patch this points at, or null if it names no known patch. */
+    public PatchType type() {
+        FarmingWorldMap.PatchDef def = resolve();
+        return def != null ? def.getType() : null;
     }
 }

@@ -58,6 +58,8 @@ public final class CropData {
     private final PatchType patchType;
     private final String tag;
     private final String seedName;
+    /** The herb's name on its square in the settings' herb grid, or "" for every other crop. */
+    private final String gridTag;
 
     private CropData(Tables.Row row) {
         this.crop = row.constant(Crop.class, 0);
@@ -69,6 +71,7 @@ public final class CropData {
         this.seedlingItemId = optionalId(row, 7);
         this.wateredSeedlingItemId = optionalId(row, 9);
         this.saplingItemId = optionalId(row, 11);
+        this.gridTag = row.text(14);
     }
 
     private static int optionalId(Tables.Row row, int column) {
@@ -78,7 +81,7 @@ public final class CropData {
     private static List<CropData> load() {
         List<CropData> rows = new ArrayList<>();
         Set<Crop> seen = EnumSet.noneOf(Crop.class);
-        for (Tables.Row row : Tables.read("/com/larryfarming/crop-data.tsv", 14)) {
+        for (Tables.Row row : Tables.read("/com/larryfarming/crop-data.tsv", 15)) {
             CropData data = new CropData(row);
             if (!seen.add(data.crop)) {
                 throw row.error("a second row for " + data.crop);

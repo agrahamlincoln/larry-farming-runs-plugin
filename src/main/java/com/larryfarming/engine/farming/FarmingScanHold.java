@@ -1,6 +1,7 @@
 package com.larryfarming.engine.farming;
 
 import java.util.*;
+import lombok.Value;
 
 /**
  * Holds one tick's patch scan until the next tick shows the player still among the patch
@@ -21,34 +22,12 @@ import java.util.*;
 public final class FarmingScanHold {
 
     /** One region's varbit values, read on one tick. Takes ownership of {@code values}. */
-    public static final class Scan {
-        private final FarmingWorldMap.RegionDef region;
-        private final Map<Integer, Integer> values;
-        private final boolean allowOffsetLearning;
-        private final long observedAtEpochSec;
-
-        public Scan(FarmingWorldMap.RegionDef region, Map<Integer, Integer> values, boolean allowOffsetLearning, long observedAtEpochSec) {
-            this.region = region;
-            this.values = values;
-            this.allowOffsetLearning = allowOffsetLearning;
-            this.observedAtEpochSec = observedAtEpochSec;
-        }
-
-        public FarmingWorldMap.RegionDef getRegion() {
-            return region;
-        }
-
-        public Map<Integer, Integer> getValues() {
-            return values;
-        }
-
-        public boolean isAllowOffsetLearning() {
-            return allowOffsetLearning;
-        }
-
-        public long getObservedAtEpochSec() {
-            return observedAtEpochSec;
-        }
+    @Value
+    public static class Scan {
+        FarmingWorldMap.RegionDef region;
+        Map<Integer, Integer> values;
+        boolean allowOffsetLearning;
+        long observedAtEpochSec;
     }
 
     private Set<FarmingWorldMap.RegionDef> heldUnder = Set.of();

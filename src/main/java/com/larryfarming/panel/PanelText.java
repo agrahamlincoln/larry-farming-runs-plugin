@@ -37,6 +37,28 @@ final class PanelText
 		return area;
 	}
 
+	static JLabel label(String text, Font font, Color colour)
+	{
+		JLabel label = new JLabel(text);
+		label.setFont(font);
+		label.setForeground(colour);
+		return label;
+	}
+
+	static JLabel label(String text, Color colour)
+	{
+		return label(text, FontManager.getRunescapeSmallFont(), colour);
+	}
+
+	/** Draws text with a black drop shadow one pixel down and right, as the game draws its item text. */
+	static void drawShadowed(Graphics g, String text, int x, int y, Color colour)
+	{
+		g.setColor(Color.BLACK);
+		g.drawString(text, x + 1, y + 1);
+		g.setColor(colour);
+		g.drawString(text, x, y);
+	}
+
 	/** {@link #textArea} in the small font, which nearly every line of the panel uses. */
 	static JTextArea small(String text, Color color)
 	{
@@ -65,6 +87,22 @@ final class PanelText
 		gbc.weightx = 1.0;
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		row.add(text, gbc);
+	}
+
+	/** An optional icon on the left of the row, then text that fills and wraps the rest. */
+	static void addIconAndFill(JPanel row, int anchor, ImageIcon sprite, int gap, Component text)
+	{
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.gridy = 0;
+		gbc.anchor = anchor;
+		if (sprite != null)
+		{
+			JLabel icon = new JLabel(sprite);
+			icon.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, gap));
+			gbc.gridx = 0;
+			row.add(icon, gbc);
+		}
+		addFill(row, gbc, sprite == null ? 0 : 1, text);
 	}
 
 	/** Gives {@code target} a hand cursor and runs {@code action} on each left click. */

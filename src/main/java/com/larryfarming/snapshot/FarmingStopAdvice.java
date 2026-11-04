@@ -84,6 +84,13 @@ public class FarmingStopAdvice {
      */
     String patchName;
 
+    /**
+     * The arrival a patch row stands for, by its constant name; null on other rows. Unique
+     * within a plan where the name is not: the Falador farm's herb patch and the Falador
+     * park tree both read "Falador".
+     */
+    String arrival;
+
     Outcome outcome;
 
     /** What to do, imperative: "Icy basalt to Weiss". Empty when not visiting. */

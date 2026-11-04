@@ -1,8 +1,8 @@
 package com.larryfarming.farming.detection;
 
+import com.larryfarming.data.Tables;
 import java.util.Arrays;
 import java.util.Set;
-import net.runelite.api.gameval.ObjectID;
 
 /**
  * The built furniture a house scan looks for: what the farm runs' house routes stand on.
@@ -17,30 +17,28 @@ import net.runelite.api.gameval.ObjectID;
  */
 public enum HouseFeature {
 
-    PORTAL_WEISS(ObjectID.POH_PORTAL_TEAK_WEISS, ObjectID.POH_PORTAL_MAG_WEISS,
-            ObjectID.POH_PORTAL_MARBLE_WEISS, ObjectID.POH_PORTAL_LEAGUE_5_WEISS),
+    PORTAL_WEISS,
     /**
      * The Troll Stronghold portal. Not the Trollheim portal
      * ({@code POH_PORTAL_*_TROLLHEIM}), which lands on the mountain far from the patch.
      */
-    PORTAL_TROLL_STRONGHOLD(ObjectID.POH_PORTAL_TEAK_STRONGHOLD, ObjectID.POH_PORTAL_MAG_STRONGHOLD, ObjectID.POH_PORTAL_MARBLE_STRONGHOLD,
-            ObjectID.POH_PORTAL_LEAGUE_5_STRONGHOLD),
-    PORTAL_KOUREND(ObjectID.POH_PORTAL_TEAK_KOUREND, ObjectID.POH_PORTAL_MAG_KOUREND,
-            ObjectID.POH_PORTAL_MARBLE_KOUREND, ObjectID.POH_PORTAL_LEAGUE_5_KOUREND),
-    PORTAL_FENKENSTRAIN(ObjectID.POH_PORTAL_TEAK_FENKENSTRAIN,
-            ObjectID.POH_PORTAL_MAG_FENKENSTRAIN, ObjectID.POH_PORTAL_MARBLE_FENKENSTRAIN, ObjectID.POH_PORTAL_LEAGUE_5_FENKENSTRAIN),
-    PORTAL_HARMONY(ObjectID.POH_PORTAL_TEAK_HARMONY_ISLAND,
-            ObjectID.POH_PORTAL_MAG_HARMONY_ISLAND, ObjectID.POH_PORTAL_MARBLE_HARMONY_ISLAND, ObjectID.POH_PORTAL_LEAGUE_5_HARMONY_ISLAND),
+    PORTAL_TROLL_STRONGHOLD,
+    PORTAL_KOUREND,
+    PORTAL_FENKENSTRAIN,
+    PORTAL_HARMONY,
     /**
      * A Portal Nexus of any tier. It proves the Nexus stands, not what it is attuned to,
      * which the slot varbits answer ({@link PortalNexus}).
      */
-    PORTAL_NEXUS(ObjectID.POH_NEXUS_PORTAL_1, ObjectID.POH_NEXUS_PORTAL_2, ObjectID.POH_NEXUS_PORTAL_3, ObjectID.POH_NEXUS_PORTAL_LEAGUE_5),
+    PORTAL_NEXUS,
     /** The spirit tree, alone or as the spiritual fairy tree, in every skin. */
-    SPIRIT_TREE(ObjectID.POH_SPIRIT_TREE, ObjectID.XMAS20_POH_SPIRIT_TREE, ObjectID.LEAGUE_5_POH_SPIRIT_TREE, ObjectID.POH_SPIRIT_RING,
-            ObjectID.XMAS20_POH_SPIRIT_RING, ObjectID.LEAGUE_5_POH_SPIRIT_RING),
+    SPIRIT_TREE,
     /** The fairy ring, alone or as the spiritual fairy tree, which is both. */
-    FAIRY_RING(ObjectID.POH_FAIRY_RING, ObjectID.POH_SPIRIT_RING, ObjectID.XMAS20_POH_SPIRIT_RING, ObjectID.LEAGUE_5_POH_SPIRIT_RING);
+    FAIRY_RING;
+
+    static {
+        Rows.TABLE.requireAll(values());
+    }
 
     private static final HouseFeature[] ALL = values();
 
@@ -49,8 +47,13 @@ public enum HouseFeature {
 
     private final int[] objectIds;
 
-    HouseFeature(int... objectIds) {
-        this.objectIds = objectIds;
+    HouseFeature() {
+        this.objectIds = Rows.TABLE.of(name()).integers(1);
+    }
+
+    /** The feature table, held apart so the constructors can read it; see {@link Tables#byName}. */
+    private static final class Rows {
+        static final Tables.Named TABLE = Tables.byName("/com/larryfarming/house-features.tsv", 3);
     }
 
     private static int[] anyId() {

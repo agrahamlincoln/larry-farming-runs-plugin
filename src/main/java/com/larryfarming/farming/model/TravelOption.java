@@ -132,10 +132,6 @@ public class TravelOption {
         return new TravelOption(requires, instruction, destination, 0, UNMEASURED, false, null, false, false, UNMEASURED, null);
     }
 
-    public static TravelOption via(Capability requires, String instruction) {
-        return via(Requirement.cap(requires), instruction);
-    }
-
     public static TravelOption via(Requirement requires, String instruction) {
         return rung(requires, instruction, null);
     }
@@ -273,17 +269,10 @@ public class TravelOption {
     /**
      * The whole instruction, given the way this player is actually travelling: the
      * teleport's own name, then whatever the rung says to do on arrival.
-     */
-    public String instructionFor(TeleportMeans means) {
-        return instructionFor(means, false);
-    }
-
-    /**
-     * The same, for a player who turns out to be standing at the place already.
      *
-     * <p>The teleport is dropped and the tail promoted to a sentence: "then run east to the
-     * quetzal landing site" becomes "Run east to the quetzal landing site". An empty tail
-     * says the player is already there.
+     * <p>For a player standing at the place already, the teleport is dropped and the tail
+     * promoted to a sentence: "then run east to the quetzal landing site" becomes "Run east
+     * to the quetzal landing site". An empty tail says the player is already there.
      *
      * <p>Takes an explicit flag rather than reading a null {@code means} as "already there":
      * {@code TeleportPlanner} also returns no means when the player's bank is unread.

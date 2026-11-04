@@ -38,6 +38,7 @@ public enum Destination {
     DRAYNOR_MANOR("Draynor Manor"),
     ARCEUUS_LIBRARY("the Arceuus Library"),
     HARMONY_ISLAND("Harmony Island"),
+    KOUREND_CASTLE("Kourend Castle"),
     CIVITAS_ILLA_FORTIS("Civitas illa Fortis", Zone.CIVITAS_ILLA_FORTIS);
 
     @Getter

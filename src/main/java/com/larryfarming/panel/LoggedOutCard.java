@@ -19,22 +19,12 @@ class LoggedOutCard extends JPanel
 
 		add(centred(new JLabel(BrandHeader.face(4))));
 		add(Box.createVerticalStrut(10));
-		add(centred(line("Larry plans the route.", PanelColors.HEADER)));
-		add(centred(line("You plant the patches.", PanelColors.HEADER)));
+		add(centred(PanelText.label("Larry plans the route.", PanelColors.HEADER)));
+		add(centred(PanelText.label("You plant the patches.", PanelColors.HEADER)));
 		add(Box.createVerticalStrut(12));
-		JLabel logIn = line(LOG_IN, Color.WHITE);
-		logIn.setFont(FontManager.getRunescapeFont());
-		add(centred(logIn));
+		add(centred(PanelText.label(LOG_IN, FontManager.getRunescapeFont(), Color.WHITE)));
 
 		setMaximumSize(new Dimension(Short.MAX_VALUE, getPreferredSize().height));
-	}
-
-	private static JLabel line(String text, Color colour)
-	{
-		JLabel label = new JLabel(text);
-		label.setFont(FontManager.getRunescapeSmallFont());
-		label.setForeground(colour);
-		return label;
 	}
 
 	private static JComponent centred(JComponent inner)

@@ -1,0 +1,31 @@
+# The tool leprechaun's stored counts: for each item, the varbit slices whose values compose
+# how many it holds. The game holds a slot's count in one to three varbits: one wide field, or
+# a narrow low field in the farming varp plus "extra" varbits that carry the higher bits. A
+# slice's shift is the width of everything below it, so the slices compose to the caps: 1000
+# for supplies, 100 for tools. Each id has RuneLite's ItemID or VarbitID constant in the
+# column after.
+#
+# Secateurs and the watering can are not counts of one item and have no rows here.
+#
+# item id	ItemID name	varbit id	VarbitID name	shift
+# Ultracompost and plant cure each have a single ten-bit varbit (0-1023).
+21483	BUCKET_ULTRACOMPOST	5732	FARMING_TOOLS_ULTRACOMPOST	0
+6036	PLANT_CURE	6268	FARMING_TOOLS_PLANTCURE	0
+# Supercompost and compost: an eight-bit low field.
+6034	BUCKET_SUPERCOMPOST	1443	FARMING_TOOLS_SUPERCOMPOST	0
+6034	BUCKET_SUPERCOMPOST	6267	FARMING_TOOLS_EXTRASUPERCOMPOST	8
+6032	BUCKET_COMPOST	1442	FARMING_TOOLS_COMPOST	0
+6032	BUCKET_COMPOST	6266	FARMING_TOOLS_EXTRACOMPOST	8
+# The bucket takes three slices: 5 bits, then 3, then 2.
+1925	BUCKET_EMPTY	1441	FARMING_TOOLS_BUCKETS	0
+1925	BUCKET_EMPTY	4731	FARMING_TOOLS_EXTRABUCKETS	5
+1925	BUCKET_EMPTY	6265	FARMING_TOOLS_EXTRA2BUCKETS	8
+# Tools: a one-bit low field, the low bit of a seven-bit count.
+952	SPADE	1437	FARMING_TOOLS_SPADE	0
+952	SPADE	8361	FARMING_TOOLS_EXTRASPADES	1
+5343	DIBBER	1436	FARMING_TOOLS_DIBBER	0
+5343	DIBBER	8358	FARMING_TOOLS_EXTRADIBBERS	1
+5341	RAKE	1435	FARMING_TOOLS_RAKE	0
+5341	RAKE	8357	FARMING_TOOLS_EXTRARAKES	1
+5325	GARDENING_TROWEL	1440	FARMING_TOOLS_TROWEL	0
+5325	GARDENING_TROWEL	8360	FARMING_TOOLS_EXTRATROWELS	1

@@ -1,8 +1,6 @@
 package com.larryfarming.panel;
 
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.Objects;
 import java.util.function.Consumer;
 import javax.swing.*;
@@ -96,16 +94,11 @@ class SpellbookPicker extends JPanel
 			chip.setToolTipText(live ? "Your spellbook: " + BOOK_LABELS[i]
 				// Mid-sentence, "standard" is lower case; Lunar and Arceuus are names.
 				: "Plan for the " + ("STANDARD".equals(book) ? "standard" : BOOK_LABELS[i]) + " spellbook");
-			chip.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-			chip.addMouseListener(new MouseAdapter()
+			PanelText.onLeftClick(chip, () ->
 			{
-				@Override
-				public void mouseClicked(MouseEvent e)
+				if (spellbookCallback != null)
 				{
-					if (spellbookCallback != null)
-					{
-						spellbookCallback.accept(live ? null : book);
-					}
+					spellbookCallback.accept(live ? null : book);
 				}
 			});
 			books.add(chip);

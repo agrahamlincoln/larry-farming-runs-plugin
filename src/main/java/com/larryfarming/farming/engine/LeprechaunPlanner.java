@@ -33,10 +33,6 @@ final class LeprechaunPlanner {
     private static final Set<Integer> PLANTING_ONLY = Set.of(ItemID.DIBBER, ItemID.BUCKET_COMPOST,
             ItemID.BUCKET_SUPERCOMPOST, ItemID.BUCKET_ULTRACOMPOST);
 
-    /** The two bottomless buckets: the leprechaun holds one, so a second is not taken. */
-    private static final Set<Integer> BOTTOMLESS_BUCKETS = Set.of(
-            ItemID.BOTTOMLESS_COMPOST_BUCKET, ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED);
-
     /**
      * What to leave at each arrival, keyed by its index in {@code made}.
      *
@@ -52,7 +48,8 @@ final class LeprechaunPlanner {
             if (!ItemCounts.leprechaunStores(line.getItemId()) || !broughtAlong(line, underway)) {
                 continue;
             }
-            if (BOTTOMLESS_BUCKETS.contains(line.getItemId()) && storesABucket(state)) {
+            // The leprechaun holds one bucket, so a second is not taken.
+            if (BottomlessBucket.ITEM_IDS.contains(line.getItemId()) && storesABucket(state)) {
                 continue;
             }
             int last = lastUse(made, plans, cropFor, PLANTING_ONLY.contains(line.getItemId()));

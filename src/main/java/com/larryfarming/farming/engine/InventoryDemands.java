@@ -3,13 +3,13 @@ package com.larryfarming.farming.engine;
 import com.larryfarming.engine.*;
 import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.catalogue.CropData;
+import com.larryfarming.farming.detection.BottomlessBucket;
 import com.larryfarming.farming.detection.CapabilityResolver;
 import com.larryfarming.farming.detection.CapabilityState;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingCarryItem;
 import java.util.*;
-import net.runelite.api.gameval.ItemID;
 
 /**
  * Reads a planned trip and a player, and says what each arrival wants out of the bag.
@@ -26,10 +26,6 @@ final class InventoryDemands {
 
     private InventoryDemands() {
     }
-
-    /** Both bucket ids, since the resolver treats either as owning one. */
-    private static final List<Integer> BOTTOMLESS_COMPOST_BUCKET_IDS = List.of(
-            ItemID.BOTTOMLESS_COMPOST_BUCKET, ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED);
 
     /**
      * What one arrival wants, for every visit the trip is actually making.
@@ -54,7 +50,7 @@ final class InventoryDemands {
     static List<InventorySim.Demand> forTrip(List<List<Integer>> visits, List<StopPlan> plans,
             List<List<Crop>> cropFor, FarmingInputs inputs, PlayerState state, CapabilityResolver resolver) {
         List<InventorySim.Demand> demands = new ArrayList<>(visits.size());
-        boolean pouched = state != null && ownsAny(state, RunePouch.POUCH_ITEM_IDS);
+        boolean pouched = ItemCounts.ownsAny(state, RunePouch.POUCH_ITEM_IDS);
         for (List<Integer> visit : visits) {
             List<StopPlan> here = new ArrayList<>(visit.size());
             List<List<Crop>> plantedHere = new ArrayList<>(visit.size());
@@ -102,10 +98,12 @@ final class InventoryDemands {
                 // The cheapest bank the player passes while here. A visit works every patch
                 // at its arrival, so a bank on the way to any one of them serves the visit.
                 // Unmeasured rungs are skipped, which can only overstate the cost.
-                // Compared on effective cost, so an upstairs bank pays for its staircase.
+                // Compared on the cost BankProximity grades, so an upstairs bank pays for its
+                // staircase and the bank chosen is judged on the number the player is told.
                 TravelOption route = plan.getRoute();
-                if (route != null && route.hasBankFigure() && (bankTiles == TravelOption.UNMEASURED || effectiveCost(route)
-                                        < effectiveCost(bankTiles, bankUpstairs))) {
+                if (route != null && route.hasBankFigure() && (bankTiles == TravelOption.UNMEASURED
+                        || Arrival.BankProximity.costInTiles(route.getBankDetour(), route.isBankUpstairs())
+                                < Arrival.BankProximity.costInTiles(bankTiles, bankUpstairs))) {
                     bankTiles = route.getBankDetour();
                     bankUpstairs = route.isBankUpstairs();
                     // Always from the same rung as the figure: different rungs at one visit
@@ -120,19 +118,6 @@ final class InventoryDemands {
                     bankTiles, bankUpstairs, bank, tools, travel, spent));
         }
         return demands;
-    }
-
-    /**
-     * What a bank stop costs to reach, in tiles, counting a floor change. Uses the same
-     * arithmetic as {@link Arrival.BankProximity#of}, so the bank chosen is judged on the
-     * number the player is told.
-     */
-    private static int effectiveCost(TravelOption route) {
-        return effectiveCost(route.getBankDetour(), route.isBankUpstairs());
-    }
-
-    private static int effectiveCost(int tiles, boolean upstairs) {
-        return upstairs ? tiles + Arrival.BankProximity.FLOOR_CHANGE_TILES : tiles;
     }
 
     /**
@@ -195,7 +180,7 @@ final class InventoryDemands {
             return;
         }
         for (PatchRef ref : stop.getPatches()) {
-            PatchType type = ref.resolve() == null ? null : ref.resolve().getType();
+            PatchType type = ref.type();
             if (type != null) {
                 protections.add(type);
             }
@@ -237,13 +222,13 @@ final class InventoryDemands {
         }
         // CarryPlanner.packsCompost decides the bucket for the packing list too.
         boolean fertile = FertileSoil.inUse((inputs != null ? inputs : FarmingInputs.none()).getPreferences(), state, resolver.getBook());
-        if (ownsAny(state, BOTTOMLESS_COMPOST_BUCKET_IDS) && CarryPlanner.packsCompost(plans, fertile)) {
+        if (ItemCounts.ownsAny(state, BottomlessBucket.ITEM_IDS) && CarryPlanner.packsCompost(plans, fertile)) {
             carried.add(InventorySim.Fixture.BOTTOMLESS_BUCKET);
         }
-        if (ownsAny(state, RunePouch.POUCH_ITEM_IDS)) {
+        if (ItemCounts.ownsAny(state, RunePouch.POUCH_ITEM_IDS)) {
             carried.add(InventorySim.Fixture.RUNE_POUCH);
         }
-        if (ownsAny(state, SeedBox.BOX_ITEM_IDS)) {
+        if (ItemCounts.ownsAny(state, SeedBox.BOX_ITEM_IDS)) {
             carried.add(InventorySim.Fixture.SEED_BOX);
         }
         // The ash is an errand, not an owned saving. It is charged on the same condition
@@ -256,17 +241,4 @@ final class InventoryDemands {
         return carried;
     }
 
-    /**
-     * Whether the empty pot stays in the bag after a sapling goes in the ground.
-     *
-     * <p>Always true. Barbarian Training destroys the pot, but the player can turn that
-     * setting off and nothing reports it. {@link Capability#BARE_HAND_PLANTING} says the
-     * training is done, not that the setting is on. Assuming the pots are gone would plan
-     * legs that overflow in the field; assuming they stay costs at most a spare bank stop.
-     */
-    static final boolean POTS_ARE_KEPT = true;
-
-    private static boolean ownsAny(PlayerState state, Collection<Integer> itemIds) {
-        return itemIds.stream().anyMatch(id -> ItemCounts.countOwned(state, id, null) > 0);
-    }
 }

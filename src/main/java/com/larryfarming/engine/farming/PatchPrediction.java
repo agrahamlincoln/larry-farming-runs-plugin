@@ -1,5 +1,9 @@
 package com.larryfarming.engine.farming;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 /**
  * An immutable snapshot of one farming patch's predicted state at a moment in
  * time: what is planted, its health, how far it has grown, and (for a living,
@@ -20,6 +24,8 @@ package com.larryfarming.engine.farming;
  * {@link #getDoneEstimateEpochSec()} bound it, and {@link #readinessAt(long)}
  * turns it into the three positions a caller can actually be in.
  */
+@Getter
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
 public final class PatchPrediction {
 
     /**
@@ -41,101 +47,35 @@ public final class PatchPrediction {
 
     private final Crop crop;
     private final CropState state;
+    /** Predicted growth stage, clamped to {@code stages - 1}. */
     private final int stage;
     private final int stages;
-    private final long earliestDoneEpochSec;
-    private final long doneEstimateEpochSec;
-    private final long observedAtEpochSec;
-    private final boolean fellable;
-    private final long plantedAtEpochSec;
-
-    /** A patch stated outright with no timing. {@link FarmingTracker} never builds one. */
-    public static PatchPrediction of(Crop crop, CropState state) {
-        return of(crop, state, 0, 0, 0L, 0L);
-    }
-
-    /**
-     * A patch stated in full, with timing. The finish time is exact, so the finish window
-     * has zero width.
-     *
-     * <p>Public so the farming advisor package can use it. The constructor stays
-     * package-private so real predictions come from {@link FarmingTracker}.
-     */
-    public static PatchPrediction of(Crop crop, CropState state, int stage, int stages,
-            long doneEstimateEpochSec, long observedAtEpochSec) {
-        return new PatchPrediction(crop, state, stage, stages, doneEstimateEpochSec, doneEstimateEpochSec, observedAtEpochSec, false, 0L);
-    }
-
-    PatchPrediction(Crop crop, CropState state, int stage, int stages,
-            long earliestDoneEpochSec, long doneEstimateEpochSec, long observedAtEpochSec, boolean fellable, long plantedAtEpochSec) {
-        this.plantedAtEpochSec = plantedAtEpochSec;
-        this.crop = crop;
-        this.state = state;
-        this.stage = stage;
-        this.stages = stages;
-        this.earliestDoneEpochSec = earliestDoneEpochSec;
-        this.doneEstimateEpochSec = doneEstimateEpochSec;
-        this.observedAtEpochSec = observedAtEpochSec;
-        this.fellable = fellable;
-    }
-
-    /**
-     * When the tracker saw this crop go in, or 0 when it did not: the crop was already
-     * growing at its first sighting, or the planting was in an earlier session. Exact where
-     * set, unlike a planting worked back from the finish estimate.
-     */
-    public long getPlantedAtEpochSec() {
-        return plantedAtEpochSec;
-    }
-
-    public Crop getCrop() {
-        return crop;
-    }
-
-    /**
-     * Whether a tree is still rooted here, so the patch cannot take a sapling until it has
-     * been chopped down. See {@link DecodedPatch#isFellable()}, which this carries forward.
-     */
-    public boolean isFellable() {
-        return fellable;
-    }
-
-    public CropState getState() {
-        return state;
-    }
-
-    /** Predicted growth stage, clamped to {@code stages - 1}. */
-    public int getStage() {
-        return stage;
-    }
-
-    public int getStages() {
-        return stages;
-    }
-
     /**
      * Earliest wall-clock second the crop could have finished — the near edge of
      * the finish window. Equal to {@link #getDoneEstimateEpochSec()} whenever the
      * farming-tick beat is pinned down, which is the normal case once any growth
      * tick has been witnessed.
      */
-    public long getEarliestDoneEpochSec() {
-        return earliestDoneEpochSec;
-    }
-
+    private final long earliestDoneEpochSec;
     /**
      * Latest wall-clock second the crop can still be pending — the far edge of the
      * finish window, and the value to show in a countdown so it never under-promises.
      * Zero when there is no timer at all (a terminal harvestable herb/tree, diseased,
      * dead, or a weedy patch).
      */
-    public long getDoneEstimateEpochSec() {
-        return doneEstimateEpochSec;
-    }
-
-    public long getObservedAtEpochSec() {
-        return observedAtEpochSec;
-    }
+    private final long doneEstimateEpochSec;
+    private final long observedAtEpochSec;
+    /**
+     * Whether a tree is still rooted here, so the patch cannot take a sapling until it has
+     * been chopped down. See {@link DecodedPatch#isFellable()}, which this carries forward.
+     */
+    private final boolean fellable;
+    /**
+     * When the tracker saw this crop go in, or 0 when it did not: the crop was already
+     * growing at its first sighting, or the planting was in an earlier session. Exact where
+     * set, unlike a planting worked back from the finish estimate.
+     */
+    private final long plantedAtEpochSec;
 
     /**
      * True when nothing is effectively in progress at the patch: weeds, or a

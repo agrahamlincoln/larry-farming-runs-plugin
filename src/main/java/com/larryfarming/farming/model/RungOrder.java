@@ -40,21 +40,6 @@ public final class RungOrder {
         TravelOption.Cost cost(int rung);
     }
 
-    /** The ladder ranked by each rung's own figures. */
-    public static List<TravelOption> rank(List<TravelOption> ladder) {
-        return rank(ladder, new Figures() {
-            @Override
-            public int walk(int rung) {
-                return ladder.get(rung).getWalk();
-            }
-
-            @Override
-            public TravelOption.Cost cost(int rung) {
-                return ladder.get(rung).getCost();
-            }
-        });
-    }
-
     /** The ladder ranked by the figures given, which may differ from the rungs' own. */
     public static List<TravelOption> rank(List<TravelOption> ladder, Figures figures) {
         int[] order = order(ladder.size(), figures);

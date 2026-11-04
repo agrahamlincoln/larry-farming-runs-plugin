@@ -2,6 +2,8 @@ package com.larryfarming.farming.catalogue;
 
 import com.larryfarming.farming.model.*;
 import java.util.*;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 
 /**
  * One place a run visits, as the stops table lists it: the family it belongs to, the stop
@@ -18,14 +20,24 @@ import java.util.*;
  * nothing loading the sites may reach either of them, or {@link FarmingCatalogue}, whose
  * policy {@link Seeds} builds. Such a cycle reads the sites half-built.
  */
+@Accessors(fluent = true)
 final class Site {
 
     private final String key;
+    @Getter
     private final RunId family;
     private final Map<Spellbook, RunStop> stops;
+    /** What makes this site's patch a better home for a seed, or null when nothing does. */
+    @Getter
     private final PatchAttributes.Entry attributes;
+    /** The crop a diary keeps for this site's patch, or null when none does. */
+    @Getter
     private final SeedPolicy.DiaryOverride diaryClaim;
+    /** The {@code FarmingKeys} key that holds whether the runs visit it, or null for none. */
+    @Getter
     private final String switchKey;
+    /** The site named for a player, as its run's settings list it: "Weiss". */
+    @Getter
     private final String switchLabel;
 
     Site(String key, RunId family, Map<Spellbook, RunStop> stops, PatchAttributes.Entry attributes, SeedPolicy.DiaryOverride diaryClaim,
@@ -71,10 +83,6 @@ final class Site {
         return key;
     }
 
-    RunId family() {
-        return family;
-    }
-
     /** The patch this site works, the first where it works several. */
     PatchRef patch() {
         return anyStop().primaryPatch();
@@ -88,26 +96,6 @@ final class Site {
     /** A stop of this site's, for what every book's stop shares: its patches and gates. */
     RunStop anyStop() {
         return stops.values().iterator().next();
-    }
-
-    /** What makes this site's patch a better home for a seed, or null when nothing does. */
-    PatchAttributes.Entry attributes() {
-        return attributes;
-    }
-
-    /** The crop a diary keeps for this site's patch, or null when none does. */
-    SeedPolicy.DiaryOverride diaryClaim() {
-        return diaryClaim;
-    }
-
-    /** The {@code FarmingKeys} key that holds whether the runs visit it, or null for none. */
-    String switchKey() {
-        return switchKey;
-    }
-
-    /** The site named for a player, as its run's settings list it: "Weiss". */
-    String switchLabel() {
-        return switchLabel;
     }
 
     /** The books whose run lists this site, in enum order. */

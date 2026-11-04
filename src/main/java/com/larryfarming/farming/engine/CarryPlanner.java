@@ -29,10 +29,6 @@ public final class CarryPlanner {
     private CarryPlanner() {
     }
 
-    /** Both ids the bucket exists as; the resolver treats either as owning one. */
-    private static final int[] BOTTOMLESS_COMPOST_BUCKET_IDS =
-            {ItemID.BOTTOMLESS_COMPOST_BUCKET, ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED};
-
     /**
      * Breathing gear for the underwater patches. Both pieces must be worn (helmet on the
      * head, apparatus in the cape slot) or oxygen drains. Unlocked by the Freeing Pirate
@@ -130,7 +126,7 @@ public final class CarryPlanner {
             // No AT_LEPRECHAUN branch: the bucket's varbits (7915/7916) describe its
             // contents wherever it is, and nothing observable says the leprechaun holds it.
             // A stored bucket reads as BANKED, one withdrawal too many rather than none.
-            boolean inTheBag = carriedAny(state, BOTTOMLESS_COMPOST_BUCKET_IDS);
+            boolean inTheBag = BottomlessBucket.ITEM_IDS.stream().anyMatch(id -> ItemCounts.countCarried(state, id, null) > 0);
             carry.add(new FarmingCarryItem(FarmingCarryItem.Kind.TOOL,
                     ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED, "Bottomless compost bucket", 0, inTheBag
                             ? FarmingCarryItem.Availability.CARRIED : FarmingCarryItem.Availability.BANKED,
@@ -157,7 +153,12 @@ public final class CarryPlanner {
         addCoins(carry, plans, state, clearingCoins);
         addFertileSoilAsh(carry, fertileCasts * FertileSoil.ASH_PER_CAST, state);
 
-        return withoutSeedsTheyDoNotHave(carry);
+        // Less the seeds the player owns none of. The stop that wanted an unowned seed
+        // already names the shortfall, so listing the seed here would ask for a planting the
+        // run has dropped. Seeds only: an unowned tool stays on the list, because a missing
+        // spade or axe costs the whole trip.
+        carry.removeIf(item -> !item.isOwned() && item.getKind() == FarmingCarryItem.Kind.SEED);
+        return carry;
     }
 
     /**
@@ -217,7 +218,10 @@ public final class CarryPlanner {
      * and sapling. A line names one id; the bag may hold any of these.
      */
     static Set<Integer> formsOf(int itemId) {
-        for (int[] family : new int[][]{AXES, LOG_BASKETS, STAFF_IDS, BOTTOMLESS_COMPOST_BUCKET_IDS}) {
+        if (BottomlessBucket.ITEM_IDS.contains(itemId)) {
+            return BottomlessBucket.ITEM_IDS;
+        }
+        for (int[] family : new int[][]{AXES, LOG_BASKETS, STAFF_IDS}) {
             for (int id : family) {
                 if (id == itemId) {
                     return idsOf(family);
@@ -246,25 +250,7 @@ public final class CarryPlanner {
 
     /** The same stop with no way of getting there, for a stretch already standing at it. */
     static StopPlan withoutTravel(StopPlan plan) {
-        return new StopPlan(plan.getStop(), plan.getOutcome(), null, plan.getConfidence(),
-                plan.getBecause(), plan.getSkipReason(), plan.getReadyAtEpochSec(), Set.of(), null);
-    }
-
-    /**
-     * The bag, less the seeds the player owns none of.
-     *
-     * <p>The stop that wanted an unowned seed already names the shortfall, so listing the
-     * seed here would ask for a planting the run has dropped. Seeds only: an unowned tool
-     * stays on the list, because a missing spade or axe costs the whole trip.
-     */
-    private static List<FarmingCarryItem> withoutSeedsTheyDoNotHave(List<FarmingCarryItem> carry) {
-        List<FarmingCarryItem> packable = new ArrayList<>(carry.size());
-        for (FarmingCarryItem item : carry) {
-            if (item.isOwned() || item.getKind() != FarmingCarryItem.Kind.SEED) {
-                packable.add(item);
-            }
-        }
-        return packable;
+        return plan.withRoute(null).withNeeds(Set.of()).withTeleport(null);
     }
 
     /**
@@ -366,7 +352,7 @@ public final class CarryPlanner {
 
     /** Holds one anywhere it could be fetched from, the bank included. */
     private static boolean ownsCharos(PlayerState state) {
-        return ItemCounts.countOwned(state, RING_OF_CHAROS_ACTIVATED, null) > 0;
+        return ItemCounts.ownsAny(state, RING_OF_CHAROS_ACTIVATED);
     }
 
     /** Coins per Lovakengj minecart ride. */
@@ -524,16 +510,16 @@ public final class CarryPlanner {
                 continue;
             }
             for (PatchRef ref : plan.getStop().getPatches()) {
-                FarmingWorldMap.PatchDef def = ref.resolve();
-                if (def == null) {
+                PatchType type = ref.type();
+                if (type == null) {
                     continue;
                 }
                 // Asked per patch, because one stop can cover several patches (the three
                 // Fossil Island hardwoods are one stop).
-                Clearing clearing = clearingAt(def.getType(), ref, state, inputs);
+                Clearing clearing = clearingAt(type, ref, state, inputs);
                 if (clearing == Clearing.AXE) {
                     work.axe = true;
-                    work.logs |= def.getType() == PatchType.TREE || def.getType() == PatchType.HARDWOOD_TREE;
+                    work.logs |= type == PatchType.TREE || type == PatchType.HARDWOOD_TREE;
                 } else if (clearing == Clearing.GARDENER) {
                     work.coins += GARDENER_FEE;
                 }
@@ -587,7 +573,7 @@ public final class CarryPlanner {
         if (!anyDiveAmong(plans)) {
             return;
         }
-        if (ItemCounts.countOwned(state, MEDALLION_OF_THE_DEEP, null) > 0) {
+        if (ItemCounts.ownsAny(state, MEDALLION_OF_THE_DEEP)) {
             carry.add(tool(MEDALLION_OF_THE_DEEP, "Medallion of the deep", state).withNote("Wear it instead of the helmet and apparatus."));
             return;
         }
@@ -638,12 +624,7 @@ public final class CarryPlanner {
      * {@link FertileSoil#keepsTheCompost} follows.
      */
     private static boolean usesCompost(List<StopPlan> plans) {
-        for (StopPlan plan : plans) {
-            if (plan.isVisit() && plan.getStop().getActions().contains(RunStop.StopAction.COMPOST)) {
-                return true;
-            }
-        }
-        return false;
+        return plans.stream().anyMatch(plan -> plan.isVisit() && plan.getStop().getActions().contains(RunStop.StopAction.COMPOST));
     }
 
     /** Whether any stop on this trip is a seaweed patch. */
@@ -653,8 +634,7 @@ public final class CarryPlanner {
                 continue;
             }
             for (PatchRef ref : plan.getStop().getPatches()) {
-                FarmingWorldMap.PatchDef def = ref.resolve();
-                if (def != null && def.getType() == PatchType.SEAWEED) {
+                if (ref.type() == PatchType.SEAWEED) {
                     return true;
                 }
             }
@@ -697,16 +677,16 @@ public final class CarryPlanner {
                 continue;
             }
             for (PatchRef ref : plan.getStop().getPatches()) {
-                FarmingWorldMap.PatchDef def = ref.resolve();
-                if (def == null || !standsDiseased(inputs, ref) || !counted.add(ref)) {
+                PatchType type = ref.type();
+                if (type == null || !standsDiseased(inputs, ref) || !counted.add(ref)) {
                     continue;
                 }
                 // Counted before the tables: a cast cures any patch type.
                 sick++;
-                if (PRUNED_WITH_SECATEURS.contains(def.getType())) {
+                if (PRUNED_WITH_SECATEURS.contains(type)) {
                     // Secateurs are not used up, so one pair covers the run.
                     prune = true;
-                } else if (CURED_WITH_PLANT_CURE.contains(def.getType())) {
+                } else if (CURED_WITH_PLANT_CURE.contains(type)) {
                     cures++;
                 }
             }
@@ -718,7 +698,7 @@ public final class CarryPlanner {
         // brings them: the weapon slot asks for them, or the bag does beside the staff.
         // The plain pair shares one leprechaun slot with magic secateurs, which ItemCounts
         // tells apart with the type varbit.
-        if (prune && ItemCounts.countOwned(state, Loadouts.MAGIC_SECATEURS, null) == 0) {
+        if (prune && !ItemCounts.ownsAny(state, Loadouts.MAGIC_SECATEURS)) {
             carry.add(tool(ItemID.SECATEURS, "Secateurs", state));
         }
         // Consumed per patch cured, so this line carries a count.
@@ -809,7 +789,7 @@ public final class CarryPlanner {
      */
     private static int bestOwned(PlayerState state, int[] itemIds, int none) {
         for (int itemId : itemIds) {
-            if (ItemCounts.countOwned(state, itemId, null) > 0) {
+            if (ItemCounts.ownsAny(state, itemId)) {
                 return itemId;
             }
         }
@@ -825,13 +805,7 @@ public final class CarryPlanner {
      * it too unless it is already on the player (see {@code addStaff}).
      */
     public static boolean staffWielded(List<StopPlan> plans, PlayerState state, CapabilityResolver resolver) {
-        boolean ringsUsed = false;
-        for (StopPlan plan : plans) {
-            if (plan.isVisit() && plan.getNeeds().contains(Capability.FAIRY_RINGS)) {
-                ringsUsed = true;
-                break;
-            }
-        }
+        boolean ringsUsed = plans.stream().anyMatch(plan -> plan.isVisit() && plan.getNeeds().contains(Capability.FAIRY_RINGS));
         return ringsUsed && resolver.resolve(Capability.STAFFLESS_FAIRY_RINGS, state).getState() != CapabilityState.HAVE;
     }
 
@@ -841,7 +815,7 @@ public final class CarryPlanner {
      * loadout plan puts them in the weapon slot instead, never both.
      */
     private static void addSecateurs(List<FarmingCarryItem> carry, List<StopPlan> plans, PlayerState state, CapabilityResolver resolver) {
-        if (!staffWielded(plans, state, resolver) || ItemCounts.countOwned(state, Loadouts.MAGIC_SECATEURS, null) == 0) {
+        if (!staffWielded(plans, state, resolver) || !ItemCounts.ownsAny(state, Loadouts.MAGIC_SECATEURS)) {
             return;
         }
         carry.add(item(FarmingCarryItem.Kind.TOOL, Loadouts.MAGIC_SECATEURS, "Magic secateurs", 0, 1, state, Loadouts.MAGIC_SECATEURS)
@@ -905,39 +879,23 @@ public final class CarryPlanner {
         if (!data.isSaplingPlanted()) {
             return item(FarmingCarryItem.Kind.SEED, seed, data.getSeedName(), count, count, state, seed);
         }
-        int saplings = ownedOf(state, List.of(data.getSaplingItemId()));
-        int potted = saplings + ownedOf(state, List.of(data.getWateredSeedlingItemId(), data.getSeedlingItemId()));
-        // Named and drawn for the furthest stage they hold any of.
-        String pottedName = saplings > 0 ? data.getSaplingName() : data.getSeedlingName();
+        // Furthest-along first, so the line is named and drawn for the furthest stage they
+        // hold any of.
+        int[] stages = {data.getSaplingItemId(), data.getWateredSeedlingItemId(), data.getSeedlingItemId()};
+        int potted = 0;
+        for (int stage : stages) {
+            potted += ItemCounts.countOwned(state, stage, null);
+        }
+        String pottedName = ItemCounts.ownsAny(state, stages[0]) ? data.getSaplingName() : data.getSeedlingName();
         String name;
-        if (saplings >= count || potted >= count) {
+        if (potted >= count) {
             name = pottedName;
         } else if (potted > 0) {
             name = pottedName + " or " + data.getSeedName().toLowerCase(Locale.ROOT);
         } else {
             name = data.getSeedName();
         }
-        return item(FarmingCarryItem.Kind.SEED, potted > 0 ? pottedIcon(state, data) : seed,
-                name, count, count, state, ids(data.getPlantingForms()));
-    }
-
-    /** How many of any of these the player has, wherever they keep them. */
-    private static int ownedOf(PlayerState state, List<Integer> itemIds) {
-        int owned = 0;
-        for (int itemId : itemIds) {
-            owned += ItemCounts.countOwned(state, itemId, null);
-        }
-        return owned;
-    }
-
-    /** The furthest-along potted stage the player holds, else the seed. */
-    private static int pottedIcon(PlayerState state, CropData data) {
-        for (int stage : List.of(data.getSaplingItemId(), data.getWateredSeedlingItemId(), data.getSeedlingItemId())) {
-            if (ItemCounts.countOwned(state, stage, null) > 0) {
-                return stage;
-            }
-        }
-        return data.getSeedItemId();
+        return item(FarmingCarryItem.Kind.SEED, bestOwned(state, stages, seed), name, count, count, state, ids(data.getPlantingForms()));
     }
 
     private static int[] ids(List<Integer> itemIds) {
@@ -1064,12 +1022,7 @@ public final class CarryPlanner {
 
     /** True when any of these ids is on the player right now. */
     private static boolean carriedAny(PlayerState state, int... itemIds) {
-        for (int itemId : itemIds) {
-            if (ItemCounts.countCarried(state, itemId, null) > 0) {
-                return true;
-            }
-        }
-        return false;
+        return Arrays.stream(itemIds).anyMatch(itemId -> ItemCounts.countCarried(state, itemId, null) > 0);
     }
 
     private static FarmingCarryItem tool(int itemId, String name, PlayerState state) {

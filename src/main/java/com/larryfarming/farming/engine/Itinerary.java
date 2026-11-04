@@ -2,7 +2,6 @@ package com.larryfarming.farming.engine;
 
 import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.catalogue.Arrivals;
-import com.larryfarming.farming.catalogue.Seats;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import java.util.*;
@@ -17,9 +16,9 @@ import lombok.Value;
  * <p>Per-run planning (rungs, seed allocation, seed shortfalls) happens before this, per run
  * and in run order, because the seed rotation is allocated in the catalogue's patch order.
  * Merging first would hand a patch the seed meant for another. This class takes planned
- * runs, drops duplicate patches, puts the stops in the seat order of the book the trip is
- * walked on, groups them by arrival, and moves the patches that earn the better seeds to the
- * front of the herb rotation.
+ * runs, drops duplicate patches, puts the stops in the circuit's seat order, which every
+ * book walks, groups them by arrival, and moves the patches that earn the better seeds to
+ * the front of the herb rotation.
  */
 public final class Itinerary {
 
@@ -127,10 +126,8 @@ public final class Itinerary {
      * @param state the player, whose diaries and quests decide which patches earn the
      *     better seeds and therefore which are reached first. Null before anything has
      *     been reported, which scores every patch alike and leaves the circuit as authored
-     * @param book the one book the whole trip is walked on, whose seats order every family's
-     *     stops, trees and herbs alike
      */
-    public static Trip merge(List<Planned> planned, PlayerState state, Spellbook book) {
+    public static Trip merge(List<Planned> planned, PlayerState state) {
         List<StopPlan> plans = new ArrayList<>();
         List<List<Crop>> cropFor = new ArrayList<>();
         List<RunId> runFor = new ArrayList<>();
@@ -152,7 +149,9 @@ public final class Itinerary {
             }
         }
 
-        List<List<Integer>> visits = groupByArrival(inSeatOrder(plans, book), plans);
+        // Grouping consecutive stops suffices: an arrival has a single seat, so the sort
+        // has already put its stops together.
+        List<List<Integer>> visits = TripOrder.groupByArrival(inSeatOrder(plans), plans);
         return new Trip(plans, cropFor, runFor, bestHomesFirst(visits, plans, state));
     }
 
@@ -161,7 +160,7 @@ public final class Itinerary {
      * best homes re-dealt first as a merged trip's are.
      */
     static Trip alone(Planned run, PlayerState state) {
-        List<List<Integer>> visits = TripOrder.groupByArrival(run.getPlans());
+        List<List<Integer>> visits = TripOrder.groupByArrival(TripOrder.inTripOrder(run.getPlans()), run.getPlans());
         return new Trip(run.getPlans(), run.getCropFor(), Collections.nCopies(run.getPlans().size(), run.getRun()),
                 bestHomesFirst(visits, run.getPlans(), state));
     }
@@ -169,44 +168,19 @@ public final class Itinerary {
     /**
      * Stop indices in the order the trip walks them.
      *
-     * <p>Sorted by the book's seats. The sort is stable, so ties keep each run's own patch
+     * <p>Sorted by the circuit's seats. The sort is stable, so ties keep each run's own patch
      * order and the trip does not reshuffle between snapshots.
      *
-     * <p>Every {@link Arrival} constant has a seat on every book in {@link Seats}, which
-     * refuses to build otherwise.
+     * <p>Every {@link Arrival} constant has a seat in {@link Arrivals}, which refuses to load
+     * otherwise.
      */
-    private static List<Integer> inSeatOrder(List<StopPlan> plans, Spellbook book) {
-        Seats seats = Arrivals.seats();
+    private static List<Integer> inSeatOrder(List<StopPlan> plans) {
         List<Integer> order = new ArrayList<>(plans.size());
         for (int i = 0; i < plans.size(); i++) {
             order.add(i);
         }
-        order.sort(Comparator.comparingInt(index -> seats.seat(book, plans.get(index).getStop().getArrival())));
+        order.sort(Comparator.comparingInt(index -> Arrivals.seat(plans.get(index).getStop().getArrival())));
         return order;
-    }
-
-    /**
-     * The trip as visits: every stop at one arrival becomes one group.
-     *
-     * <p>Grouping consecutive stops suffices: an arrival has a single circuit position, so
-     * the sort has already put its stops together.
-     */
-    private static List<List<Integer>> groupByArrival(List<Integer> order, List<StopPlan> plans) {
-        List<List<Integer>> visits = new ArrayList<>();
-        List<Integer> current = null;
-        Arrival at = null;
-        for (int index : order) {
-            Arrival arrival = plans.get(index).getStop().getArrival();
-            if (current != null && arrival == at) {
-                current.add(index);
-                continue;
-            }
-            current = new ArrayList<>();
-            current.add(index);
-            at = arrival;
-            visits.add(current);
-        }
-        return visits;
     }
 
     /**
@@ -384,7 +358,6 @@ public final class Itinerary {
      * the primary.
      */
     private static boolean isHerbPatch(PatchRef patch) {
-        FarmingWorldMap.PatchDef def = patch.resolve();
-        return def != null && def.getType() == PatchType.HERB;
+        return patch.type() == PatchType.HERB;
     }
 }

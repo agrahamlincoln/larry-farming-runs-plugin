@@ -2,7 +2,7 @@ package com.larryfarming.panel;
 
 import java.awt.Color;
 import java.awt.Dimension;
-import javax.swing.JPanel;
+import javax.swing.*;
 import net.runelite.client.ui.ColorScheme;
 
 /**
@@ -24,6 +24,16 @@ final class PanelColors
 
 	private PanelColors()
 	{
+	}
+
+	/** Makes {@code panel} a list container: a vertical stack on a filled, outlined box. */
+	static <T extends JPanel> T container(T panel)
+	{
+		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+		panel.setBackground(CONTAINER_BG);
+		panel.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+		panel.setBorder(BorderFactory.createLineBorder(CONTAINER_BORDER, 1));
+		return panel;
 	}
 
 	/** A 1px horizontal divider line for use inside list containers. */

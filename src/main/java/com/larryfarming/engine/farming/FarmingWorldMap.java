@@ -28,6 +28,9 @@ package com.larryfarming.engine.farming;
 
 import com.larryfarming.data.Tables;
 import java.util.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 /**
  * Static registry of every tracked farming patch, keyed by map region ID, read from
@@ -53,42 +56,22 @@ public final class FarmingWorldMap {
     private static final String RESOURCE = "/com/larryfarming/patches.tsv";
 
     /** One tracked patch: its location, identifying varbit, and type. */
+    @Getter
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static final class PatchDef {
         private final String location;
+        /**
+         * "" for single patches, or a disambiguator like "North", "South" or "East" for
+         * multi-patch regions.
+         */
         private final String patchName;
+        /**
+         * The owning region's primary region ID, used as the persistence key; not necessarily
+         * where the player stands.
+         */
         private final int regionId;
         private final int varbitId;
         private final PatchType type;
-
-        private PatchDef(String location, String patchName, int regionId, int varbitId, PatchType type) {
-            this.location = location;
-            this.patchName = patchName;
-            this.regionId = regionId;
-            this.varbitId = varbitId;
-            this.type = type;
-        }
-
-        public String getLocation() {
-            return location;
-        }
-
-        /** "" for single patches, or a disambiguator like "North"/"South"/"East" for multi-patch regions. */
-        public String getPatchName() {
-            return patchName;
-        }
-
-        /** The owning region's primary region ID — used as the persistence key, not necessarily where the player stands. */
-        public int getRegionId() {
-            return regionId;
-        }
-
-        public int getVarbitId() {
-            return varbitId;
-        }
-
-        public PatchType getType() {
-            return type;
-        }
 
         /** Persistence key, matching RuneLite's "regionId.varbitId" convention. */
         public String configKey() {
@@ -117,7 +100,9 @@ public final class FarmingWorldMap {
 
     /** A cluster of patches sharing a primary map region, plus the bounds check that disambiguates it from siblings. */
     public static final class RegionDef {
+        @Getter
         private final String name;
+        @Getter
         private final List<PatchDef> patches;
         private final Bounds bounds;
 
@@ -125,14 +110,6 @@ public final class FarmingWorldMap {
             this.name = name;
             this.patches = List.copyOf(patches);
             this.bounds = bounds;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public List<PatchDef> getPatches() {
-            return patches;
         }
 
         /**

@@ -10,7 +10,7 @@ import javax.swing.*;
 
 /**
  * The side panel's grids of setting squares: one {@link SettingSquare} per choice, laid out
- * four across over the inventory colour like the packing grid.
+ * four across over the inventory colour, as the game lays out an inventory.
  */
 final class SettingGrid
 {
@@ -95,8 +95,8 @@ final class SettingGrid
 	}
 
 	/**
-	 * Squares in the packing grid's layout: four across over the inventory colour, trailing
-	 * cells left blank.
+	 * Squares four across over the inventory colour, trailing cells left blank. The packing
+	 * grid and the settings grids share it.
 	 */
 	static InventoryBackdrop grid(List<? extends JComponent> cells, IconProvider icons)
 	{

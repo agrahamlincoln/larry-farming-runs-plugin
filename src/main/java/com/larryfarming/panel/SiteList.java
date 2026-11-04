@@ -82,9 +82,7 @@ final class SiteList extends JPanel
 	/** A caption over settings, as every settings block in the panel heads its groups. */
 	static JLabel caption(String text, int gapAbove)
 	{
-		JLabel caption = new JLabel(text);
-		caption.setFont(FontManager.getRunescapeSmallFont());
-		caption.setForeground(PanelColors.HEADER);
+		JLabel caption = PanelText.label(text, PanelColors.HEADER);
 		caption.setAlignmentX(LEFT_ALIGNMENT);
 		caption.setBorder(BorderFactory.createEmptyBorder(gapAbove, 2, 3, 0));
 		return caption;
@@ -111,8 +109,7 @@ final class SiteList extends JPanel
 	 */
 	private static JComponent row(FarmingSettingChoice choice, BiConsumer<String, String> send)
 	{
-		JCheckBox box = FarmingPanel.checkbox(choice.getLabel());
-		box.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+		JCheckBox box = FarmingPanel.checkbox(choice.getLabel(), 0);
 		if (choice.isSeen() && !choice.isLocked())
 		{
 			return marked(choice.getLabel(), box, new Eye(PanelColors.HEADER, boxWidth(), boxHeight()), Color.WHITE);
@@ -156,20 +153,12 @@ final class SiteList extends JPanel
 	 */
 	static final class LevelMark extends Mark
 	{
-		private static final Color SHADOW = Color.BLACK;
-
 		private final String level;
 
 		LevelMark(int level, int width, int height)
 		{
 			super(PanelColors.LEVEL, width, height, width, height);
 			this.level = String.valueOf(level);
-		}
-
-		/** The level drawn, for a reader that cannot see the pixels. */
-		String level()
-		{
-			return level;
 		}
 
 		@Override
@@ -179,10 +168,7 @@ final class SiteList extends JPanel
 			FontMetrics metrics = g.getFontMetrics();
 			int textX = x + (getIconWidth() - metrics.stringWidth(level)) / 2;
 			int baseline = y + (getIconHeight() + metrics.getAscent()) / 2 - 1;
-			g.setColor(SHADOW);
-			g.drawString(level, textX + 1, baseline + 1);
-			g.setColor(colour);
-			g.drawString(level, textX, baseline);
+			PanelText.drawShadowed(g, level, textX, baseline, colour);
 		}
 	}
 

@@ -237,7 +237,7 @@ public final class DepositPlanner {
      * player may skip.
      */
     static boolean bagWouldFill(PlayerState state, List<FarmingCarryItem> withdrawals) {
-        boolean pouch = state != null && RunePouch.POUCH_ITEM_IDS.stream().anyMatch(id -> ItemCounts.countOwned(state, id, null) > 0);
+        boolean pouch = ItemCounts.ownsAny(state, RunePouch.POUCH_ITEM_IDS);
         return bagWouldFill(state, slotsFor(withdrawals, state, pouch));
     }
 

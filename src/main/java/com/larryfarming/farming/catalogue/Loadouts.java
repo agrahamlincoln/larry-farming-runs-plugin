@@ -65,7 +65,7 @@ public final class Loadouts {
         if (!head.text(0).equals("slot")) {
             throw head.error("a slot's rows start with its slot row");
         }
-        head.requireWidth(8);
+        head.requireWidth(7);
         List<GearPick> tiers = new ArrayList<>();
         List<GearPick> forms = new ArrayList<>();
         GearPick goal = null;
@@ -93,8 +93,8 @@ public final class Loadouts {
         }
         // Without a goal row, the goal is the cheapest tier, the one within reach.
         GearPick target = goal != null ? goal : tiers.get(tiers.size() - 1);
-        return new LoadoutSlot(head.constant(EquipmentSlot.class, 2), List.copyOf(tiers), head.text(3), head.flag(5, "yes"),
-                head.text(7).isEmpty() ? null : head.text(7), head.flag(6, "yes"), head.text(4), target,
+        return new LoadoutSlot(head.constant(EquipmentSlot.class, 2), List.copyOf(tiers), head.flag(4, "yes"),
+                head.optionalText(6), head.flag(5, "yes"), head.text(3), target,
                 sentence != null ? sentence : "Earn " + target.getDisplayName() + " for " + target.getBenefit() + ".");
     }
 

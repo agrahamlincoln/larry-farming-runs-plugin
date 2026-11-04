@@ -1,9 +1,7 @@
 package com.larryfarming.engine;
 
-import java.util.List;
 import java.util.Set;
 
-import com.larryfarming.model.ItemStack;
 import com.larryfarming.model.PlayerState;
 import net.runelite.api.gameval.ItemID;
 
@@ -32,9 +30,16 @@ public final class SeedBox {
      */
     public static final Set<Integer> BOX_ITEM_IDS = Set.of(ItemID.SEED_BOX, ItemID.SEED_BOX_OPEN);
 
+    /**
+     * How many <em>kinds</em> of seed a box holds in its one slot. The wiki has it at "up to
+     * 2,147,483,647 seeds of six different types", so only the type count binds.
+     */
+    public static final int KINDS_HELD = 6;
+
     /** True when a seed box is in the inventory, or defensively worn. */
     public static boolean carried(PlayerState state) {
-        return state != null && (holdsBox(state.getInventory()) || holdsBoxEquipment(state));
+        return state != null && (ItemCounts.holdsAny(state.getInventory(), BOX_ITEM_IDS)
+                || ItemCounts.holdsAny(state.getEquipment().values(), BOX_ITEM_IDS));
     }
 
     /**
@@ -86,30 +91,6 @@ public final class SeedBox {
 
     /** True when a seed box is sitting in the bank. */
     public static boolean banked(PlayerState state) {
-        return state != null && holdsBox(state.getBank());
-    }
-
-    private static boolean holdsBox(List<ItemStack> items) {
-        if (items == null) {
-            return false;
-        }
-        for (ItemStack item : items) {
-            if (BOX_ITEM_IDS.contains(item.getItemId())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean holdsBoxEquipment(PlayerState state) {
-        if (state.getEquipment() == null) {
-            return false;
-        }
-        for (ItemStack item : state.getEquipment().values()) {
-            if (item != null && BOX_ITEM_IDS.contains(item.getItemId())) {
-                return true;
-            }
-        }
-        return false;
+        return state != null && ItemCounts.holdsAny(state.getBank(), BOX_ITEM_IDS);
     }
 }

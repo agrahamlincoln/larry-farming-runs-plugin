@@ -63,82 +63,41 @@ public final class LoadoutPlanner {
         return advice;
     }
 
-    /** The ring slot's sentences, with "Teleport to the Falador farm with it." added. */
+    /** The ring slot's tip, with "Teleport to the Falador farm with it." added. */
     private static SlotAdvice withRingNote(SlotAdvice advice) {
-        if (advice.getVerdict() == SlotAdvice.Verdict.NOTHING_YET) {
-            return advice;
-        }
-        String note = " Teleport to the Falador farm with it.";
-        String tip = advice.getTip().isEmpty() ? "" : advice.getTip() + note;
-        return new SlotAdvice(advice.getSlot(), advice.getPurpose(), advice.isNiceToHave(),
-                advice.getGroup(), advice.isMustWear(), tip, advice.getTiers(),
-                advice.getVerdict(), advice.getBest(), advice.getBecause() + note,
-                advice.isConfident(), advice.getGoal(), advice.getGoalSentence());
+        String tip = advice.getTip();
+        return tip.isEmpty() ? advice : advice.withTip(tip + " Teleport to the Falador farm with it.");
     }
 
+    /**
+     * The slot's verdict, decided by the first tier the player holds: best-first order
+     * makes it the best they own, on hand or not. Nothing held is a goal, whether or not the
+     * bank has been seen.
+     */
     private static SlotAdvice planSlot(LoadoutSlot slot, PlayerState state) {
         ItemStack worn = state != null ? state.getEquipment().get(slot.getSlot()) : null;
-        boolean confident = state != null && state.getBankLastSeen() != null;
-
-        List<SlotAdvice.Tier> tiers = new ArrayList<>(slot.getTiers().size());
-        // Indices rather than references: two tiers sharing an item ID would make an
-        // identity comparison silently call a worn lower rung "the best you own".
-        int best = -1;
-        int onHandAt = -1;
-        for (int i = 0; i < slot.getTiers().size(); i++) {
-            GearPick pick = slot.getTiers().get(i);
-            SlotAdvice.Standing standing;
-            int carried = firstCarried(state, pick);
-            int owned = firstOwned(state, pick);
+        for (GearPick pick : slot.getTiers()) {
+            // The form held, so a lunar staff is named and drawn as one.
             if (worn != null && pick.getItemIds().contains(worn.getItemId())) {
-                standing = SlotAdvice.Standing.WORN;
-                pick = pick.formHolding(worn.getItemId());
-            } else if (carried > 0) {
-                standing = SlotAdvice.Standing.CARRIED;
-                pick = pick.formHolding(carried);
-            } else if (owned > 0) {
-                standing = SlotAdvice.Standing.OWNED;
-                pick = pick.formHolding(owned);
-            } else {
-                standing = SlotAdvice.Standing.UNEARNED;
+                return new SlotAdvice(slot, SlotAdvice.Verdict.SET, pick.formHolding(worn.getItemId()), "");
             }
-            tiers.add(new SlotAdvice.Tier(pick, standing));
-            // Best-first order means the first hit is the best, on hand or not.
-            if (best < 0 && standing != SlotAdvice.Standing.UNEARNED) {
-                best = i;
+            int carried = firstCarried(state, pick);
+            if (carried > 0) {
+                // Carrying serves the run for every item that need not be worn.
+                GearPick held = pick.formHolding(carried);
+                return slot.isMustWear() ? swap(slot, held) : new SlotAdvice(slot, SlotAdvice.Verdict.SET, held, "");
             }
-            if (onHandAt < 0 && servesTheRun(slot, standing)) {
-                onHandAt = i;
+            int owned = firstOwned(state, pick);
+            if (owned > 0) {
+                return swap(slot, pick.formHolding(owned));
             }
         }
-
-        if (best < 0) {
-            // Nothing found means "no" only once the bank has been seen.
-            if (!confident) {
-                return advice(slot, tiers, SlotAdvice.Verdict.NOTHING_YET, null, "", "Open your bank to check this slot.", false);
-            }
-            return advice(slot, tiers, SlotAdvice.Verdict.NOTHING_YET, null, "", slot.getGoalSentence(), true);
-        }
-        // The form held, so a lunar staff is named and drawn as one.
-        GearPick pick = tiers.get(best).getPick();
-        if (best == onHandAt) {
-            boolean wearing = tiers.get(best).getStanding() == SlotAdvice.Standing.WORN;
-            return advice(slot, tiers, SlotAdvice.Verdict.SET, pick, "", (wearing ? "You are wearing " : "You carry ")
-                            + inSentence(pick.getDisplayName()) + ".", confident);
-        }
-        String tip = String.format(slot.getTip(), inSentence(pick.getDisplayName()));
-        return advice(slot, tiers, SlotAdvice.Verdict.SWAP, pick, tip, tip, confident);
+        return new SlotAdvice(slot, SlotAdvice.Verdict.NOTHING_YET, null, "");
     }
 
-    /** Where an item must be for the run: worn, or for most items carried will do. */
-    private static boolean servesTheRun(LoadoutSlot slot, SlotAdvice.Standing standing) {
-        return standing == SlotAdvice.Standing.WORN || (!slot.isMustWear() && standing == SlotAdvice.Standing.CARRIED);
-    }
-
-    private static SlotAdvice advice(LoadoutSlot slot, List<SlotAdvice.Tier> tiers,
-            SlotAdvice.Verdict verdict, GearPick best, String tip, String because, boolean confident) {
-        return new SlotAdvice(slot.getSlot(), slot.getPurpose(), slot.isNiceToHave(),
-                slot.getGroup(), slot.isMustWear(), tip, tiers, verdict, best, because, confident, slot.getGoal(), slot.getGoalSentence());
+    /** Advice to put on or bring {@code best}, which the player owns but not where the run wants it. */
+    private static SlotAdvice swap(LoadoutSlot slot, GearPick best) {
+        return new SlotAdvice(slot, SlotAdvice.Verdict.SWAP, best, String.format(slot.getTip(), inSentence(best.getDisplayName())));
     }
 
     /** An item name for mid-sentence, as the game writes it there. */
@@ -203,25 +162,27 @@ public final class LoadoutPlanner {
     }
 
     private static void addEquips(List<SlotAdvice> plan, List<FarmingUpgrade> rows, boolean niceToHave, List<String> groupsDone) {
-        for (SlotAdvice slot : plan) {
-            if (slot.getVerdict() != SlotAdvice.Verdict.SWAP || slot.isNiceToHave() != niceToHave) {
+        for (SlotAdvice advice : plan) {
+            String group = advice.getSlot().getGroup();
+            if (advice.getVerdict() != SlotAdvice.Verdict.SWAP || advice.getSlot().isNiceToHave() != niceToHave) {
                 continue;
             }
-            if (slot.getGroup() == null) {
-                rows.add(new FarmingUpgrade(FarmingUpgrade.Kind.EQUIP, slot.getBest().getIconItemId(), slot.getBest().getDisplayName(),
-                        slot.getTip()));
-            } else if (!groupsDone.contains(slot.getGroup())) {
+            if (group == null) {
+                rows.add(new FarmingUpgrade(FarmingUpgrade.Kind.EQUIP, advice.getBest().getIconItemId(), advice.getBest().getDisplayName(),
+                        advice.getTip()));
+            } else if (!groupsDone.contains(group)) {
                 // One row for the outfit, drawn as the first piece to put on.
-                groupsDone.add(slot.getGroup());
+                groupsDone.add(group);
                 rows.add(new FarmingUpgrade(FarmingUpgrade.Kind.EQUIP,
-                        slot.getBest().getIconItemId(), slot.getGroup(), Loadouts.OUTFIT_TIP));
+                        advice.getBest().getIconItemId(), group, Loadouts.OUTFIT_TIP));
             }
         }
     }
 
     private static void addGoals(List<SlotAdvice> plan, List<FarmingUpgrade> rows, List<String> groupsDone) {
-        for (SlotAdvice slot : plan) {
-            if (slot.getVerdict() != SlotAdvice.Verdict.NOTHING_YET) {
+        for (SlotAdvice advice : plan) {
+            LoadoutSlot slot = advice.getSlot();
+            if (advice.getVerdict() != SlotAdvice.Verdict.NOTHING_YET) {
                 continue;
             }
             if (slot.getGroup() == null) {
@@ -239,15 +200,15 @@ public final class LoadoutPlanner {
         int total = 0;
         int have = 0;
         int icon = 0;
-        for (SlotAdvice slot : plan) {
-            if (!group.equals(slot.getGroup())) {
+        for (SlotAdvice advice : plan) {
+            if (!group.equals(advice.getSlot().getGroup())) {
                 continue;
             }
             total++;
-            if (slot.getVerdict() == SlotAdvice.Verdict.NOTHING_YET) {
+            if (advice.getVerdict() == SlotAdvice.Verdict.NOTHING_YET) {
                 // Draw the group as the first piece still missing.
                 if (icon == 0) {
-                    icon = slot.getGoal().getIconItemId();
+                    icon = advice.getSlot().getGoal().getIconItemId();
                 }
             } else {
                 have++;

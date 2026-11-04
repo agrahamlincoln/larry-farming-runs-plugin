@@ -40,12 +40,12 @@ class BrandHeader extends JPanel
 		add(new JLabel(face(2)), BorderLayout.WEST);
 
 		JPanel name = PanelText.stack();
-		name.add(label("Larry", FontManager.getRunescapeBoldFont(), BRAND_LIGHT));
-		mood = label(DESCRIPTOR, FontManager.getRunescapeSmallFont(), PanelColors.META);
+		name.add(PanelText.label("Larry", FontManager.getRunescapeBoldFont(), BRAND_LIGHT));
+		mood = PanelText.label(DESCRIPTOR, PanelColors.META);
 		name.add(mood);
 		add(name, BorderLayout.CENTER);
 
-		JLabel version = label(LarryVersion.SHOWN, FontManager.getRunescapeSmallFont(), PanelColors.META);
+		JLabel version = PanelText.label(LarryVersion.SHOWN, PanelColors.META);
 		version.setVerticalAlignment(SwingConstants.TOP);
 		add(version, BorderLayout.EAST);
 
@@ -70,13 +70,5 @@ class BrandHeader extends JPanel
 	{
 		BufferedImage art = ImageUtil.loadImageResource(BrandHeader.class, FACE);
 		return new ImageIcon(art.getScaledInstance(art.getWidth() * scale, art.getHeight() * scale, Image.SCALE_REPLICATE));
-	}
-
-	private static JLabel label(String text, Font font, Color colour)
-	{
-		JLabel label = new JLabel(text);
-		label.setFont(font);
-		label.setForeground(colour);
-		return label;
 	}
 }

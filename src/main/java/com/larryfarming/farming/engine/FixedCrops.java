@@ -6,7 +6,6 @@ import com.larryfarming.farming.catalogue.FarmingCatalogue;
 import com.larryfarming.farming.model.FarmingPreferences;
 import com.larryfarming.farming.model.RunStop;
 import com.larryfarming.model.PlayerState;
-import com.larryfarming.model.Skill;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -79,9 +78,6 @@ final class FixedCrops {
      * is never short, so it never skips a stop.
      */
     static boolean belowLevel(PlayerState state, CropData data) {
-        if (state == null || state.getSkills() == null || !state.getSkills().containsKey(Skill.FARMING)) {
-            return false;
-        }
-        return state.getSkillLevel(Skill.FARMING) < data.getFarmingLevel();
+        return RunSettings.farmingLevel(state) < data.getFarmingLevel();
     }
 }

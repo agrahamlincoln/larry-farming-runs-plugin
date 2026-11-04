@@ -3,15 +3,17 @@ package com.larryfarming.data;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 
 /**
  * Reads Larry's tab-separated data tables from the plugin jar.
  *
  * <p>A table is a UTF-8 text resource with one row per line and cells split on tabs. Lines
  * starting with {@code #} are comments, and blank lines are skipped. A cell holding only
- * {@code -} is empty: it reads as the empty string, as no constant through
- * {@link Row#optionalConstant}, as no ints through {@link Row#integers} and as false through
- * {@link Row#flag}. It is not a number.
+ * {@code -} is empty: it reads as the empty string, as null through {@link Row#optionalText},
+ * as no constant through {@link Row#optionalConstant} or {@link Row#constants}, as no ints
+ * through {@link Row#integers} and as false through {@link Row#flag}. It is not a number.
  *
  * <p>Tables load in static initialisers, where a bad row would otherwise surface as a bare
  * {@code ExceptionInInitializerError}. So every failure here, and every failure a caller
@@ -138,17 +140,12 @@ public final class Tables {
     }
 
     /** One line of a table: its cells, and where it came from for error messages. */
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static final class Row {
 
         private final String resource;
         private final int line;
         private final String[] cells;
-
-        private Row(String resource, int line, String[] cells) {
-            this.resource = resource;
-            this.line = line;
-            this.cells = cells;
-        }
 
         public int width() {
             return cells.length;
@@ -166,6 +163,12 @@ public final class Tables {
         public String text(int column) {
             String cell = cell(column);
             return cell.equals(EMPTY) ? "" : cell;
+        }
+
+        /** The cell's text, or null for an {@link #EMPTY} cell. */
+        public String optionalText(int column) {
+            String text = text(column);
+            return text.isEmpty() ? null : text;
         }
 
         /** The cell as an int; an {@link #EMPTY} cell is not a number. */

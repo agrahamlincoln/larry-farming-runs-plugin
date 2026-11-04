@@ -29,6 +29,7 @@ package com.larryfarming.engine.farming;
 import com.larryfarming.data.Tables;
 import java.util.EnumSet;
 import java.util.Set;
+import lombok.Getter;
 
 /**
  * A crop that can occupy a tracked farming patch: every plantable species across
@@ -45,6 +46,7 @@ import java.util.Set;
  * {@code regrowTickRateMinutes} minutes. A {@code regrowTickRateMinutes} of 0 means the
  * crop does not regrow. The item ID is only used for the sidebar row icon.
  */
+@Getter
 public enum Crop {
     /** Tick rate 0: weeds regrow, but a weedy patch has no timer worth showing. */
     WEEDS,
@@ -180,7 +182,9 @@ public enum Crop {
     private final int itemId;
     private final int tickRateMinutes;
     private final int stages;
+    /** Minutes between regrown pickings while HARVESTABLE; 0 if the crop does not regrow. */
     private final int regrowTickRateMinutes;
+    /** Number of harvest "lives" (berry/fruit pickings) once the crop is HARVESTABLE. */
     private final int harvestStages;
 
     Crop() {
@@ -197,17 +201,6 @@ public enum Crop {
     private static final class Rows {
         static final Tables.Named TABLE = Tables.byName("/com/larryfarming/crops.tsv", 8);
     }
-
-    public String getDisplayName() { return displayName; }
-    public int getItemId() { return itemId; }
-    public int getTickRateMinutes() { return tickRateMinutes; }
-    public int getStages() { return stages; }
-
-    /** Minutes between regrown pickings while HARVESTABLE; 0 if the crop does not regrow. */
-    public int getRegrowTickRateMinutes() { return regrowTickRateMinutes; }
-
-    /** Number of harvest "lives" (berry/fruit pickings) once the crop is HARVESTABLE. */
-    public int getHarvestStages() { return harvestStages; }
 
     /** Total wall-clock grow time from planting to done, in seconds. */
     public long totalGrowSeconds() {

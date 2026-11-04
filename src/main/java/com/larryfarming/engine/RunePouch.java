@@ -4,6 +4,8 @@ import net.runelite.api.gameval.VarbitID;
 
 import java.util.*;
 import java.util.function.IntUnaryOperator;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Reads the contents of a rune pouch (or divine rune pouch) from RuneLite varbits.
@@ -22,12 +24,12 @@ public final class RunePouch {
     }
 
     /** Item IDs that count as a rune pouch occupying an inventory or bank slot. */
-    public static final Set<Integer> POUCH_ITEM_IDS = Collections.unmodifiableSet(new HashSet<>(java.util.Arrays.asList(
+    public static final Set<Integer> POUCH_ITEM_IDS = Set.of(
             12791,  // Rune pouch
             24416,  // Rune pouch (Trouver-locked variant)
             27281,  // Divine rune pouch
             27509   // Divine rune pouch (Trouver-locked variant)
-    )));
+    );
 
     /** Per-slot rune TYPE varbits (index into the RUNEPOUCH_RUNE enum; 0 = empty slot). */
     private static final int[] TYPE_VARBITS = {
@@ -42,18 +44,8 @@ public final class RunePouch {
     };
 
     /** Varbit IDs whose change means the pouch contents must be re-read. */
-    public static final Set<Integer> CONTENT_VARBITS;
-
-    static {
-        Set<Integer> v = new HashSet<>();
-        for (int id : TYPE_VARBITS) {
-            v.add(id);
-        }
-        for (int id : AMOUNT_VARBITS) {
-            v.add(id);
-        }
-        CONTENT_VARBITS = Collections.unmodifiableSet(v);
-    }
+    private static final Set<Integer> CONTENT_VARBITS = IntStream.concat(Arrays.stream(TYPE_VARBITS), Arrays.stream(AMOUNT_VARBITS))
+            .boxed().collect(Collectors.toUnmodifiableSet());
 
     public static boolean isContentVarbit(int varbitId) {
         return CONTENT_VARBITS.contains(varbitId);

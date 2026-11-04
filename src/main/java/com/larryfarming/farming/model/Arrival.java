@@ -1,6 +1,7 @@
 package com.larryfarming.farming.model;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * One place on the trip: somewhere the player travels to, and every patch they work
@@ -20,6 +21,8 @@ import lombok.Getter;
  * farm and Monastery bushes share one cloak but sit 150 tiles apart, so they are two
  * arrivals.
  */
+@Getter
+@RequiredArgsConstructor
 public enum Arrival {
 
     // --- Kourend --------------------------------------------------------------
@@ -177,7 +180,7 @@ public enum Arrival {
          * @param upstairs whether the bank is on another floor
          */
         public static BankProximity of(int tiles, boolean upstairs) {
-            int cost = upstairs ? tiles + FLOOR_CHANGE_TILES : tiles;
+            int cost = costInTiles(tiles, upstairs);
             if (cost <= 5) {
                 return AT_ARRIVAL;
             }
@@ -186,19 +189,17 @@ public enum Arrival {
             }
             return cost <= 90 ? FAR : NONE;
         }
+
+        /** A bank detour's walked tiles with {@link #FLOOR_CHANGE_TILES} added when it changes floor. */
+        public static int costInTiles(int tiles, boolean upstairs) {
+            return upstairs ? tiles + FLOOR_CHANGE_TILES : tiles;
+        }
     }
 
     /**
      * Player-facing, written to sit mid-sentence: "travel to the Farming Guild". A caller
      * wanting a heading capitalises and strips the article.
      */
-    @Getter
     private final String displayName;
-    @Getter
     private final BankProximity bank;
-
-    Arrival(String displayName, BankProximity bank) {
-        this.displayName = displayName;
-        this.bank = bank;
-    }
 }

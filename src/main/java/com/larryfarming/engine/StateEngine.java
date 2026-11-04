@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Holds the logged-in account's state: the {@link PlayerState} read from game events, and
@@ -82,19 +83,16 @@ public class StateEngine {
     // ---------------------------------------------------------------
 
     /** The account as the client reports it at login. Creates the state on a first login. */
-    public void onLogin(Map<String, EventApplier.SkillSnapshot> skills, List<String> completedQuests, List<String> startedQuests,
-                        List<ItemStack> inventory, Map<EquipmentSlot, ItemStack> equipment) {
+    public void onLogin(Map<String, SkillState> skills, List<ItemStack> inventory, Map<EquipmentSlot, ItemStack> equipment) {
         if (playerState == null) {
             playerState = new PlayerState();
         }
-        EventApplier.applyLoginState(playerState, skills, completedQuests, startedQuests, inventory, equipment);
+        EventApplier.applyLoginState(playerState, skills, inventory, equipment);
         afterEvent();
     }
 
     public void onStatChanged(String skillName, long xp, int level) {
-        if (playerState == null) return;
-        EventApplier.applyStatChanged(playerState, skillName, xp, level);
-        afterEvent();
+        change(() -> EventApplier.applyStatChanged(playerState, skillName, xp, level));
     }
 
     /** Applies a change to the player state, if an account is loaded. */
@@ -135,14 +133,8 @@ public class StateEngine {
 
     /** "3 x Guam seed, 1 x Whiteberry seed", for the seed box debug lines. */
     private static String tally(List<ItemStack> box) {
-        StringBuilder out = new StringBuilder();
-        for (ItemStack stack : box) {
-            if (out.length() > 0) {
-                out.append(", ");
-            }
-            out.append(stack.getQuantity()).append(" x ").append(stack.getName());
-        }
-        return out.length() == 0 ? "nothing" : out.toString();
+        return box.isEmpty() ? "nothing"
+                : box.stream().map(stack -> stack.getQuantity() + " x " + stack.getName()).collect(Collectors.joining(", "));
     }
 
     /**

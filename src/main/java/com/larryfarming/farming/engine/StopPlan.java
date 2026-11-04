@@ -6,6 +6,7 @@ import com.larryfarming.snapshot.FarmingSkipReason;
 import java.util.Collections;
 import java.util.Set;
 import lombok.Value;
+import lombok.With;
 
 /**
  * What to do about one stop on a run: how to get there, or why not to bother.
@@ -35,6 +36,7 @@ public class StopPlan {
     Outcome outcome;
 
     /** The route to take, or null when not visiting. */
+    @With
     TravelOption route;
 
     /**
@@ -66,12 +68,14 @@ public class StopPlan {
      * <p>Carried whenever it is known, including on {@link FarmingSkipReason#NO_SEED}
      * skips: a patch can be both growing and short of a seed for the next planting.
      */
+    @With
     long readyAtEpochSec;
 
     /**
      * What the chosen route leans on, with any "or" already decided. The packing list is
      * built from this. Empty when not visiting or when the route asks for nothing.
      */
+    @With
     Set<Capability> needs;
 
     /**
@@ -79,6 +83,7 @@ public class StopPlan {
      * a route that names its own item, and null when not visiting.
      * It decides whether the bag packs a tablet or runes.
      */
+    @With
     TeleportMeans teleport;
 
     /** A skip for a reason found in the ground or the stock, after the route was settled. */

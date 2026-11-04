@@ -276,23 +276,16 @@ public class IconProvider
 	}
 
 	/**
-	 * An item sprite at a fixed size, greyed out for gear the player has not earned yet.
-	 *
-	 * @param size   width and height in pixels
-	 * @param earned false to render in greyscale
-	 */
-	public ImageIcon getGearIcon(int itemId, int size, boolean earned)
-	{
-		return getGearIcon(itemId, size, earned, false);
-	}
-
-	/**
-	 * The same, with the option of cropping the sprite's transparent margin first.
+	 * An item sprite at a fixed size, greyed out for gear the player has not earned yet,
+	 * with the option of cropping the sprite's transparent margin first.
 	 *
 	 * <p>Cropping keeps a small icon legible by spending its pixels on the art. Use it only
 	 * for a row showing one item at a time: cropping gives each sprite its own scale, which
 	 * breaks a gear grid where a ring should look smaller than a cape.
 	 *
+	 * @param itemId     the item to draw
+	 * @param size       width and height in pixels
+	 * @param earned     false to render in greyscale
 	 * @param fillSquare true to crop the transparent margin away before scaling
 	 */
 	public ImageIcon getGearIcon(int itemId, int size, boolean earned, boolean fillSquare)
@@ -396,18 +389,7 @@ public class IconProvider
 		// restyles the same instance, since labels already hold it.
 		ImageIcon icon = new ImageIcon(sprite);
 		cache.put(cacheKey, icon);
-		if (!held)
-		{
-			styleWhenLoaded(icon, sprite, ImageUtil::grayscaleImage);
-		}
-		else if (sprite instanceof AsyncBufferedImage)
-		{
-			Runnable repaint = onImageLoaded;
-			if (repaint != null)
-			{
-				((AsyncBufferedImage) sprite).onLoaded(() -> SwingUtilities.invokeLater(repaint));
-			}
-		}
+		styleWhenLoaded(icon, sprite, held ? UnaryOperator.identity() : ImageUtil::grayscaleImage);
 		return icon;
 	}
 

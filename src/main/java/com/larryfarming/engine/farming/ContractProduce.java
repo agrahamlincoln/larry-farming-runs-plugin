@@ -1,5 +1,9 @@
 package com.larryfarming.engine.farming;
 
+import com.larryfarming.data.Tables;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Decodes the farming contract varbit (7963) to the {@link Crop} the contract asks for.
  *
@@ -10,29 +14,20 @@ package com.larryfarming.engine.farming;
 public final class ContractProduce {
 
     /** Indexed by varbit value; 0 is the empty contract slot. */
-    private static final Crop[] BY_VARBIT_VALUE = {
-        null,
-        // 1-6: bushes
-        Crop.REDBERRIES, Crop.CADAVABERRIES, Crop.DWELLBERRIES, Crop.JANGERBERRIES,
-        Crop.WHITEBERRIES, Crop.POISON_IVY,
-        // 7-11: trees
-        Crop.OAK, Crop.WILLOW, Crop.MAPLE, Crop.YEW, Crop.MAGIC,
-        // 12-19: fruit trees
-        Crop.APPLE, Crop.BANANA, Crop.ORANGE, Crop.CURRY, Crop.PINEAPPLE, Crop.PAPAYA,
-        Crop.PALM, Crop.DRAGONFRUIT,
-        // 20-33: herbs
-        Crop.GUAM, Crop.MARRENTILL, Crop.TARROMIN, Crop.HARRALANDER, Crop.RANARR,
-        Crop.TOADFLAX, Crop.IRIT, Crop.AVANTOE, Crop.KWUARM, Crop.SNAPDRAGON,
-        Crop.CADANTINE, Crop.LANTADYME, Crop.DWARF_WEED, Crop.TORSTOL,
-        // 34-39: flowers
-        Crop.MARIGOLD, Crop.ROSEMARY, Crop.NASTURTIUM, Crop.WOAD, Crop.LIMPWURT,
-        Crop.WHITE_LILY,
-        // 40-47: allotments
-        Crop.POTATO, Crop.ONION, Crop.CABBAGE, Crop.TOMATO, Crop.SWEETCORN,
-        Crop.STRAWBERRY, Crop.WATERMELON, Crop.SNAPE_GRASS,
-        // 48-51: cacti and the special trees
-        Crop.CACTUS, Crop.POTATO_CACTUS, Crop.REDWOOD, Crop.CELASTRUS,
-    };
+    private static final List<Crop> BY_VARBIT_VALUE = load();
+
+    /** The table lists every value from 1 in order, so a missing or out-of-order value fails at load. */
+    private static List<Crop> load() {
+        List<Crop> crops = new ArrayList<>();
+        crops.add(null);
+        for (Tables.Row row : Tables.read("/com/larryfarming/contract-produce.tsv", 2)) {
+            if (row.integer(0) != crops.size()) {
+                throw row.error("expected value " + crops.size());
+            }
+            crops.add(row.constant(Crop.class, 1));
+        }
+        return crops;
+    }
 
     private ContractProduce() {
     }
@@ -44,6 +39,6 @@ public final class ContractProduce {
      *     know, so a new contract tier is never read as the wrong crop
      */
     public static Crop byVarbitValue(int value) {
-        return value > 0 && value < BY_VARBIT_VALUE.length ? BY_VARBIT_VALUE[value] : null;
+        return value > 0 && value < BY_VARBIT_VALUE.size() ? BY_VARBIT_VALUE.get(value) : null;
     }
 }

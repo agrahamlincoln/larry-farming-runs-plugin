@@ -2,6 +2,7 @@ package com.larryfarming.farming.detection;
 
 import com.larryfarming.model.PlayerState;
 import java.util.Set;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.VarbitID;
 
 /**
@@ -23,6 +24,12 @@ public final class BottomlessBucket {
 
     /** The leprechaun's bucket varbit, read at login with the rest of its store. */
     public static final Set<Integer> STORED_VARBITS = Set.of(STORED_TYPE_VARBIT);
+
+    /**
+     * The bucket empty and filled: one item in two states, either of which counts as owning
+     * it. The leprechaun holds one, so a second is never taken.
+     */
+    public static final Set<Integer> ITEM_IDS = Set.of(ItemID.BOTTOMLESS_COMPOST_BUCKET, ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED);
 
     private BottomlessBucket() {
     }

@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import lombok.Value;
 import net.runelite.api.ChatMessageType;
 
 /**
@@ -86,28 +87,13 @@ public final class SeedBoxChat
 	 * name that may be plural. The caller resolves it against the candidates it holds, which
 	 * for a seed leaving the box are the box's own contents.
 	 */
-	public static final class SeedBoxMove
+	@Value
+	public static class SeedBoxMove
 	{
-		private final String itemName;
-		private final int quantity;
-
-		public SeedBoxMove(String itemName, int quantity)
-		{
-			this.itemName = itemName;
-			this.quantity = quantity;
-		}
-
 		/** The item as the game named it, which may be lower-case or plural. */
-		public String getItemName()
-		{
-			return itemName;
-		}
-
+		String itemName;
 		/** How many moved: positive into the box, negative out of it. Never zero. */
-		public int getQuantity()
-		{
-			return quantity;
-		}
+		int quantity;
 	}
 
 	/**

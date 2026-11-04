@@ -198,10 +198,7 @@ final class CatalogueLoader {
                     openSite(row);
                     finishStop();
                     row.requireWidth(3);
-                    books = new ArrayList<>();
-                    for (String book : row.text(1).split(",")) {
-                        books.add(Enum.valueOf(Spellbook.class, book));
-                    }
+                    books = row.constants(Spellbook.class, 1);
                     String[] keys = row.text(2).split(",");
                     PatchRef[] patches = new PatchRef[keys.length];
                     for (int i = 0; i < keys.length; i++) {
@@ -219,16 +216,11 @@ final class CatalogueLoader {
                     break;
                 case "gate":
                     stop(row).gate(UnlockGate.builder().skill(row.requireWidth(7).optionalConstant(Skill.class, 1)).level(row.integer(2))
-                            .boostedFromLevel(row.integer(3)).recommendedFromLevel(row.integer(4)).diaryArea(nullable(row, 5))
-                            .diaryTier(nullable(row, 6)).build());
+                            .boostedFromLevel(row.integer(3)).recommendedFromLevel(row.integer(4)).diaryArea(row.optionalText(5))
+                            .diaryTier(row.optionalText(6)).build());
                     break;
                 case "actions":
-                    String[] names = row.requireWidth(2).text(1).split(",");
-                    RunStop.StopAction[] actions = new RunStop.StopAction[names.length];
-                    for (int i = 0; i < names.length; i++) {
-                        actions[i] = Enum.valueOf(RunStop.StopAction.class, names[i]);
-                    }
-                    stop(row).actions(actions);
+                    stop(row).actions(row.requireWidth(2).constants(RunStop.StopAction.class, 1).toArray(new RunStop.StopAction[0]));
                     break;
                 case "plants":
                     stop(row).plants(row.requireWidth(2).constant(Crop.class, 1));
@@ -347,7 +339,7 @@ final class CatalogueLoader {
                 return;
             }
             PatchAttributes.Entry entry = attributes == null ? null : new PatchAttributes.Entry(attributes.flag(1, "immune"),
-                            nullable(attributes, 2), nullable(attributes, 3), nullable(attributes, 4), List.copyOf(yieldTiers),
+                            attributes.optionalText(2), attributes.optionalText(3), attributes.optionalText(4), List.copyOf(yieldTiers),
                             List.copyOf(xpTiers), attributes.flag(5, "easy"), attributes.flag(6, "reserved"));
             try {
                 sites.add(new Site(siteKey, family, siteStops, entry, claim, siteSwitch == null ? null : siteSwitch.text(1),
@@ -361,11 +353,6 @@ final class CatalogueLoader {
             xpTiers.clear();
             claim = null;
             siteSwitch = null;
-        }
-
-        private static String nullable(Tables.Row row, int column) {
-            String text = row.text(column);
-            return text.isEmpty() ? null : text;
         }
 
         private static PatchRef patch(Tables.Row row, String key) {

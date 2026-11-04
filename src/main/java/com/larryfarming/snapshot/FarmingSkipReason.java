@@ -1,5 +1,8 @@
 package com.larryfarming.snapshot;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 /**
  * Why a stop is not being visited, as a comparable value so a stop with several reasons
  * can pick the one its row carries.
@@ -8,6 +11,8 @@ package com.larryfarming.snapshot;
  * on outranks a wait that resolves itself:</b> a growing patch will be ready whether or not
  * the player is told, but an empty seed stack stays empty until they act.
  */
+@Getter
+@RequiredArgsConstructor
 public enum FarmingSkipReason {
 
     /** The seed for this patch is not in stock anywhere we can see. */
@@ -52,16 +57,8 @@ public enum FarmingSkipReason {
      */
     STANDING_CROP("keep the crop");
 
-    private final String label;
-
-    FarmingSkipReason(String label) {
-        this.label = label;
-    }
-
     /** Two or three words for a row heading, where the full clause will not fit. */
-    public String getLabel() {
-        return label;
-    }
+    private final String label;
 
     /**
      * The more worth saying of two reasons for the same stop. Either argument may be null;

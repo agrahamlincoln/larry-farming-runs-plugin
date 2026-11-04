@@ -7,6 +7,7 @@ import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Turns a planned run into the flat, already-decided shape the panel renders.
@@ -191,8 +192,7 @@ public final class FarmingAdviceBuilder {
         // basket either way.
         CarryPlanner.BasketPlace basket = CarryPlanner.basketPlace(plans, cropFor, state, inputs);
         InventorySim.Plan bag = InventorySim.plan(InventoryDemands.forTrip(made, plans, cropFor, inputs, state, resolver),
-                InventoryDemands.fixturesFor(state, resolver, plans, inputs, basket == CarryPlanner.BasketPlace.BAG),
-                InventoryDemands.POTS_ARE_KEPT);
+                InventoryDemands.fixturesFor(state, resolver, plans, inputs, basket == CarryPlanner.BasketPlace.BAG));
         List<SlotAdvice> loadout = LoadoutPlanner.plan(state, CarryPlanner.staffWielded(plans, state, resolver),
                 teleportsByExplorersRing(plans), basket == CarryPlanner.BasketPlace.BACK);
         WithdrawalPlanner.Withdrawals withdrawals = WithdrawalPlanner.forBankStops(bag, made,
@@ -295,9 +295,10 @@ public final class FarmingAdviceBuilder {
         // knowing only its own stops in its own order; the circuit interleaves families
         // and lifts best homes forward, so a rung leaning on a patch can now come before it.
         // The Monastery bushes move first, so the leg they start is routed from them. Once a
-        // trip is underway, it then starts from the stop the player is already heading to.
+        // trip is underway, the stops on screen keep their order, from the first still
+        // to visit.
         Itinerary.Trip trip = RunPlanning.replanAcrossTheCircuit(headingFirst(
-                CloakToTheRings.bushesBeforeTheFirstRing(Itinerary.merge(planned, state, planFor), resolver, state), inputs), planner, state);
+                CloakToTheRings.bushesBeforeTheFirstRing(Itinerary.merge(planned, state), resolver, state), inputs), planner, state);
         // The respawn suggestion follows the family the ranking puts first.
         return drawTrip(trip, true, runName, due.get(0).getRun(), plantedIn, seeds, state, planner, inputs, planFor);
     }
@@ -369,32 +370,51 @@ public final class FarmingAdviceBuilder {
     }
 
     /**
-     * The trip walked on from the arrival the player is already on the way to. A run that
-     * comes due partway round takes its seat on the circuit, which can lie behind the player,
-     * and would turn them round. Rotated rather than moved, so the stops behind the player go
-     * to the end. Once the player works the heading stop, the next plan heads for the stop
-     * after it, and the trip starts from that one. Before the trip is underway the circuit's
-     * order stands.
+     * The trip walked on in the order the plan on screen gave, from the first stop on it
+     * still to visit. Before the trip is underway the circuit's order stands.
+     *
+     * <p>The stop on screen first can be one just worked, and a worked stop can move its
+     * neighbours on the trip: Kastori follows Ortus Farm while its cheapest route starts from
+     * that patch, and once the patch is done that route is gone and Kastori's place on the
+     * trip can change. So the trip starts at the first stop on screen still to visit, never
+     * at a worked one. The stops on screen also keep their order, so a stop whose circuit
+     * seat lies earlier, such as a run that comes due partway round, never jumps ahead of the
+     * player's plan and what they packed for it. A seat behind the player goes to the end
+     * rather than turning them round. Stops match by arrival, since two rows can share a
+     * name.
      */
     private static Itinerary.Trip headingFirst(Itinerary.Trip trip, FarmingInputs inputs) {
+        List<String> ahead = inputs.getAhead();
         List<List<Integer>> visits = new ArrayList<>(trip.getVisits());
-        for (int i = 1; i < visits.size(); i++) {
-            if (StopRowWriter.nameOfGroup(visits.get(i), trip.getPlans()).equals(inputs.getHeading())
-                    && underway(visits, trip.getPlans(), trip.getRunFor(), inputs)) {
-                Collections.rotate(visits, -i);
-                return trip.revisited(visits);
+        if (ahead.isEmpty() || !underway(visits, trip.getPlans(), trip.getRunFor(), inputs)) {
+            return trip;
+        }
+        // The seats the stops on screen hold now, refilled with those stops in screen order.
+        // A plan has one row per arrival, so no two stops share a place on screen.
+        List<Integer> seats = new ArrayList<>();
+        TreeMap<Integer, List<Integer>> byPlaceOnScreen = new TreeMap<>();
+        for (int i = 0; i < visits.size(); i++) {
+            List<Integer> group = visits.get(i);
+            int placeOnScreen = ahead.indexOf(trip.getPlans().get(group.get(0)).getStop().getArrival().name());
+            if (placeOnScreen >= 0 && !StopRowWriter.visitsIn(group, trip.getPlans()).isEmpty()) {
+                seats.add(i);
+                byPlaceOnScreen.put(placeOnScreen, group);
             }
         }
-        return trip;
+        if (seats.isEmpty()) {
+            return trip;
+        }
+        Iterator<List<Integer>> inScreenOrder = byPlaceOnScreen.values().iterator();
+        for (int seat : seats) {
+            visits.set(seat, inScreenOrder.next());
+        }
+        Collections.rotate(visits, -seats.get(0));
+        return trip.revisited(visits);
     }
 
     /** Run ids as the snapshot speaks them, immutable, in the given (circuit) order. */
     private static List<String> namesOf(Collection<RunId> runs) {
-        List<String> names = new ArrayList<>(runs.size());
-        for (RunId run : runs) {
-            names.add(run.name());
-        }
-        return List.copyOf(names);
+        return runs.stream().map(RunId::name).collect(Collectors.toUnmodifiableList());
     }
 
     /**
@@ -563,10 +583,7 @@ public final class FarmingAdviceBuilder {
         if (unticked.isEmpty()) {
             return "";
         }
-        List<String> names = new ArrayList<>(unticked.size());
-        for (Crop crop : unticked) {
-            names.add(CropNames.inSentence(crop));
-        }
+        List<String> names = unticked.stream().map(CropNames::inSentence).collect(Collectors.toList());
         return "You carry " + LookOnce.joined(names, "and") + " seeds. Turn them on under "
                 + RunId.HERB.getDisplayName() + " to plant them.";
     }
@@ -574,11 +591,8 @@ public final class FarmingAdviceBuilder {
     /** Whether any visit plants a herb patch the rotation fills. */
     private static boolean plantsTheHerbRotation(List<StopPlan> plans) {
         for (StopPlan plan : plans) {
-            if (!plan.isVisit() || !plan.getStop().isPlanting() || plan.getStop().isFixedCrop()) {
-                continue;
-            }
-            FarmingWorldMap.PatchDef def = plan.getStop().primaryPatch().resolve();
-            if (def != null && def.getType() == PatchType.HERB) {
+            if (plan.isVisit() && plan.getStop().isPlanting() && !plan.getStop().isFixedCrop()
+                    && plan.getStop().patchType() == PatchType.HERB) {
                 return true;
             }
         }

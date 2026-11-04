@@ -45,13 +45,15 @@ public final class TravelWatch {
     private static final Set<Rune> ELEMENTAL = EnumSet.of(Rune.AIR, Rune.WATER, Rune.EARTH, Rune.FIRE);
 
     /**
-     * The travel items a teleport can use up: jewellery crumbling on its last charge, a
-     * basalt or tablet broken, an ectophial emptied. A cape, a cloak or a ring of unlimited
-     * use leaves the bag only when the player puts it somewhere, never on a teleport.
+     * The travel items a teleport can use up: jewellery crumbling or going uncharged on its
+     * last charge, a basalt or tablet broken, an ectophial emptied. A cape, a cloak, an
+     * eternal glory or a ring of unlimited use leaves the bag only when the player puts it
+     * somewhere, never on a teleport.
      */
     private static final Set<Capability> USED_UP = EnumSet.of(
             Capability.RING_OF_DUELING, Capability.GAMES_NECKLACE, Capability.COMBAT_BRACELET,
-            Capability.DIGSITE_PENDANT, Capability.RING_OF_WEALTH, Capability.SKILLS_NECKLACE,
+            Capability.DIGSITE_PENDANT, Capability.RING_OF_WEALTH, Capability.AMULET_OF_GLORY,
+            Capability.SKILLS_NECKLACE,
             Capability.SLAYER_RING, Capability.NECKLACE_OF_PASSAGE,
             Capability.TELEPORT_CRYSTAL, Capability.ECTOPHIAL, Capability.ICY_BASALT, Capability.STONY_BASALT, Capability.BRIMHAVEN_TABLET);
 
@@ -87,11 +89,6 @@ public final class TravelWatch {
         carriedBefore = null;
         bankBefore = null;
         regionBefore = null;
-    }
-
-    /** One game tick, for a next stop whose route lands nowhere a teleport could. */
-    public boolean tick(PlayerState state, String heading) {
-        return tick(state, heading, null);
     }
 
     /**

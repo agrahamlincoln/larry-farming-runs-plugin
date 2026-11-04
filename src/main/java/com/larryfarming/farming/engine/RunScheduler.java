@@ -80,8 +80,7 @@ public final class RunScheduler {
     private static List<PatchRef> patchesFor(CropData data) {
         List<PatchRef> matching = new ArrayList<>(2);
         for (PatchRef patch : CONTRACT_PATCHES) {
-            FarmingWorldMap.PatchDef def = patch.resolve();
-            if (def != null && def.getType() == data.getPatchType()) {
+            if (patch.type() == data.getPatchType()) {
                 matching.add(patch);
             }
         }
@@ -159,7 +158,7 @@ public final class RunScheduler {
         if (RunAvailability.of(gate, state) == CapabilityState.LACK) {
             return build(run, RunStatus.LOCKED, RunAvailability.shortfall(gate, state), 0L, 0, false);
         }
-        if (waitsForTheHerbLevel(run, inputs.getPreferences(), state)) {
+        if (run.getId() == RunId.HERB && herbRunsWaitForTheLevel(inputs.getPreferences(), state)) {
             return build(run, RunStatus.PENDING, "from " + Preset.HERB_RUN_LEVEL + " Farming", 0L, 0, false);
         }
         if (run.getId() == RunId.CONTRACT) {
@@ -220,11 +219,6 @@ public final class RunScheduler {
         long readyAt = !waits ? tally.earliestReady : tally.undated > 0 ? 0L : tally.latestReady;
         return build(run, RunStatus.PENDING, pendingDetail(tally, readyAt, waits, nowEpochSec),
                 readyAt, 0, tally.predicted, unfinished, false);
-    }
-
-    /** Whether the herb run waits for {@link Preset#HERB_RUN_LEVEL} Farming. */
-    static boolean waitsForTheHerbLevel(FarmingRun run, FarmingPreferences prefs, PlayerState state) {
-        return run.getId() == RunId.HERB && herbRunsWaitForTheLevel(prefs, state);
     }
 
     /** Whether the player's herb runs wait for {@link Preset#HERB_RUN_LEVEL} Farming. */
@@ -307,7 +301,11 @@ public final class RunScheduler {
                 return null;
             }
             anyStop = true;
-            if (plan.getSkipReason() == FarmingSkipReason.NO_FAIRY_RING_ROUTE && aRingWouldOpenIt(stop, state, resolver)) {
+            // HAVE only: a ring rung that would certainly reach the stop if the player had a
+            // way to stand at a ring. Stricter than the planner's own test, which also
+            // accepts a network it cannot read yet.
+            if (plan.getSkipReason() == FarmingSkipReason.NO_FAIRY_RING_ROUTE
+                    && RunPlanner.withAwayToAring(stop, state, resolver) == CapabilityState.HAVE) {
                 anyForWantOfAring = true;
             } else if (!shutByItsGate(stop, state, resolver)) {
                 onlyTheRing = false;
@@ -317,24 +315,6 @@ public final class RunScheduler {
             return null;
         }
         return anyForWantOfAring && onlyTheRing ? FarmingSkipReason.NO_FAIRY_RING_ROUTE.getLabel() : NO_ROUTE_DETAIL;
-    }
-
-    /**
-     * Whether a fairy ring rung would certainly reach this stop if the player had a way to
-     * stand at a ring. Stricter than the planner's own test, which also accepts a network
-     * it cannot read yet.
-     */
-    private static boolean aRingWouldOpenIt(RunStop stop, PlayerState state, CapabilityResolver resolver) {
-        Requirement approach = FarmingCatalogue.toAfairyRing();
-        for (TravelOption option : stop.getTravel()) {
-            if (option.isCertainOnly() || !option.getRequires().contains(approach)) {
-                continue;
-            }
-            if (resolver.evaluateGranting(option.getRequires(), approach, state, Collections.emptyMap()) == CapabilityState.HAVE) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /** Whether the stop's access gate definitely keeps the player out, whatever the route. */
@@ -749,9 +729,11 @@ public final class RunScheduler {
     private static void classify(PatchPrediction prediction, RunStop stop,
             FarmingPreferences prefs, PlayerState player, Tally tally, long nowEpochSec, boolean seedless) {
         CropState state = prediction.getState();
+        PatchWork.Act act = PatchWork.at(prediction, stop, nowEpochSec);
+        PatchType type = stop.patchType();
         // An anima plant dies at the end of its time, seen or not, and is cleared only to
         // plant the next one: with no seed for that, it is ground with nothing to plant.
-        if (stop.patchType() == PatchType.ANIMA && PatchWork.at(prediction, stop, nowEpochSec) == PatchWork.Act.CLEAR_DEAD) {
+        if (type == PatchType.ANIMA && act == PatchWork.Act.CLEAR_DEAD) {
             if (seedless) {
                 tally.empty++;
                 tally.seedless++;
@@ -776,12 +758,12 @@ public final class RunScheduler {
         // A checked fruit tree the run replants wants a sapling as bare ground does. One still
         // waiting on its check is worth the trip for the check alone, and so is ripe fruit the
         // player picks in passing, so neither is counted.
-        if (prefs.replantsGrownTrees() && stop.patchType() == PatchType.FRUIT_TREE && prediction.isFellable()
-                && !(prefs.picksFruitInPassing() && PatchWork.at(prediction, stop, nowEpochSec) == PatchWork.Act.HARVEST)) {
+        if (prefs.replantsGrownTrees() && type == PatchType.FRUIT_TREE && prediction.isFellable()
+                && !(prefs.picksFruitInPassing() && act == PatchWork.Act.HARVEST)) {
             tally.grownTrees++;
         }
         // A ripe or unchecked bush counts as ready below, though it comes out after.
-        if (PatchWork.standsEmpty(prediction, stop, nowEpochSec) || PatchWork.at(prediction, stop, nowEpochSec) == null
+        if (PatchWork.standsEmpty(prediction, stop, nowEpochSec) || act == null
                         && PatchWork.comesOut(prediction, stop, prefs, player)) {
             // An empty patch is as good a reason to go as a finished crop; see
             // RunStatus.DUE. A checked tree lands here rather than under "ready": it
@@ -802,13 +784,13 @@ public final class RunScheduler {
                 // Named apart from bare ground, which is all "empty" means to the player.
                 if (prediction.isFellable()) {
                     // A calquat bears fruit like a fruit tree, so picked bare it is picked.
-                    if (stop.patchType() == PatchType.FRUIT_TREE || stop.patchType() == PatchType.CALQUAT) {
+                    if (type == PatchType.FRUIT_TREE || type == PatchType.CALQUAT) {
                         tally.picked++;
                     } else {
                         tally.checked++;
                     }
-                } else if (prediction.getCrop() != Crop.WEEDS && (stop.patchType() == PatchType.BUSH
-                                || stop.patchType() == PatchType.CACTUS)) {
+                } else if (prediction.getCrop() != Crop.WEEDS && (type == PatchType.BUSH
+                                || type == PatchType.CACTUS)) {
                     tally.picked++;
                 }
             }
@@ -817,7 +799,7 @@ public final class RunScheduler {
         if (prediction.isIdle()) {
             return;
         }
-        if (PatchWork.at(prediction, stop, nowEpochSec) != null) {
+        if (act != null) {
             tally.ready++;
             tally.actionable++;
             return;
@@ -975,7 +957,7 @@ public final class RunScheduler {
     private static FarmingRunStatus build(FarmingRun run, RunStatus status, String detail,
             long readyAt, int actionable, boolean predicted, boolean tripUnfinished, boolean aboutThePatch) {
         return new FarmingRunStatus(run.getId().name(), run.getId().getDisplayName(),
-                status.name(), detail, readyAt, actionable, RunIcons.of(run.getId()), predicted, tripUnfinished, aboutThePatch);
+                status.name(), detail, readyAt, actionable, run.getId().getIconItemId(), predicted, tripUnfinished, aboutThePatch);
     }
 
     /** Due now, one patch to work, with the act named in {@code detail}. */

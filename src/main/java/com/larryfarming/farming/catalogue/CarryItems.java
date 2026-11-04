@@ -31,12 +31,10 @@ public final class CarryItems {
         private final String name;
 
         /**
-         * @param itemIds every id that counts as having this, the first being the one drawn
+         * @param itemIds every id that counts as having this, the first being the one drawn;
+         *     never empty, since the table refuses a row without ids
          */
         Carry(String name, int... itemIds) {
-            if (itemIds.length == 0) {
-                throw new IllegalArgumentException("no item ids for " + name);
-            }
             this.name = name;
             this.itemIds = itemIds;
         }

@@ -23,7 +23,7 @@ dependencies {
 }
 
 group = 'com.larryfarming'
-version = '1.2.0'
+version = '1.3.0'
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'

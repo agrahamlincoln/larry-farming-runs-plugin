@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Plans the farm runs for the account the {@link StateEngine} holds, and publishes the advice
@@ -419,15 +420,21 @@ public class FarmingPlanner implements EngineListener {
 
     /** The stop this advice sends the player to next, or null for none. */
     private static FarmingStopAdvice headingStop(FarmingAdvice advice) {
-        if (advice == null || advice.getStops() == null) {
-            return null;
-        }
-        for (FarmingStopAdvice stop : advice.getStops()) {
-            if (stop.getKind() == FarmingStopAdvice.Kind.PATCH && stop.getOutcome() == FarmingStopAdvice.Outcome.VISIT) {
-                return stop;
+        List<FarmingStopAdvice> visits = visits(advice);
+        return visits.isEmpty() ? null : visits.get(0);
+    }
+
+    /** The patch stops this advice sends the player to, in its order. */
+    private static List<FarmingStopAdvice> visits(FarmingAdvice advice) {
+        List<FarmingStopAdvice> visits = new ArrayList<>();
+        if (advice != null && advice.getStops() != null) {
+            for (FarmingStopAdvice stop : advice.getStops()) {
+                if (stop.getKind() == FarmingStopAdvice.Kind.PATCH && stop.getOutcome() == FarmingStopAdvice.Outcome.VISIT) {
+                    visits.add(stop);
+                }
             }
         }
-        return null;
+        return visits;
     }
 
     /** {@link #flushIfDirty()} against a stated second rather than the clock. */
@@ -527,7 +534,7 @@ public class FarmingPlanner implements EngineListener {
                 .withOfferedBanksHidden(offeredBanksHidden)
                 .withPackedThisTrip(tripRecord.getPacked())
                 .withTravelTaken(travelWatch.taken())
-                .withHeading(nameOf(headingStop(advice)));
+                .withAhead(visits(advice).stream().map(FarmingStopAdvice::getArrival).collect(Collectors.toList()));
     }
 
     /**

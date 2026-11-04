@@ -26,7 +26,10 @@ leg	reach:ARCEUUS_LIBRARY	34	CONSUMABLE
 leg	NECKLACE_OF_PASSAGE	39	CHARGE
 leg	ARDOUGNE_CLOAK_1	51	FREE
 leg	all(VARROCK_DIARY_MEDIUM,reach:GRAND_EXCHANGE)	82	CONSUMABLE
+leg	AMULET_OF_GLORY	90	CHARGE
+leg	ECTOPHIAL	92	FREE
 leg	reach:VARROCK	116	CONSUMABLE
+leg	COMBAT_BRACELET	123	CHARGE
 approach	SPIRIT_TREE_DEPARTURE
 leg	POH_SPIRIT_TREE	0	FREE
 leg	all(VARROCK_DIARY_MEDIUM,reach:GRAND_EXCHANGE)	30	CONSUMABLE
@@ -166,6 +169,8 @@ walks	60	FREE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north to the patch
 banks	216	CANIFIS
 walks	40	FREE
+to	SALVE_GRAVEYARD	then run east to the patch
+walks	181	CONSUMABLE
 noAlternative
 stop	LUNAR	MORYTANIA_HERB
 at	CANIFIS
@@ -189,6 +194,8 @@ walks	56	CONSUMABLE
 via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west to the patch
 banks	272	CANIFIS
 walks	60	FREE
+to	SALVE_GRAVEYARD	then run east to the patch
+walks	181	CONSUMABLE
 noAlternative
 
 site	FALADOR_HERB	HERB
@@ -205,6 +212,8 @@ via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
 walks	20	CHARGE
 via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Spirit tree to the Grand Tree, then on to Port Sarim
 walks	55	FREE
+via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
+walks	95	CHARGE
 to	FALADOR	then run south-east to the farm
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
@@ -219,6 +228,8 @@ via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
 walks	20	CHARGE
 via	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Construction cape to your house spirit tree, then Port Sarim
 walks	55	FREE
+via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
+walks	95	CHARGE
 to	FALADOR	then run south-east to the farm
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
@@ -230,7 +241,7 @@ attributes	-	-	-	-	-	-
 yieldTier	Kandarin	Medium	5
 yieldTier	Kandarin	Hard	10
 yieldTier	Kandarin	Elite	15
-stop	ARCEUUS,LUNAR	CATHERBY_HERB
+stop	ARCEUUS LUNAR	CATHERBY_HERB
 at	CATHERBY
 to	CATHERBY	-
 banks	40	CATHERBY
@@ -245,7 +256,7 @@ noFallbackGiven
 
 site	ARDOUGNE_HERB	HERB
 switch	visitArdougneHerb	Ardougne
-stop	ARCEUUS,LUNAR	ARDOUGNE_HERB
+stop	ARCEUUS LUNAR	ARDOUGNE_HERB
 at	ARDOUGNE_FARM
 via	ARDOUGNE_CLOAK_4	Ardougne cloak 4 to the farm patch
 banks	175	ARDOUGNE_NORTH
@@ -294,6 +305,8 @@ walks	74	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
+to	KOUREND_CASTLE	then run south-east to the farm
+walks	185	CONSUMABLE
 skipIfUnreachable
 stop	LUNAR	HOSIDIUS_HERB
 at	HOSIDIUS
@@ -311,6 +324,8 @@ walks	74	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
+to	KOUREND_CASTLE	then run south-east to the farm
+walks	185	CONSUMABLE
 skipIfUnreachable
 
 site	HARMONY_HERB	HERB
@@ -331,7 +346,7 @@ skipIfUnreachable
 gate	-	0	0	0	Morytania	Elite
 
 site	SNAPE_GRASS	HERB
-stop	ARCEUUS,LUNAR	CATHERBY_NORTH_ALLOTMENT
+stop	ARCEUUS LUNAR	CATHERBY_NORTH_ALLOTMENT
 at	CATHERBY
 to	CATHERBY	-
 banks	40	CATHERBY
@@ -347,7 +362,7 @@ plants	SNAPE_GRASS
 optional	Harvested over several runs alongside the Catherby herb patch
 
 site	WHITE_LILY	HERB
-stop	ARCEUUS,LUNAR	CATHERBY_FLOWER
+stop	ARCEUUS LUNAR	CATHERBY_FLOWER
 at	CATHERBY
 to	CATHERBY	-
 banks	40	CATHERBY
@@ -378,8 +393,10 @@ walks	68	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	68	CHARGE
+to	KOUREND_CASTLE	then run south-east to the farm
+walks	179	CONSUMABLE
 skipIfUnreachable
-actions	HARVEST,PLANT
+actions	HARVEST PLANT
 plants	LIMPWURT
 optional	One seed a run, no compost needed
 stop	LUNAR	HOSIDIUS_FLOWER
@@ -398,23 +415,27 @@ walks	68	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	68	CHARGE
+to	KOUREND_CASTLE	then run south-east to the farm
+walks	179	CONSUMABLE
 skipIfUnreachable
-actions	HARVEST,PLANT
+actions	HARVEST PLANT
 plants	LIMPWURT
 optional	One seed a run, no compost needed
 
 site	POTATO_CACTUS	HERB
-stop	ARCEUUS,LUNAR	AL_KHARID_CACTUS
+stop	ARCEUUS LUNAR	AL_KHARID_CACTUS
 at	AL_KHARID
 via	RING_OF_DUELING	Ring of dueling to Emir's Arena
 banks	105	AL_KHARID
 walks	34	CHARGE
+via	AMULET_OF_GLORY	Amulet of glory to Al Kharid, then run north-east
+walks	43	CHARGE
 noFallbackGiven
 plants	POTATO_CACTUS
 optional	Replanted each visit for its health check
 
 site	WHITEBERRIES	HERB
-stop	ARCEUUS,LUNAR	ARDOUGNE_MONASTERY_BUSH
+stop	ARCEUUS LUNAR	ARDOUGNE_MONASTERY_BUSH
 at	ARDOUGNE_MONASTERY
 via	ARDOUGNE_CLOAK_1	Ardougne cloak to the Monastery
 banks	142	ARDOUGNE_SOUTH
@@ -422,26 +443,30 @@ walks	9	FREE
 via	all(@RING,FAIRY_RINGS)	Fairy ring DJP, then run west past the Tower of Life
 banks	98	ARDOUGNE_SOUTH
 walks	39	FREE
+to	ARDOUGNE	then run south-west to the Monastery
+walks	91	CONSUMABLE
 noFallbackGiven
 plants	WHITEBERRIES
 optional	Grows more slowly than a herb run comes round
 everyNthRun	2
 
 site	MUSHROOMS	HERB
-stop	ARCEUUS,LUNAR	MORT_MYRE_MUSHROOM
+stop	ARCEUUS LUNAR	MORT_MYRE_MUSHROOM
 at	MORT_MYRE
 accessGate	MORYTANIA_ACCESS
 to	SALVE_GRAVEYARD	then run north-east to the patch
 walks	19	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring CKS, then run east
 walks	2	FREE
+to	FENKENSTRAINS_CASTLE	then run south-west into Mort Myre
+walks	106	CONSUMABLE
 skipIfUnreachable
 plants	MUSHROOM
 optional	Grows more slowly than a herb run comes round
 everyNthRun	3
 
 site	BELLADONNA	HERB
-stop	ARCEUUS,LUNAR	DRAYNOR_MANOR_BELLADONNA
+stop	ARCEUUS LUNAR	DRAYNOR_MANOR_BELLADONNA
 at	DRAYNOR_MANOR
 to	DRAYNOR_MANOR	then run west to the patch
 walks	49	CONSUMABLE
@@ -451,13 +476,15 @@ via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch, then run east
 walks	115	CHARGE
 via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch, then run east
 walks	115	CHARGE
+via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north
+walks	116	CHARGE
 skipIfUnreachable
 plants	BELLADONNA
 optional	Grows more slowly than a herb run comes round
 everyNthRun	4
 
 site	AUBURNVALE_BELLADONNA	HERB
-stop	ARCEUUS,LUNAR	AUBURNVALE_BELLADONNA
+stop	ARCEUUS LUNAR	AUBURNVALE_BELLADONNA
 at	AUBURNVALE
 accessGate	VARLAMORE_ACCESS
 via	QUETZAL_WHISTLE	Quetzal whistle to Auburnvale, then run east
@@ -466,6 +493,8 @@ to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu
 walks	51	CONSUMABLE
 via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn Valley, then run north-east
 walks	44	FREE
+to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to Auburnvale, then run east
+walks	116	CONSUMABLE
 via	all(PENDANT_OF_ATES,ATES_STATUE_NEMUS_RETREAT)	Pendant of Ates to Nemus Retreat, then run north-east
 walks	121	CHARGE
 skipIfUnreachable
@@ -475,7 +504,7 @@ everyNthRun	4
 
 site	ORTUS_FARM	HERB
 switch	visitOrtusFarm	Ortus Farm
-stop	ARCEUUS,LUNAR	ORTUS_HERB
+stop	ARCEUUS LUNAR	ORTUS_HERB
 at	ORTUS_FARM
 via	QUETZAL_WHISTLE	Quetzal whistle to the Hunter Guild landing site, then run north
 banks	87	HUNTER_GUILD
@@ -492,6 +521,9 @@ walks	91	FREE
 to	CIVITAS_ILLA_FORTIS	then run south-west from Sunrise Palace
 banks	15	CIVITAS_ILLA_FORTIS_WEST
 walks	114	CONSUMABLE
+to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Hunter Guild, then run north
+banks	87	HUNTER_GUILD
+walks	127	CONSUMABLE
 noFallbackGiven
 optional	No fixed place in the run; weave it in
 
@@ -525,6 +557,9 @@ to	SALVE_GRAVEYARD	FAIRY_RINGS	then fairy ring CKR
 walks	129	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring CKR, south of Tai Bwo Wannai, then run north
 walks	107	FREE
+to	ARDOUGNE	then Captain Barnaby's ferry to Brimhaven, and run south to Tai Bwo Wannai
+fare	30
+walks	176	CONSUMABLE
 noFallbackGiven
 
 site	KASTORI_CALQUAT	CALQUAT
@@ -577,6 +612,8 @@ walks	81	CONSUMABLE
 via	CHRONICLE	Chronicle to the Champions' Guild
 banks	42	VARROCK_EAST
 walks	110	CHARGE
+via	AMULET_OF_GLORY	Amulet of glory to Edgeville, then run east
+walks	197	CHARGE
 skipIfUnreachable
 
 site	LUMBRIDGE_TREE	REGULAR_TREE
@@ -673,8 +710,10 @@ at	NEMUS_RETREAT
 accessGate	VARLAMORE_ACCESS
 via	all(PENDANT_OF_ATES,ATES_STATUE_NEMUS_RETREAT)	Pendant of Ates to Nemus Retreat
 walks	57	CHARGE
-via	all(QUETZAL_WHISTLE,MOUNTAIN_GUIDE)	Quetzal whistle to Quetzacalli Gorge, then the mountain guide. On your first visit, activate the statue.
+via	all(QUETZAL_WHISTLE,MOUNTAIN_GUIDE)	Quetzal whistle to Quetzacalli Gorge, then the mountain guide. If you have a pendant of Ates, activate the statue at Nemus Retreat.
 walks	44	CHARGE
+to	VARROCK	all(RENU,MOUNTAIN_GUIDE)	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to Quetzacalli Gorge, then the mountain guide. If you have a pendant of Ates, activate the statue at Nemus Retreat.
+walks	124	CONSUMABLE
 skipIfUnreachable
 
 site	BRIMHAVEN_FRUIT	FRUIT_TREE
@@ -872,7 +911,7 @@ at	FOSSIL_ISLAND_SEAWEED
 via	all(DIGSITE_PENDANT,FOSSIL_ISLAND_ZIPLINE)	Digsite pendant to the House on the Hill, then the zipline down
 via	all(DIGSITE_PENDANT,CANAL_BARGE)	Digsite pendant to the Digsite, barge to the Museum Camp, then row out and dive
 noFallbackGiven
-actions	HARVEST,COMPOST,PLANT,PAY_PROTECTION
+actions	HARVEST COMPOST PLANT PAY_PROTECTION
 plants	SEAWEED
 
 site	GUILD_CONTRACT	CONTRACT

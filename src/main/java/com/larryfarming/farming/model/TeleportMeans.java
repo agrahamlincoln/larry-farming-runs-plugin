@@ -56,26 +56,14 @@ public final class TeleportMeans {
      *
      * @param questName the quest it is locked behind, or null when only the level gates it
      * @param spriteId  the spell's icon in the game's spellbook
-     * @param runes     what one cast costs, in pairs of rune and count
+     * @param runes     what one cast costs, each rune with its count
      */
     public static TeleportMeans spell(String displayName, Spellbook spellbook, int magicLevel,
-            String questName, int spriteId, Object... runes) {
-        Map<Rune, Integer> costs = new EnumMap<>(Rune.class);
-        if (runes.length % 2 != 0) {
-            throw new IllegalArgumentException(displayName + ": runes come in rune-count pairs");
-        }
-        for (int i = 0; i < runes.length; i += 2) {
-            costs.put((Rune) runes[i], (Integer) runes[i + 1]);
-        }
-        if (costs.isEmpty()) {
+            String questName, int spriteId, Map<Rune, Integer> runes) {
+        if (runes.isEmpty()) {
             throw new IllegalArgumentException(displayName + ": a teleport spell costs runes");
         }
-        return new TeleportMeans(Kind.SPELL, displayName, spellbook, magicLevel, questName, costs, 0, spriteId, null);
-    }
-
-    /** A teleport tablet, usable on any spellbook with no quest behind it. */
-    public static TeleportMeans tablet(String displayName, int itemId) {
-        return tablet(displayName, itemId, null);
+        return new TeleportMeans(Kind.SPELL, displayName, spellbook, magicLevel, questName, new EnumMap<>(runes), 0, spriteId, null);
     }
 
     /**

@@ -270,11 +270,6 @@ public final class SeedSelector {
         return owned;
     }
 
-    /** Whether the player owns at least one of this crop's planting forms and can plant it. */
-    static boolean holdsAny(Crop crop, PlayerState state) {
-        return knownToHold(crop, state, 1);
-    }
-
     /**
      * Whether the stores Larry has seen hold enough of this crop to fill one patch, at a
      * Farming level that plants it. Counted as the allocator counts, so the scheduler never
@@ -372,11 +367,7 @@ public final class SeedSelector {
          * patches is covered by anything, which changes nothing: there is nothing to fill.
          */
         private boolean carriedCovers(int patches) {
-            int total = 0;
-            for (int held : carried.values()) {
-                total += held;
-            }
-            return total >= patches;
+            return carried.values().stream().mapToInt(Integer::intValue).sum() >= patches;
         }
 
         /**

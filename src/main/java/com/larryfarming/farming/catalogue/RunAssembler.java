@@ -7,8 +7,8 @@ import java.util.*;
  * Builds every run from the registry: a family's data from {@link Families}, and the sites
  * of that family on that book from {@link Site}, each worked by that book's stop.
  *
- * <p>A run lists its sites in its book's seat order: by the seat of each site's arrival on
- * the family's book, and at one arrival in the order {@link Site} declares them.
+ * <p>A run lists its sites in the circuit's seat order, by the seat of each site's arrival,
+ * and at one arrival in the order {@link Site} declares them.
  */
 final class RunAssembler {
 
@@ -32,7 +32,7 @@ final class RunAssembler {
             }
         }
         // Stable, so sites at one arrival keep their declared order.
-        sites.sort(Comparator.comparingInt(site -> Arrivals.seat(family.getBook(), site.arrival())));
+        sites.sort(Comparator.comparingInt(site -> Arrivals.seat(site.arrival())));
         FarmingRun.FarmingRunBuilder run = FarmingRun.builder().id(family.getId()).spellbook(family.getBook()).unlock(family.getUnlock())
                 .respawnTown(family.getRespawnTown()).seedPatchType(family.getSeedPatchType());
         for (Site site : sites) {

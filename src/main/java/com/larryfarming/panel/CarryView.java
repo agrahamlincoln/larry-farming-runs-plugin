@@ -3,6 +3,7 @@ package com.larryfarming.panel;
 import com.larryfarming.snapshot.FarmingCarryItem;
 import java.awt.*;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.JPanel;
 import net.runelite.client.ui.ColorScheme;
@@ -17,8 +18,6 @@ class CarryView extends JPanel
 {
 	/** The game inventory's width. */
 	static final int COLUMNS = 4;
-	private static final int SQUARE = ItemSquare.SIZE;
-	private static final int GAP = ItemSquare.GAP;
 
 	/** Already in the bag. */
 	private static final Color COLOR_HELD = ColorScheme.PROGRESS_COMPLETE_COLOR;
@@ -34,51 +33,23 @@ class CarryView extends JPanel
 	 */
 	static final String CHECK_SEED_BOX = "Check your seed box";
 
-
-	private final InventoryBackdrop grid;
-
 	CarryView()
 	{
 		PanelText.stack(this);
-		grid = new InventoryBackdrop(null);
-		grid.setBorder(BorderFactory.createEmptyBorder(2, 4, 4, 0));
-
-		add(grid);
+		setBorder(BorderFactory.createEmptyBorder(2, 4, 4, 0));
 	}
 
 	/**
 	 * Redraws the bag. Called only when the carry signature has changed, since the caller
-	 * guards structural rebuilds.
-	 *
-	 * @param width the width the missing-items line should wrap against, or 0 if not laid
-	 *              out yet
+	 * guards structural rebuilds. An empty or null bag hides the view.
 	 */
-	void rebuild(List<FarmingCarryItem> carry, IconProvider icons, int width)
+	void rebuild(List<FarmingCarryItem> carry, IconProvider icons)
 	{
-		grid.removeAll();
-		grid.setIcons(icons);
-		if (carry == null || carry.isEmpty())
+		removeAll();
+		setVisible(carry != null && !carry.isEmpty());
+		if (isVisible())
 		{
-			setVisible(false);
-			return;
-		}
-		setVisible(true);
-
-		int rows = (carry.size() + COLUMNS - 1) / COLUMNS;
-		grid.setLayout(new GridLayout(rows, COLUMNS, GAP, GAP));
-		// GridLayout divides all the width it gets. Cap it so squares stay sprite-sized.
-		Dimension size = new Dimension(COLUMNS * SQUARE + (COLUMNS - 1) * GAP + 4, rows * SQUARE + (rows - 1) * GAP + 6);
-		grid.setMaximumSize(size);
-		grid.setPreferredSize(size);
-
-		for (FarmingCarryItem item : carry)
-		{
-			grid.addSlot(square(item, icons));
-		}
-		// Trailing cells are blanks, not empty slots, which would imply "room for more".
-		for (int i = carry.size(); i < rows * COLUMNS; i++)
-		{
-			grid.add(gap());
+			add(SettingGrid.grid(carry.stream().map(item -> square(item, icons)).collect(Collectors.toList()), icons));
 		}
 	}
 
@@ -95,15 +66,6 @@ class CarryView extends JPanel
 	static String label(FarmingCarryItem item)
 	{
 		return item.getQuantity() > 0 ? item.getQuantity() + " × " + item.getName() : item.getName();
-	}
-
-	/** A blank, sprite-sized cell for a grid's trailing slots. */
-	static JPanel gap()
-	{
-		JPanel cell = new JPanel();
-		cell.setOpaque(false);
-		cell.setPreferredSize(new Dimension(SQUARE, SQUARE));
-		return cell;
 	}
 
 	/**

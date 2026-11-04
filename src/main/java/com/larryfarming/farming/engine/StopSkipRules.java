@@ -245,8 +245,8 @@ final class StopSkipRules {
                 || isStillGrowing(seen)) {
             return false;
         }
-        FarmingWorldMap.PatchDef def = ref.resolve();
-        return def != null && (def.getType() == PatchType.TREE || def.getType() == PatchType.HARDWOOD_TREE);
+        PatchType type = ref.type();
+        return type == PatchType.TREE || type == PatchType.HARDWOOD_TREE;
     }
 
     /**
@@ -394,12 +394,7 @@ final class StopSkipRules {
         if (winner == FarmingSkipReason.NEEDS_LEVEL) {
             return kept;
         }
-        long readyAt = Math.max(current.getReadyAtEpochSec(), candidate.getReadyAtEpochSec());
-        if (readyAt == kept.getReadyAtEpochSec()) {
-            return kept;
-        }
-        return new StopPlan(kept.getStop(), kept.getOutcome(), kept.getRoute(),
-                kept.getConfidence(), kept.getBecause(), kept.getSkipReason(), readyAt, kept.getNeeds(), kept.getTeleport());
+        return kept.withReadyAtEpochSec(Math.max(current.getReadyAtEpochSec(), candidate.getReadyAtEpochSec()));
     }
 
     /**
@@ -500,7 +495,7 @@ final class StopSkipRules {
      * <p>The tracker sets HARVESTABLE only from a direct observation (see
      * {@link PatchPrediction}), so the state is read as-is. {@link
      * com.larryfarming.engine.farming.FarmingTracker#predict} advances {@code stage} to now, so a
-     * stage short of the last is still growing. {@link PatchPrediction#of} carries 0 of 0
+     * stage short of the last is still growing. A prediction with no timing carries 0 of 0
      * stages, so the stage comparison is skipped when there is no count.
      */
     static boolean isStillGrowing(PatchPrediction prediction) {

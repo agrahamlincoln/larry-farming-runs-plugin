@@ -62,6 +62,7 @@ public enum Capability {
     COMBAT_BRACELET,
     RING_OF_DUELING,
     RING_OF_WEALTH,
+    AMULET_OF_GLORY,
     RING_OF_THE_ELEMENTS,
     SLAYER_RING,
     ROYAL_SEED_POD,

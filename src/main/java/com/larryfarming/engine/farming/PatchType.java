@@ -26,6 +26,8 @@
 package com.larryfarming.engine.farming;
 
 import com.larryfarming.data.Tables;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Every kind of farming patch the plugin tracks, and the table that turns a patch's
@@ -40,62 +42,43 @@ import com.larryfarming.data.Tables;
  *
  * <p>Declaration order is the order {@link FarmingWorldMap#allPatches()} groups patches in.
  */
+@Getter
+@RequiredArgsConstructor
 public enum PatchType {
-    HERB("Herb", false, 199),
-    TREE("Tree", true, 5370),
-    HARDWOOD_TREE("Hardwood", true, 6333),
-    ALLOTMENT("Allotment", false, 1942),
-    FLOWER("Flower", false, 6010),
-    HOPS("Hops", false, 6006),
-    BUSH("Bush", true, 1951),
-    FRUIT_TREE("Fruit tree", true, 1955),
-    SEAWEED("Seaweed", false, 21504),
-    CACTUS("Cactus", true, 6016),
-    MUSHROOM("Mushroom", false, 6004),
-    BELLADONNA("Belladonna", false, 2398),
-    CALQUAT("Calquat", true, 5980),
-    CELASTRUS("Celastrus", true, 1391),
-    REDWOOD("Redwood", true, 19669),
-    CRYSTAL_TREE("Crystal tree", true, 23962),
-    SPIRIT_TREE("Spirit tree", true, 6063),
-    HESPORI("Hespori", true, 22875),
-    ANIMA("Anima", false, 22881),
-    GRAPES("Grape", true, 1987),
-    CORAL("Coral", false, 31481),
-    COMPOST("Compost", true, 6032),
-    BIG_COMPOST("Big compost", true, 6032);
+    HERB(false),
+    TREE(true),
+    HARDWOOD_TREE(true),
+    ALLOTMENT(false),
+    FLOWER(false),
+    HOPS(false),
+    BUSH(true),
+    FRUIT_TREE(true),
+    SEAWEED(false),
+    CACTUS(true),
+    MUSHROOM(false),
+    BELLADONNA(false),
+    CALQUAT(true),
+    CELASTRUS(true),
+    REDWOOD(true),
+    CRYSTAL_TREE(true),
+    SPIRIT_TREE(true),
+    HESPORI(true),
+    ANIMA(false),
+    GRAPES(true),
+    CORAL(false),
+    COMPOST(true),
+    BIG_COMPOST(true);
 
     private static final int VALUES = 256;
 
     /** Each type's 256 decoded states, by ordinal; a null slot decodes to nothing. */
     private static final DecodedPatch[][] STATES = loadStates();
 
-    private final String displayName;
-    private final boolean healthCheckRequired;
-    private final int iconItemId;
-
-    PatchType(String displayName, boolean healthCheckRequired, int iconItemId) {
-        this.displayName = displayName;
-        this.healthCheckRequired = healthCheckRequired;
-        this.iconItemId = iconItemId;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
     /**
      * Whether harvest needs a Check-health click first. For such patches the
      * check-health state decodes as GROWING at the crop's max stage.
      */
-    public boolean isHealthCheckRequired() {
-        return healthCheckRequired;
-    }
-
-    /** Representative produce item ID for this type's InfoBox / panel icon. */
-    public int getIconItemId() {
-        return iconItemId;
-    }
+    private final boolean healthCheckRequired;
 
     /** Decode a patch transmit-varbit byte; null when the value is not a known state. */
     public DecodedPatch decode(int varbitValue) {

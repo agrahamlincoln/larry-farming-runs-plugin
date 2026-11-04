@@ -69,8 +69,7 @@ public final class CapabilityResolver {
      * absent; without a house, every house capability does.
      */
     public CapabilityResolver(Spellbook onBook, DailyTeleportLedger dailyLedger, long nowEpochSec, PatchSight sight, HouseSight house) {
-        this(onBook, dailyLedger, nowEpochSec, sight, house, true, Collections.<TravelMethod>emptySet(), Collections.<Capability>emptySet(),
-                TravelTaken.NONE);
+        this(onBook, dailyLedger, nowEpochSec, sight, house, true, Set.of(), Set.of(), TravelTaken.NONE);
     }
 
     private CapabilityResolver(Spellbook onBook, DailyTeleportLedger dailyLedger,
@@ -107,7 +106,7 @@ public final class CapabilityResolver {
      * all ask here, so all three follow the switch.
      */
     public CapabilityResolver switchingOff(Set<TravelMethod> methods) {
-        Set<TravelMethod> wanted = methods == null || methods.isEmpty() ? Collections.<TravelMethod>emptySet()
+        Set<TravelMethod> wanted = methods == null || methods.isEmpty() ? Set.of()
                 : Collections.unmodifiableSet(EnumSet.copyOf(methods));
         return wanted.equals(switchedOff) ? this : new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house,
                         readsPosition, wanted, houseDeclared, taken);
@@ -122,7 +121,7 @@ public final class CapabilityResolver {
      * out.
      */
     public CapabilityResolver declaringHouse(Set<Capability> declared) {
-        Set<Capability> wanted = declared == null || declared.isEmpty() ? Collections.<Capability>emptySet()
+        Set<Capability> wanted = declared == null || declared.isEmpty() ? Set.of()
                 : Collections.unmodifiableSet(EnumSet.copyOf(declared));
         return wanted.equals(houseDeclared) ? this : new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house,
                         readsPosition, switchedOff, wanted, taken);
@@ -162,10 +161,6 @@ public final class CapabilityResolver {
     /** Whether this resolver may answer from where the player is standing. */
     public boolean readsPosition() {
         return readsPosition;
-    }
-
-    public Spellbook getSpellbook() {
-        return onBook;
     }
 
     /**
@@ -315,19 +310,16 @@ public final class CapabilityResolver {
      * going there anyway. A rung standing on an uncertain stop inherits its uncertainty.
      */
     public CapabilityState evaluate(Requirement requirement, PlayerState state, Map<PatchRef, CapabilityState> reachedPatches) {
-        return evaluate(requirement, null, state, reachedPatches);
+        return evaluateGranting(requirement, null, state, reachedPatches);
     }
 
     /**
      * {@link #evaluate}, reading one sub-expression as held. Asks whether a rung would hold
      * but for that part, such as a fairy ring rung but for a way to stand at a ring.
+     *
+     * @param granted the part read as held, or null for none
      */
     public CapabilityState evaluateGranting(Requirement requirement, Requirement granted,
-            PlayerState state, Map<PatchRef, CapabilityState> reachedPatches) {
-        return evaluate(requirement, granted, state, reachedPatches);
-    }
-
-    private CapabilityState evaluate(Requirement requirement, Requirement granted,
             PlayerState state, Map<PatchRef, CapabilityState> reachedPatches) {
         if (granted != null && requirement.equals(granted)) {
             return CapabilityState.HAVE;
@@ -359,7 +351,7 @@ public final class CapabilityResolver {
             PlayerState state, Map<PatchRef, CapabilityState> reachedPatches) {
         List<CapabilityState> states = new ArrayList<>(requirement.getParts().size());
         for (Requirement part : requirement.getParts()) {
-            states.add(evaluate(part, granted, state, reachedPatches));
+            states.add(evaluateGranting(part, granted, state, reachedPatches));
         }
         return states;
     }
@@ -601,12 +593,7 @@ public final class CapabilityResolver {
                 missing.add(verdict.getBecause());
             }
         }
-        if (missing.isEmpty()) {
-            return "";
-        }
-        if (missing.size() == 1) {
-            return missing.get(0);
-        }
+        // Empty for nothing missing, the one reason alone, or the first two joined.
         return String.join(", and ", missing.subList(0, Math.min(2, missing.size())));
     }
 

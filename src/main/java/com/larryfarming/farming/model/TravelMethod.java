@@ -26,6 +26,7 @@ import lombok.Getter;
  */
 public enum TravelMethod {
     RING_OF_WEALTH,
+    AMULET_OF_GLORY,
     GAMES_NECKLACE,
     COMBAT_BRACELET,
     SKILLS_NECKLACE,

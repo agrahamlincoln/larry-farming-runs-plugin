@@ -60,12 +60,7 @@ final class TripOrder {
 
     /** Whether the run proper already goes to this arrival, so an extra there rides along. */
     private static boolean sharesAnArrival(List<StopPlan> plans, Arrival arrival) {
-        for (StopPlan plan : plans) {
-            if (!plan.getStop().isOptional() && arrivalOf(plan) == arrival) {
-                return true;
-            }
-        }
-        return false;
+        return plans.stream().anyMatch(plan -> !plan.getStop().isOptional() && arrivalOf(plan) == arrival);
     }
 
     /**
@@ -80,12 +75,15 @@ final class TripOrder {
      * <p><b>Skipped stops merge too</b>, or a skip between two visits to one place would
      * split them and the list would reshape around patch state. The set-aside lines inside
      * the row say which patch each reason is about.
+     *
+     * @param order indices into {@code plans} in walking order, which must already keep each
+     *     arrival's stops together
      */
-    static List<List<Integer>> groupByArrival(List<StopPlan> plans) {
+    static List<List<Integer>> groupByArrival(List<Integer> order, List<StopPlan> plans) {
         List<List<Integer>> groups = new ArrayList<>();
         List<Integer> current = null;
         Arrival currentArrival = null;
-        for (int index : inTripOrder(plans)) {
+        for (int index : order) {
             StopPlan plan = plans.get(index);
             Arrival arrival = arrivalOf(plan);
             if (current != null && arrival == currentArrival) {

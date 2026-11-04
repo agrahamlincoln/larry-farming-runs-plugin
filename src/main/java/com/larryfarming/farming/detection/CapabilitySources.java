@@ -9,6 +9,8 @@ import com.larryfarming.farming.model.Capability;
 import com.larryfarming.farming.model.Spellbook;
 import com.larryfarming.model.*;
 import java.util.*;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import net.runelite.api.gameval.ItemID;
 import lombok.Value;
 import net.runelite.api.gameval.VarbitID;
@@ -103,7 +105,7 @@ public final class CapabilitySources {
             if (done != null) {
                 return done >= KNIGHT_WAVES_DONE ? CapabilityVerdict.have(Source.DETECTED,
                                 "you have finished the Knight Waves Training Grounds") : CapabilityVerdict.lack(Source.DETECTED,
-                                "finish the Knight Waves Training Grounds to respawn at " + "Camelot");
+                                "the Knight Waves Training Grounds unlocks respawning at Camelot");
             }
             return quest("King's Ransom", "respawning at Camelot").detect(state);
         });
@@ -213,12 +215,9 @@ public final class CapabilitySources {
     private static int[] loginScanVarbitIds() {
         // The table's flags: Ates statues, quetzal landing sites, balloon stations, the
         // bare-handed planting lesson.
-        List<Integer> flags = new ArrayList<>();
-        for (Tables.Row row : TABLE) {
-            if (row.text(0).equals("varbit") || row.text(0).equals("balloon")) {
-                flags.add(row.integer(2));
-            }
-        }
+        IntStream flags = TABLE.stream()
+                .filter(row -> row.text(0).equals("varbit") || row.text(0).equals("balloon"))
+                .mapToInt(row -> row.integer(2));
         int[] own = {
             HouseLocation.HOUSE_LOCATION_VARBIT,
             SPELLBOOK_VARBIT,
@@ -226,24 +225,11 @@ public final class CapabilitySources {
             // A contract assigned before login never announces itself.
             CONTRACT_PRODUCE_VARBIT,
             CONTRACT_COMPLETE_VARBIT,
-            RESPAWN_FALADOR_VARBIT,
-            RESPAWN_EDGEVILLE_VARBIT,
-            RESPAWN_CAMELOT_VARBIT,
-            RESPAWN_FEROX_VARBIT,
-            RESPAWN_CIVITAS_VARBIT,
-            RESPAWN_KOUREND_VARBIT,
-            LANCALLIUMS_PAGE_VARBIT,
-            MEMOIRS_CHARGES_VARBIT,
         };
-        int[] diaries = DiaryTiers.allVarbits();
-        int[] all = new int[own.length + diaries.length + DAILY_USE_VARBIT_IDS.length + flags.size()];
-        System.arraycopy(own, 0, all, 0, own.length);
-        System.arraycopy(diaries, 0, all, own.length, diaries.length);
-        System.arraycopy(DAILY_USE_VARBIT_IDS, 0, all, own.length + diaries.length, DAILY_USE_VARBIT_IDS.length);
-        for (int i = 0; i < flags.size(); i++) {
-            all[all.length - flags.size() + i] = flags.get(i);
-        }
-        return all;
+        int[] books = {LANCALLIUMS_PAGE_VARBIT, MEMOIRS_CHARGES_VARBIT};
+        IntStream fixed = Stream.of(own, RESPAWN_VARBIT_IDS, books, DiaryTiers.allVarbits(), DAILY_USE_VARBIT_IDS)
+                .flatMapToInt(IntStream::of);
+        return IntStream.concat(fixed, flags).toArray();
     }
 
     /** A quest, and how far along it a player must be. */
@@ -352,19 +338,19 @@ public final class CapabilitySources {
                 "the Troll Stronghold", "Making Friends with My Arm", 66));
         rules.put(Capability.POH_NEXUS_HARMONY, nexus(PortalNexus.HARMONY_ISLAND, "Harmony Island", "The Great Brain Robbery", 65));
         rules.put(Capability.POH_SPIRIT_TREE, built(HouseFeature.SPIRIT_TREE, "a spirit tree", floor("a spirit tree in your house")
-                        .construction(75).skill(Skill.FARMING, 83).build()));
+                        .construction(75).skill(Skill.FARMING, 83)));
         rules.put(Capability.POH_FAIRY_RING, built(HouseFeature.FAIRY_RING, "a fairy ring", floor("a fairy ring in your house")
-                        .construction(85).build()));
+                        .construction(85)));
         return Collections.unmodifiableMap(rules);
     }
 
     private static HouseRule portal(HouseFeature feature, String what, String quest) {
-        return built(feature, what, floor(what).construction(50).quest(quest).build());
+        return built(feature, what, floor(what).construction(50).quest(quest));
     }
 
     private static HouseRule nexus(int destination, String where, String quest, int magic) {
         return attuned(destination, where, floor(where + " in your Portal Nexus")
-                .construction(72).quest(quest).skill(Skill.MAGIC, magic).build());
+                .construction(72).quest(quest).skill(Skill.MAGIC, magic));
     }
 
     /** How a player who has not been seen with a house item can make it count. */
@@ -535,7 +521,7 @@ public final class CapabilitySources {
      */
     private static PatchDetector grownSpiritTree(Capability capability, int farmingLevel, String where) {
         Detector cannotExist = floor("a grown spirit tree in the " + where + " patch").skill(Skill.FARMING, farmingLevel)
-                .quest("Tree Gnome Village").build();
+                .quest("Tree Gnome Village");
         return (state, sight) -> {
             CapabilityVerdict tooEarly = cannotExist.detect(state);
             if (tooEarly != null && tooEarly.getState() == CapabilityState.LACK) {
@@ -562,7 +548,7 @@ public final class CapabilitySources {
      * would never be seen.
      */
     private static PatchDetector weissHerbPatch() {
-        Detector unlit = floor("a fire of nourishment at Weiss").quest("Making Friends with My Arm").build();
+        Detector unlit = floor("a fire of nourishment at Weiss").quest("Making Friends with My Arm");
         return (state, sight) -> sight.at(FarmingCatalogue.patchFor(Capability.WEISS_HERB_PATCH)) != null
                         ? CapabilityVerdict.have(Source.DETECTED, "the Weiss herb patch has been seen, so the fire is lit")
                         : unlit.detect(state);
@@ -635,46 +621,45 @@ public final class CapabilitySources {
         rules.put(Capability.BOOK_OF_THE_DEAD, lancalliumsBook("a Book of the Dead", Capability.BOOK_OF_THE_DEAD));
 
         // --- Respawn points --------------------------------------------------------
-        // Falador's unlock is Recruitment Drive alone, so it needs no unlock varbit.
-        rules.put(Capability.RESPAWN_AVAILABLE_FALADOR, respawnPoint("Recruitment Drive", "Falador",
-                        "Sir Tiffy Cashien in Falador Park", 0, 0));
-        rules.put(Capability.RESPAWN_AVAILABLE_CAMELOT, respawnPoint("King's Ransom", "Camelot", "the Knight Waves Training Grounds",
-                        KNIGHT_WAVES_VARBIT, KNIGHT_WAVES_DONE));
+        rules.put(Capability.RESPAWN_AVAILABLE_FALADOR, respawnPoint("Falador", "Sir Tiffy Cashien in Falador Park"));
+        rules.put(Capability.RESPAWN_AVAILABLE_CAMELOT, respawnPoint("Camelot", "Merlin in Camelot Castle"));
 
         // --- Quest-gated networks -------------------------------------------------
         // The elite Lumbridge & Draynor diary lifts the staff requirement (wiki "Fairy
         // ring"). No quest does. An unread diary flag stays UNKNOWN, so the bag keeps
         // packing the staff.
-        Detector staffless = state -> {
-            switch (DiaryTiers.completed("Lumbridge", DiaryTiers.ELITE, state)) {
-                case HAVE:
-                    return CapabilityVerdict.have(Source.DETECTED, "your elite Lumbridge & Draynor diary lets you use fairy rings "
-                                    + "without a staff");
-                case LACK:
-                    return CapabilityVerdict.lack(Source.DETECTED, "wield a dramen or lunar staff to use fairy rings");
-                default:
-                    return CapabilityVerdict.unknown("not sure whether you have the elite Lumbridge & Draynor diary");
-            }
-        };
+        Detector staffless = diaryTier("Lumbridge", DiaryTiers.ELITE,
+                "your elite Lumbridge & Draynor diary lets you use fairy rings without a staff",
+                "wield a dramen or lunar staff to use fairy rings",
+                "not sure whether you have the elite Lumbridge & Draynor diary");
         rules.put(Capability.STAFFLESS_FAIRY_RINGS, staffless);
         // Varbit 4480. Varbit 4585 holds the player's default landing, which the house
         // portal follows; the spell and the tablet offer the Exchange whatever it holds.
-        rules.put(Capability.VARROCK_DIARY_MEDIUM, state -> {
-            switch (DiaryTiers.completed("Varrock", DiaryTiers.MEDIUM, state)) {
-                case HAVE:
-                    return CapabilityVerdict.have(Source.DETECTED, "your medium Varrock diary lets the Varrock teleport land at the "
-                                    + "Grand Exchange");
-                case LACK:
-                    return CapabilityVerdict.lack(Source.DETECTED, "the Varrock teleport lands at the Grand Exchange only after the "
-                                    + "medium Varrock diary");
-                default:
-                    return CapabilityVerdict.unknown("not sure whether you have the medium Varrock diary");
-            }
-        });
+        rules.put(Capability.VARROCK_DIARY_MEDIUM, diaryTier("Varrock", DiaryTiers.MEDIUM,
+                "your medium Varrock diary lets the Varrock teleport land at the Grand Exchange",
+                "the Varrock teleport lands at the Grand Exchange only after the medium Varrock diary",
+                "not sure whether you have the medium Varrock diary"));
         rules.put(Capability.FAIRY_RINGS, fairyRings(staffless));
         // House items and planted trees are answered from the house and the patch; see
         // houseRules() and patchRules().
         return Collections.unmodifiableMap(rules);
+    }
+
+    /**
+     * A diary tier, answered from its completion flag, with the reason for each answer. An
+     * unread flag answers UNKNOWN.
+     */
+    private static Detector diaryTier(String area, String tier, String have, String lack, String unsure) {
+        return state -> {
+            switch (DiaryTiers.completed(area, tier, state)) {
+                case HAVE:
+                    return CapabilityVerdict.have(Source.DETECTED, have);
+                case LACK:
+                    return CapabilityVerdict.lack(Source.DETECTED, lack);
+                default:
+                    return CapabilityVerdict.unknown(unsure);
+            }
+        };
     }
 
     /**
@@ -701,8 +686,7 @@ public final class CapabilitySources {
             case "balloon":
                 return balloonStation(row.requireWidth(5).integer(2), row.text(4));
             case "spell":
-                String quest = row.requireWidth(5).text(3);
-                return spell(row.integer(2), quest.isEmpty() ? null : quest, row.text(4));
+                return spell(row.requireWidth(5).integer(2), row.optionalText(3), row.text(4));
             case "skill":
                 return skill(row.requireWidth(5).constant(Skill.class, 2), row.integer(3), row.text(4));
             case "houseIn":
@@ -796,7 +780,7 @@ public final class CapabilitySources {
      * Held anywhere the player can retrieve it from — bank and leprechaun included.
      *
      * <p>"Not found" is UNKNOWN until the bank has been seen, since an unseen bank reads as
-     * empty. {@link com.larryfarming.farming.engine.LoadoutPlanner} reads an unseen bank the same way.
+     * empty.
      */
     private static Detector items(String description, int... itemIds) {
         return state -> {
@@ -1011,27 +995,23 @@ public final class CapabilitySources {
     }
 
     /**
-     * A respawn town, unlocked by a quest and, where {@code unlockVarbit} is non-zero, a flag
-     * read ahead of the quest.
+     * A respawn town, unlocked as {@link #RESPAWN_UNLOCKS} answers for it, and selected at
+     * {@code where}.
      *
      * <p>The selected respawn town answers outright when it has been read. Otherwise an
-     * unlocked town answers UNKNOWN, with a reason telling the player where to select it.
+     * unlocked town answers UNKNOWN, with a reason telling the player where to select it,
+     * and a locked one gives the unlock's own reason.
      */
-    private static Detector respawnPoint(String questName, String town, String where, int unlockVarbit, int unlockValue) {
-        Detector questGate = quest(questName, "respawning at " + town);
+    private static Detector respawnPoint(String town, String where) {
+        Detector unlocked = RESPAWN_UNLOCKS.get(town);
         return state -> {
-            String selectIt = "set your respawn point to " + town + " at " + where + " to use this";
+            String selectIt = "set your respawn point to " + town + " by talking to " + where + " to use this";
             // The setting outranks the unlock, which only says they could choose it.
             CapabilityVerdict settled = fromSelection(town, state);
             if (settled != null) {
                 return settled;
             }
-            Integer unlock = unlockVarbit != 0 ? state.getVarbits().get(unlockVarbit) : null;
-            if (unlock != null) {
-                return unlock >= unlockValue ? CapabilityVerdict.unknown(selectIt) : CapabilityVerdict.lack(Source.DETECTED,
-                                where + " unlocks respawning at " + town);
-            }
-            CapabilityVerdict verdict = questGate.detect(state);
+            CapabilityVerdict verdict = unlocked.detect(state);
             return verdict.getState() == CapabilityState.HAVE ? CapabilityVerdict.unknown(selectIt) : verdict;
         };
     }
@@ -1072,10 +1052,6 @@ public final class CapabilitySources {
         Floor skill(Skill skill, int level) {
             this.skill = skill;
             this.skillLevel = level;
-            return this;
-        }
-
-        Floor build() {
             return this;
         }
 

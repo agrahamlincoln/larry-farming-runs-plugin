@@ -27,9 +27,6 @@ public final class DailyTeleportLedger {
 
     private static final long SECONDS_PER_DAY = 86_400L;
 
-    /** Returned for a capability with no daily cap, so comparisons need no special case. */
-    public static final int UNLIMITED_REMAINING = Integer.MAX_VALUE;
-
     private final Map<Capability, Integer> usedToday = new EnumMap<>(Capability.class);
 
     /**
@@ -67,18 +64,16 @@ public final class DailyTeleportLedger {
         usedToday.put(capability, clampToAllowance(capability, spent));
     }
 
-    /** How many uses are left today, or {@link #UNLIMITED_REMAINING} if it is not rationed. */
-    public int remaining(Capability capability, long nowEpochSec) {
+    /**
+     * True when today's allowance is spent, so the route should be stepped over. A
+     * capability the game does not ration never runs out.
+     */
+    public boolean isExhausted(Capability capability, long nowEpochSec) {
         if (!capability.isRationedDaily()) {
-            return UNLIMITED_REMAINING;
+            return false;
         }
         rollOver(nowEpochSec);
-        return capability.getDailyUses() - usedToday.getOrDefault(capability, 0);
-    }
-
-    /** True when today's allowance is spent, so the route should be stepped over. */
-    public boolean isExhausted(Capability capability, long nowEpochSec) {
-        return remaining(capability, nowEpochSec) <= 0;
+        return usedToday.getOrDefault(capability, 0) >= capability.getDailyUses();
     }
 
     /** Forgets everything, for a player switching accounts. */

@@ -26,9 +26,8 @@ class ItemSquare extends JPanel
 
 	/** The game's own stack-count colour. */
 	private static final Color COLOR_COUNT = Color.YELLOW;
-	/** The seed tag, and the dark line under it that keeps it readable on a pale sprite. */
+	/** The seed tag, drawn over a dark shadow that keeps it readable on a pale sprite. */
 	private static final Color COLOR_TAG = Color.WHITE;
-	private static final Color COLOR_TAG_SHADOW = Color.BLACK;
 
 	private final ImageIcon sprite;
 	private final String count;
@@ -80,12 +79,7 @@ class ItemSquare extends JPanel
 		{
 			// Bottom edge, so it never collides with the count at the top.
 			g.setFont(getFont());
-			int x = 2;
-			int y = getHeight() - 2;
-			g.setColor(COLOR_TAG_SHADOW);
-			g.drawString(tag, x + 1, y + 1);
-			g.setColor(COLOR_TAG);
-			g.drawString(tag, x, y);
+			PanelText.drawShadowed(g, tag, 2, getHeight() - 2, COLOR_TAG);
 		}
 	}
 }

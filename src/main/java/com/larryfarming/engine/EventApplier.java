@@ -1,7 +1,6 @@
 package com.larryfarming.engine;
 
 import com.larryfarming.model.*;
-import lombok.Value;
 
 import java.time.Instant;
 import java.util.*;
@@ -15,12 +14,6 @@ public final class EventApplier {
     private EventApplier() {
     }
 
-    @Value
-    public static class SkillSnapshot {
-        int level;
-        long xp;
-    }
-
     public static void applyStatChanged(PlayerState state, String skillName, long xp, int level) {
         Skill skill;
         try {
@@ -32,33 +25,19 @@ public final class EventApplier {
     }
 
     /**
-     * The account as the client reports it at login: every skill, the quests finished or
-     * started, and what the player is carrying and wearing.
+     * The account as the client reports it at login: every skill, and what the player is
+     * carrying and wearing. The plugin writes every quest's state straight after.
      */
-    public static void applyLoginState(PlayerState state, Map<String, SkillSnapshot> skills, List<String> completedQuests,
-            List<String> startedQuests, List<ItemStack> inventory, Map<EquipmentSlot, ItemStack> equipment) {
+    public static void applyLoginState(PlayerState state, Map<String, SkillState> skills,
+            List<ItemStack> inventory, Map<EquipmentSlot, ItemStack> equipment) {
 
         if (skills != null) {
-            for (Map.Entry<String, SkillSnapshot> entry : skills.entrySet()) {
+            for (Map.Entry<String, SkillState> entry : skills.entrySet()) {
                 try {
-                    Skill skill = Skill.fromString(entry.getKey());
-                    SkillSnapshot snap = entry.getValue();
-                    state.getSkills().put(skill, new SkillState(snap.getLevel(), snap.getXp()));
+                    state.getSkills().put(Skill.fromString(entry.getKey()), entry.getValue());
                 } catch (IllegalArgumentException e) {
                     // Skip unknown skills
                 }
-            }
-        }
-
-        if (completedQuests != null) {
-            for (String quest : completedQuests) {
-                state.getQuests().put(quest, QuestStatus.COMPLETED);
-            }
-        }
-
-        if (startedQuests != null) {
-            for (String quest : startedQuests) {
-                state.getQuests().put(quest, QuestStatus.IN_PROGRESS);
             }
         }
 
@@ -67,8 +46,7 @@ public final class EventApplier {
         }
 
         if (equipment != null) {
-            state.getEquipment().clear();
-            state.getEquipment().putAll(equipment);
+            applyEquipmentChanged(state, equipment);
         }
     }
 
@@ -119,16 +97,20 @@ public final class EventApplier {
      */
     public static void applySeedBoxStored(PlayerState state, ItemStack stored) {
         List<ItemStack> box = new ArrayList<>(state.getSeedBox());
-        for (int i = 0; i < box.size(); i++) {
-            ItemStack held = box.get(i);
-            if (held.getItemId() == stored.getItemId()) {
-                box.set(i, new ItemStack(held.getItemId(), held.getQuantity() + stored.getQuantity(), held.getName()));
-                commitSeedBox(state, box, stored.getItemId(), stored.getQuantity());
+        addStack(box, stored);
+        commitSeedBox(state, box, stored.getItemId(), stored.getQuantity());
+    }
+
+    /** Adds a stack to the list, onto the stack of the same item when there is one. */
+    private static void addStack(List<ItemStack> stacks, ItemStack added) {
+        for (int i = 0; i < stacks.size(); i++) {
+            ItemStack held = stacks.get(i);
+            if (held.getItemId() == added.getItemId()) {
+                stacks.set(i, new ItemStack(held.getItemId(), held.getQuantity() + added.getQuantity(), held.getName()));
                 return;
             }
         }
-        box.add(stored);
-        commitSeedBox(state, box, stored.getItemId(), stored.getQuantity());
+        stacks.add(added);
     }
 
     /**
@@ -202,22 +184,9 @@ public final class EventApplier {
      */
     public static void applyDepositInference(PlayerState state, List<ItemStack> depositedItems) {
         List<ItemStack> bank = new ArrayList<>(state.getBank());
-
         for (ItemStack deposited : depositedItems) {
-            boolean merged = false;
-            for (int i = 0; i < bank.size(); i++) {
-                if (deposited.getItemId() == bank.get(i).getItemId()) {
-                    ItemStack existing = bank.get(i);
-                    bank.set(i, new ItemStack(existing.getItemId(), existing.getQuantity() + deposited.getQuantity(), existing.getName()));
-                    merged = true;
-                    break;
-                }
-            }
-            if (!merged) {
-                bank.add(deposited);
-            }
+            addStack(bank, deposited);
         }
-
         state.setBank(bank);
     }
 

@@ -1,5 +1,8 @@
 package com.larryfarming.engine.farming;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 /**
  * The decoded meaning of a farming-patch transmit varbit: which crop occupies
  * the patch, its health/lifecycle {@link CropState}, and how far it has grown.
@@ -19,34 +22,13 @@ package com.larryfarming.engine.farming;
  * assume the count-up reading, so a caller building one of these by hand must use it too:
  * a picked fruit tree written at a full stage reads back as ready.
  */
+@Getter
+@AllArgsConstructor
 public final class DecodedPatch {
 
     private final Crop crop;
     private final CropState state;
     private final int stage;
-    private final boolean fellable;
-
-    /** A patch whose crop, if any, needs no axe taking out — the common case. */
-    public DecodedPatch(Crop crop, CropState state, int stage) {
-        this(crop, state, stage, false);
-    }
-
-    /**
-     * @param fellable whether a tree is still rooted in this patch, so the ground under it
-     *                 cannot take a sapling until it has been chopped down. See
-     *                 {@link #isFellable()}
-     */
-    public DecodedPatch(Crop crop, CropState state, int stage, boolean fellable) {
-        this.crop = crop;
-        this.state = state;
-        this.stage = stage;
-        this.fellable = fellable;
-    }
-
-    public Crop getCrop() {
-        return crop;
-    }
-
     /**
      * Whether a tree is still standing in this patch, as opposed to its stump or bare
      * ground.
@@ -61,17 +43,7 @@ public final class DecodedPatch {
      * stumps, for a redwood — which is cleared with a spade rather than felled — and for
      * everything that is not a tree.
      */
-    public boolean isFellable() {
-        return fellable;
-    }
-
-    public CropState getState() {
-        return state;
-    }
-
-    public int getStage() {
-        return stage;
-    }
+    private final boolean fellable;
 
     /**
      * Number of stages for the current state: harvest "lives" once HARVESTABLE
