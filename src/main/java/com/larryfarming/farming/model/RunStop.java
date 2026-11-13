@@ -134,6 +134,9 @@ public class RunStop {
      */
     Crop fixedCrop;
 
+    /** Whether the player picks this patch's crop, so it has no default of its own here. */
+    boolean picked;
+
     /**
      * Why this stop is worth weaving in rather than part of the route proper, or null
      * for an ordinary stop. Optional stops do not count toward a run's stop total.
@@ -145,16 +148,6 @@ public class RunStop {
      * whiteberries use more, since their regrow does not line up with a herb run.
      */
     int everyNthRun;
-
-    /**
-     * True when what is planted here is meant to stand rather than be harvested, so a
-     * living one is a reason to leave the patch alone.
-     *
-     * <p>The white lily protects the neighbouring allotments from disease for as long as it
-     * lives, so it is not replaced each run. Fruit trees get this flag from their patch type
-     * (see {@code Builder.keepsProducing}).
-     */
-    boolean standingCrop;
 
     /**
      * Why this stop's patch does not, on its own, decide whether to go, or null for an
@@ -200,7 +193,7 @@ public class RunStop {
             throw new IllegalArgumentException("a reordered ladder may only reorder at " + primaryPatch().getLabel());
         }
         return new RunStop(patches, arrival, List.copyOf(ladder), terminal, actions, gate,
-                fixedCrop, optionalReason, everyNthRun, standingCrop, errandReason, accessGate);
+                fixedCrop, picked, optionalReason, everyNthRun, errandReason, accessGate);
     }
 
     /** @see #errandReason */
@@ -214,7 +207,7 @@ public class RunStop {
      * {@code FarmingCatalogue.cropChoices}.
      */
     public boolean isFixedCrop() {
-        return fixedCrop != null;
+        return fixedCrop != null || picked;
     }
 
     /** Whether something is planted here, as against a contract errand alone. */
@@ -228,6 +221,16 @@ public class RunStop {
      */
     public PatchType patchType() {
         return primaryPatch().type();
+    }
+
+    /**
+     * Whether what grows here is meant to stand rather than be harvested, so a living one is
+     * a reason to leave the patch alone. Only a fruit tree keeps fruiting after a pick;
+     * calquat and celastrus are used up by the harvest: a calquat goes barren after its
+     * sixth fruit and is cleared with a spade.
+     */
+    public boolean isStandingCrop() {
+        return patchType() == PatchType.FRUIT_TREE;
     }
 
     public boolean isOptional() {
@@ -251,10 +254,10 @@ public class RunStop {
         private List<StopAction> actions;
         private UnlockGate gate;
         private Crop fixedCrop;
+        private boolean picked;
         private String optionalReason;
         private String errandReason;
         private int everyNthRun = 1;
-        private boolean standingCrop;
         private Capability accessGate;
 
         private Builder(PatchRef... patches) {
@@ -324,6 +327,11 @@ public class RunStop {
             return this;
         }
 
+        public Builder picked() {
+            this.picked = true;
+            return this;
+        }
+
         public Builder optional(String reason) {
             this.optionalReason = reason;
             return this;
@@ -332,12 +340,6 @@ public class RunStop {
         /** @see RunStop#errandReason */
         public Builder errand(String reason) {
             this.errandReason = reason;
-            return this;
-        }
-
-        /** What is planted here stands until it dies; a living one needs no replacing. */
-        public Builder standingCrop() {
-            this.standingCrop = true;
             return this;
         }
 
@@ -371,19 +373,8 @@ public class RunStop {
                 }
             }
             List<StopAction> resolved = actions != null ? actions : StopAction.defaultsFor(type);
-            return new RunStop(patches, arrival, List.copyOf(travel), terminal, resolved, gate, fixedCrop, optionalReason, everyNthRun,
-                    standingCrop || keepsProducing(type), errandReason, accessGate);
-        }
-
-        /**
-         * Whether harvesting this kind of patch leaves the crop standing and still working.
-         *
-         * <p>Derived from the type so a new fruit tree stop cannot forget it. Only a fruit
-         * tree keeps fruiting after a pick. Calquat and celastrus are used up by the
-         * harvest: a calquat goes barren after its sixth fruit and is cleared with a spade.
-         */
-        private static boolean keepsProducing(PatchType type) {
-            return type == PatchType.FRUIT_TREE;
+            return new RunStop(patches, arrival, List.copyOf(travel), terminal, resolved, gate, fixedCrop, picked, optionalReason, everyNthRun,
+                    errandReason, accessGate);
         }
 
         /**

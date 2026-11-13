@@ -1,5 +1,6 @@
 package com.larryfarming.farming.model;
 
+import com.larryfarming.data.Tables;
 import java.util.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -10,22 +11,25 @@ import lombok.RequiredArgsConstructor;
  *
  * <p>Declared in the order the settings draw them, which never changes: the portal chamber,
  * then the Portal Nexus, then the garden.
+ *
+ * <p>Each item's group, label, config key and capability come from the house items table.
  */
 @Getter
-@RequiredArgsConstructor
 public enum HouseItem {
-    WEISS_PORTAL(Group.PORTALS, "Weiss", "declareWeissPortal", Capability.POH_PORTAL_WEISS),
-    TROLL_STRONGHOLD_PORTAL(Group.PORTALS, "Troll Stronghold",
-            "declareTrollStrongholdPortal", Capability.POH_PORTAL_TROLL_STRONGHOLD),
-    KOUREND_PORTAL(Group.PORTALS, "Kourend", "declareKourendPortal", Capability.POH_PORTAL_KOUREND),
-    FENKENSTRAIN_PORTAL(Group.PORTALS, "Fenkenstrain's", "declareFenkenstrainPortal", Capability.POH_PORTAL_FENKENSTRAIN),
-    HARMONY_PORTAL(Group.PORTALS, "Harmony", "declareHarmonyPortal", Capability.POH_PORTAL_HARMONY),
-    WEISS_IN_NEXUS(Group.NEXUS, "Weiss", "declareWeissInNexus", Capability.POH_NEXUS_WEISS),
-    TROLL_STRONGHOLD_IN_NEXUS(Group.NEXUS, "Troll Stronghold",
-            "declareTrollStrongholdInNexus", Capability.POH_NEXUS_TROLL_STRONGHOLD),
-    HARMONY_IN_NEXUS(Group.NEXUS, "Harmony", "declareHarmonyInNexus", Capability.POH_NEXUS_HARMONY),
-    SPIRIT_TREE(Group.GARDEN, "Spirit tree", "declareHouseSpiritTree", Capability.POH_SPIRIT_TREE),
-    FAIRY_RING(Group.GARDEN, "Fairy ring", "declareHouseFairyRing", Capability.POH_FAIRY_RING);
+    WEISS_PORTAL,
+    TROLL_STRONGHOLD_PORTAL,
+    KOUREND_PORTAL,
+    FENKENSTRAIN_PORTAL,
+    HARMONY_PORTAL,
+    WEISS_IN_NEXUS,
+    TROLL_STRONGHOLD_IN_NEXUS,
+    HARMONY_IN_NEXUS,
+    SPIRIT_TREE,
+    FAIRY_RING;
+
+    static {
+        Rows.TABLE.requireAll(values());
+    }
 
     /** Where in the house an item stands, as the settings caption it. */
     @Getter
@@ -50,6 +54,22 @@ public enum HouseItem {
      */
     private final String key;
     private final Capability capability;
+
+    HouseItem() {
+        Tables.Row row = Rows.TABLE.of(name());
+        this.group = row.constant(Group.class, 1);
+        this.label = row.text(2);
+        this.key = row.text(3);
+        this.capability = row.constant(Capability.class, 4);
+    }
+
+    /**
+     * The house items table, held apart so the constructors can read it; see
+     * {@link Tables#byName}.
+     */
+    private static final class Rows {
+        static final Tables.Named TABLE = Tables.byName("/com/larryfarming/house-items.tsv", 5);
+    }
 
     private static Map<Capability, HouseItem> byCapability() {
         Map<Capability, HouseItem> map = new EnumMap<>(Capability.class);

@@ -7,7 +7,8 @@ He learns your teleports and unlocks as you play, so there's nothing to set up.
 
 ## What sets him apart
 
-- **No setup tabs.** You fill in no patch list, crop list, house or storage.
+- **No setup tabs.** Nothing to fill in before your first run: no patch list, crop list, house
+  or storage.
 - **The route comes from what you have.** Larry orders the patches and picks each teleport
   from the unlocks on your account.
 - **The plan keeps up.** A new diary reward or quest unlock changes the route the moment the
@@ -17,7 +18,8 @@ He learns your teleports and unlocks as you play, so there's nothing to set up.
 
 <img src="images/carry-list.png" width="235" alt="The carry list">
 
-- Larry builds one list for the run: tools, seeds, compost, and each teleport's runes or items.
+- Larry lists what to take for the run: tools, seeds, compost, and each teleport's runes or
+  items.
 - He suggests seeds from your Farming level and what you have in stock.
 
 ## Where do I go?
@@ -25,7 +27,7 @@ He learns your teleports and unlocks as you play, so there's nothing to set up.
 <img src="images/stop-card.png" width="235" alt="One stop: its teleport, its work and what to plant">
 
 - Each stop names its teleport and the way from the landing to the patch.
-- Each stop lists the work waiting there (harvest, check a tree, clear a stump) and what to plant.
+- Each stop lists the work waiting there (harvest, check a tree, chop one down) and what to plant.
 - Finished stops drop off, and the next stop moves to the top in gold.
 
 ## When the haul won't fit
@@ -54,7 +56,7 @@ as which runs to do. One button puts them all back to the default route.
 
 ## Planned
 
-Handing the next stop to Shortest Path, and the carry list to an inventory-setup plugin.
+Handing the next stop to Shortest Path.
 
 ## Credits
 

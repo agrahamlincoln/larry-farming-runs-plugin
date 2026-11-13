@@ -14,8 +14,9 @@ import net.runelite.client.ui.FontManager;
  */
 class Fold extends JPanel
 {
-	private static final String SHUT = "▸";
-	private static final String OPEN = "▾";
+	/** The header's arrows, which the runs list's rows share. */
+	static final String SHUT = "▸";
+	static final String OPEN = "▾";
 
 	private final String title;
 	private final JLabel toggle;
@@ -60,25 +61,38 @@ class Fold extends JPanel
 		return content;
 	}
 
-	/** Puts the remembered open state back on screen, without reporting a change. */
-	void setOpen(boolean open)
+	/**
+	 * Puts the remembered open state back on screen, without reporting a change.
+	 *
+	 * @param callback receives the fold's new state when the player opens or shuts it, or
+	 *     null for nobody
+	 */
+	void restore(boolean open, Consumer<Boolean> callback)
 	{
 		this.open = open;
+		this.openCallback = callback;
 		showOpen();
 	}
 
-	/** Receives the fold's new state when the player opens or shuts it. */
-	void setOpenCallback(Consumer<Boolean> callback)
-	{
-		this.openCallback = callback;
-	}
-
-	/** Words after the title and the header's colour, kept while the fold is shut. */
+	/**
+	 * Words after the title and the header's colour, kept while the fold is shut. Set in
+	 * place, and only on a change, since the header relays out when set.
+	 */
 	void setHeader(String suffix, Color colour)
 	{
+		if (suffix.equals(this.suffix) && colour.equals(this.colour))
+		{
+			return;
+		}
 		this.suffix = suffix;
 		this.colour = colour;
 		showOpen();
+	}
+
+	/** Appends {@code words} to the header in amber while {@code on}, and nothing otherwise. */
+	void warn(boolean on, String words)
+	{
+		setHeader(on ? words : "", on ? FarmingPanel.COLOR_DUE : PanelColors.HEADER);
 	}
 
 	private void showOpen()

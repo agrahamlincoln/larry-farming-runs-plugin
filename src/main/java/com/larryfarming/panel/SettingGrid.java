@@ -100,11 +100,16 @@ final class SettingGrid
 	 */
 	static InventoryBackdrop grid(List<? extends JComponent> cells, IconProvider icons)
 	{
-		int rows = Math.max(1, (cells.size() + CarryView.COLUMNS - 1) / CarryView.COLUMNS);
-		InventoryBackdrop grid = new InventoryBackdrop(new GridLayout(rows, CarryView.COLUMNS, ItemSquare.GAP, ItemSquare.GAP));
+		return grid(cells, icons, CarryView.COLUMNS);
+	}
+
+	static InventoryBackdrop grid(List<? extends JComponent> cells, IconProvider icons, int columns)
+	{
+		int rows = Math.max(1, (cells.size() + columns - 1) / columns);
+		InventoryBackdrop grid = new InventoryBackdrop(new GridLayout(rows, columns, ItemSquare.GAP, ItemSquare.GAP));
 		grid.setIcons(icons);
 		// GridLayout divides all the width it gets. Cap it so squares stay sprite-sized.
-		Dimension size = new Dimension(CarryView.COLUMNS * ItemSquare.SIZE + (CarryView.COLUMNS - 1) * ItemSquare.GAP,
+		Dimension size = new Dimension(columns * ItemSquare.SIZE + (columns - 1) * ItemSquare.GAP,
 			rows * ItemSquare.SIZE + (rows - 1) * ItemSquare.GAP);
 		grid.setMaximumSize(size);
 		grid.setPreferredSize(size);
@@ -113,7 +118,7 @@ final class SettingGrid
 			grid.addSlot(cell);
 		}
 		// Trailing cells are blanks, not empty slots, which would imply "room for more".
-		for (int i = cells.size(); i < rows * CarryView.COLUMNS; i++)
+		for (int i = cells.size(); i < rows * columns; i++)
 		{
 			JPanel blank = new JPanel();
 			blank.setOpaque(false);

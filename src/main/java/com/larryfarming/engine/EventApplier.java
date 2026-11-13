@@ -14,14 +14,16 @@ public final class EventApplier {
     private EventApplier() {
     }
 
+    /** A skill's new level and XP. A skill this plugin does not know is skipped. */
     public static void applyStatChanged(PlayerState state, String skillName, long xp, int level) {
-        Skill skill;
-        try {
-            skill = Skill.fromString(skillName);
-        } catch (IllegalArgumentException e) {
-            return;
+        putSkill(state, skillName, new SkillState(level, xp));
+    }
+
+    private static void putSkill(PlayerState state, String skillName, SkillState skillState) {
+        Skill skill = Skill.fromString(skillName);
+        if (skill != null) {
+            state.getSkills().put(skill, skillState);
         }
-        state.getSkills().put(skill, new SkillState(level, xp));
     }
 
     /**
@@ -30,42 +32,9 @@ public final class EventApplier {
      */
     public static void applyLoginState(PlayerState state, Map<String, SkillState> skills,
             List<ItemStack> inventory, Map<EquipmentSlot, ItemStack> equipment) {
-
-        if (skills != null) {
-            for (Map.Entry<String, SkillState> entry : skills.entrySet()) {
-                try {
-                    state.getSkills().put(Skill.fromString(entry.getKey()), entry.getValue());
-                } catch (IllegalArgumentException e) {
-                    // Skip unknown skills
-                }
-            }
-        }
-
-        if (inventory != null) {
-            state.setInventory(inventory);
-        }
-
-        if (equipment != null) {
-            applyEquipmentChanged(state, equipment);
-        }
-    }
-
-    public static void applyInventoryChanged(PlayerState state, List<ItemStack> items) {
-        state.setInventory(items);
-    }
-
-    public static void applyBankChanged(PlayerState state, List<ItemStack> items) {
-        state.setBank(items);
-        state.setBankLastSeen(Instant.now());
-    }
-
-    /**
-     * Replace the tracked seed vault contents. Reported only when the player opens the
-     * vault, so like the bank it is a snapshot of the last look, not a live figure.
-     */
-    public static void applySeedVaultChanged(PlayerState state, List<ItemStack> items) {
-        state.setSeedVault(items);
-        state.setSeedVaultLastSeen(Instant.now());
+        skills.forEach((name, skillState) -> putSkill(state, name, skillState));
+        state.setInventory(inventory);
+        applyEquipmentChanged(state, equipment);
     }
 
     /**

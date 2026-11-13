@@ -6,6 +6,7 @@ import com.larryfarming.farming.model.Bank;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingCarryItem;
 import java.util.*;
+import java.util.stream.Collectors;
 import net.runelite.api.gameval.ItemID;
 
 /**
@@ -51,10 +52,7 @@ final class MissingItems {
      */
     static String at(List<StopPlan> here, List<List<Crop>> plantedHere, boolean leprechaun,
             Bank bank, PlayerState state, CapabilityResolver resolver, FarmingInputs inputs) {
-        List<StopPlan> standingThere = new ArrayList<>(here.size());
-        for (StopPlan plan : here) {
-            standingThere.add(CarryPlanner.withoutTravel(plan));
-        }
+        List<StopPlan> standingThere = here.stream().map(CarryPlanner::withoutTravel).collect(Collectors.toList());
         List<FarmingCarryItem> missing = new ArrayList<>();
         List<FarmingCarryItem> tooFew = new ArrayList<>();
         for (FarmingCarryItem line : CarryPlanner.plan(standingThere, List.of(), plantedHere, state, resolver, inputs)) {

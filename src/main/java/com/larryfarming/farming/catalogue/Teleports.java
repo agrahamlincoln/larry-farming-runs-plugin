@@ -24,17 +24,69 @@ public final class Teleports {
     private Teleports() {
     }
 
-    private static final Table TABLE = new Table("/com/larryfarming/teleports.tsv");
+    private static final String RESOURCE = "/com/larryfarming/teleports.tsv";
 
-    private static final Map<Destination, List<TeleportMeans>> MEANS = TABLE.means;
-    private static final Map<Capability, Map<Rune, Integer>> SPELL_COSTS = TABLE.costs;
+    private static final Map<Destination, List<TeleportMeans>> MEANS;
+    private static final Map<Capability, Map<Rune, Integer>> SPELL_COSTS;
 
     /**
      * Spellbook Swap: Lunar, 96 Magic, Dream Mentor. It opens another book the player has
      * unlocked for one cast within two minutes, then returns them to Lunar.
      */
-    public static final TeleportMeans SPELLBOOK_SWAP = TABLE.swap;
+    public static final TeleportMeans SPELLBOOK_SWAP;
 
+    // The teleports table, read once. Assigned here rather than in initialisers because one
+    // pass over the rows fills all three.
+    static {
+        Map<Destination, List<TeleportMeans>> byPlace = new EnumMap<>(Destination.class);
+        Map<Capability, Map<Rune, Integer>> byCapability = new EnumMap<>(Capability.class);
+        TeleportMeans swapRow = null;
+        for (Tables.Row row : Tables.read(RESOURCE)) {
+            switch (row.text(0)) {
+                case "spell":
+                case "swap":
+                    TeleportMeans spell = TeleportMeans.spell(row.requireWidth(9).text(2),
+                            row.constant(Spellbook.class, 3), row.integer(4), row.optionalText(5), row.integer(6), runes(row, 8));
+                    if (row.text(0).equals("swap")) {
+                        if (swapRow != null) {
+                            throw row.error("a second swap row");
+                        }
+                        swapRow = spell;
+                    } else {
+                        byPlace.computeIfAbsent(row.constant(Destination.class, 1), place -> new ArrayList<>()).add(spell);
+                    }
+                    break;
+                case "tablet":
+                    byPlace.computeIfAbsent(row.requireWidth(6).constant(Destination.class, 1),
+                            place -> new ArrayList<>()).add(TeleportMeans.tablet(row.text(2), row.integer(3), row.optionalText(5)));
+                    break;
+                case "same":
+                    List<TeleportMeans> shared = byPlace.get(row.requireWidth(3).constant(Destination.class, 2));
+                    if (shared == null) {
+                        throw row.error("no means above this line to share");
+                    }
+                    byPlace.put(row.constant(Destination.class, 1), shared);
+                    break;
+                case "runes":
+                    byCapability.put(row.constant(Capability.class, 1),
+                            Collections.unmodifiableMap(runes(row.requireWidth(3), 2)));
+                    break;
+                default:
+                    throw row.error("no kind " + row.text(0));
+            }
+        }
+        if (swapRow == null) {
+            throw new IllegalStateException(RESOURCE + ": no swap row");
+        }
+        // Places that share means share one list, as the table says.
+        Map<List<TeleportMeans>, List<TeleportMeans>> frozen = new IdentityHashMap<>();
+        byPlace.replaceAll((place, list) -> frozen.computeIfAbsent(list, List::copyOf));
+        MEANS = Collections.unmodifiableMap(byPlace);
+        SPELL_COSTS = Collections.unmodifiableMap(byCapability);
+        SPELLBOOK_SWAP = swapRow;
+    }
+
+    // After the table, which BY_SWAP reads.
     private static final Map<Destination, TeleportMeans> BY_SWAP = bySwap();
 
     /** Every way of reaching this place, spells before tablets. Never null. */
@@ -75,77 +127,20 @@ public final class Teleports {
         return cost != null ? cost : Collections.emptyMap();
     }
 
-    /** The teleports table, read once. */
-    private static final class Table {
-
-        final Map<Destination, List<TeleportMeans>> means;
-        final Map<Capability, Map<Rune, Integer>> costs;
-        final TeleportMeans swap;
-
-        Table(String resource) {
-            Map<Destination, List<TeleportMeans>> byPlace = new EnumMap<>(Destination.class);
-            Map<Capability, Map<Rune, Integer>> byCapability = new EnumMap<>(Capability.class);
-            TeleportMeans swapRow = null;
-            for (Tables.Row row : Tables.read(resource)) {
-                switch (row.text(0)) {
-                    case "spell":
-                    case "swap":
-                        TeleportMeans spell = TeleportMeans.spell(row.requireWidth(9).text(2),
-                                row.constant(Spellbook.class, 3), row.integer(4), row.optionalText(5), row.integer(6), runes(row, 8));
-                        if (row.text(0).equals("swap")) {
-                            if (swapRow != null) {
-                                throw row.error("a second swap row");
-                            }
-                            swapRow = spell;
-                        } else {
-                            byPlace.computeIfAbsent(row.constant(Destination.class, 1), place -> new ArrayList<>()).add(spell);
-                        }
-                        break;
-                    case "tablet":
-                        byPlace.computeIfAbsent(row.requireWidth(6).constant(Destination.class, 1),
-                                place -> new ArrayList<>()).add(TeleportMeans.tablet(row.text(2), row.integer(3), row.optionalText(5)));
-                        break;
-                    case "same":
-                        List<TeleportMeans> shared = byPlace.get(row.requireWidth(3).constant(Destination.class, 2));
-                        if (shared == null) {
-                            throw row.error("no means above this line to share");
-                        }
-                        byPlace.put(row.constant(Destination.class, 1), shared);
-                        break;
-                    case "runes":
-                        byCapability.put(row.constant(Capability.class, 1),
-                                Collections.unmodifiableMap(runes(row.requireWidth(3), 2)));
-                        break;
-                    default:
-                        throw row.error("no kind " + row.text(0));
-                }
-            }
-            if (swapRow == null) {
-                throw new IllegalStateException(resource + ": no swap row");
-            }
-            // Places that share means share one list, as the table says.
-            Map<List<TeleportMeans>, List<TeleportMeans>> frozen = new IdentityHashMap<>();
-            byPlace.replaceAll((place, list) -> frozen.computeIfAbsent(list, List::copyOf));
-            means = Collections.unmodifiableMap(byPlace);
-            costs = Collections.unmodifiableMap(byCapability);
-            swap = swapRow;
+    /** The cell's rune-count pairs, each rune with its count. */
+    private static Map<Rune, Integer> runes(Tables.Row row, int column) {
+        String[] words = row.text(column).split(" ");
+        if (words.length % 2 != 0) {
+            throw row.error("runes come in rune-count pairs: " + row.text(column));
         }
-
-        /** The cell's rune-count pairs, each rune with its count. */
-        private static Map<Rune, Integer> runes(Tables.Row row, int column) {
-            String[] words = row.text(column).split(" ");
-            if (words.length % 2 != 0) {
-                throw row.error("runes come in rune-count pairs: " + row.text(column));
+        Map<Rune, Integer> runes = new EnumMap<>(Rune.class);
+        for (int i = 0; i < words.length; i += 2) {
+            try {
+                runes.put(Rune.valueOf(words[i]), Integer.parseInt(words[i + 1]));
+            } catch (IllegalArgumentException e) {
+                throw row.error("not a rune and a count: " + words[i] + " " + words[i + 1]);
             }
-            Map<Rune, Integer> runes = new EnumMap<>(Rune.class);
-            for (int i = 0; i < words.length; i += 2) {
-                try {
-                    runes.put(Rune.valueOf(words[i]), Integer.parseInt(words[i + 1]));
-                } catch (IllegalArgumentException e) {
-                    throw row.error("not a rune and a count: " + words[i] + " " + words[i + 1]);
-                }
-            }
-            return runes;
         }
+        return runes;
     }
 }

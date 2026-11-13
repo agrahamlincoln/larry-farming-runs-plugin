@@ -1,5 +1,8 @@
 package com.larryfarming.farming.detection;
 
+import java.util.Arrays;
+import java.util.stream.IntStream;
+
 /**
  * Notices when an Ardougne cloak has actually spent one of its farm teleports.
  *
@@ -55,25 +58,12 @@ public final class ArdougneFarmTeleportWatch {
      * must look up the worn id itself. Check this cheap half first.
      */
     public static boolean isFarmTeleportOption(String option) {
-        if (option == null) {
-            return false;
-        }
-        for (String known : TELEPORT_OPTIONS) {
-            if (known.equalsIgnoreCase(option)) {
-                return true;
-            }
-        }
-        return false;
+        return option != null && Arrays.stream(TELEPORT_OPTIONS).anyMatch(option::equalsIgnoreCase);
     }
 
     /** Whether this item is an Ardougne cloak of any tier. */
     public static boolean isCloak(int itemId) {
-        for (int id : CLOAK_ITEM_IDS) {
-            if (id == itemId) {
-                return true;
-            }
-        }
-        return false;
+        return IntStream.of(CLOAK_ITEM_IDS).anyMatch(id -> id == itemId);
     }
 
     /**

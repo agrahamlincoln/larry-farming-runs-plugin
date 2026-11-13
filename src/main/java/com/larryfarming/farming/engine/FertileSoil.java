@@ -1,7 +1,6 @@
 package com.larryfarming.farming.engine;
 
 import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.PatchType;
 import com.larryfarming.farming.catalogue.Teleports;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.*;
@@ -15,9 +14,8 @@ import java.util.Map;
  * <p>The spell alone gives supercompost, worse than the ultracompost the bucket holds. A
  * player who has read the Ash covered tome casts it with two volcanic ash in the bag to get
  * ultracompost instead. Nothing in the game state says whether the tome has been read, so
- * the player says so with the setting, and Larry plans the spell only then.
- *
- * <p>The seaweed patches keep their compost: Larry does not plan the spell underwater.
+ * the player says so with the setting, and Larry plans the spell only then. It is cast on
+ * the underwater seaweed patches too.
  *
  * <p>Not modelled: the spell's rune stacks taking bag slots for a player without a rune
  * pouch, as for Cure Plant.
@@ -60,8 +58,8 @@ final class FertileSoil {
     }
 
     /**
-     * One cast for every patch planted at a stop the spell treats: one that composts, and
-     * not a seaweed patch. So the limpwurt patch, which takes no compost, costs nothing.
+     * One cast for every patch planted at a stop that composts. So the limpwurt patch, which
+     * takes no compost, costs nothing.
      * Zero when {@code cropFor} is null, as it is for a bag planned without the patches.
      *
      * @param cropFor what each stop is planting, index-aligned with {@code plans}
@@ -72,7 +70,7 @@ final class FertileSoil {
         }
         int casts = 0;
         for (int i = 0; i < plans.size() && i < cropFor.size(); i++) {
-            if (treats(plans.get(i))) {
+            if (composts(plans.get(i))) {
                 casts += cropFor.get(i).size();
             }
         }
@@ -81,35 +79,19 @@ final class FertileSoil {
 
     /** Whether the spell would treat a patch at any of these stops, so ash is carried. */
     static boolean treatsAny(List<StopPlan> plans) {
-        for (StopPlan plan : plans) {
-            if (treats(plan) && plan.getStop().isPlanting()) {
-                return true;
-            }
-        }
-        return false;
+        return plans.stream().anyMatch(plan -> composts(plan) && plan.getStop().isPlanting());
     }
 
     /**
-     * Whether the bag still carries its compost on a Fertile Soil trip: the trip plants a
-     * seaweed patch, which keeps its compost.
+     * Whether this stop is visited and composts its patch. A skipped or unreachable stop
+     * does nothing there, so it takes neither compost nor a cast.
      */
-    static boolean keepsTheCompost(List<StopPlan> plans) {
-        for (StopPlan plan : plans) {
-            RunStop stop = plan.getStop();
-            if (plan.isVisit() && stop.patchType() == PatchType.SEAWEED && stop.getActions().contains(RunStop.StopAction.COMPOST)) {
-                return true;
-            }
-        }
-        return false;
+    static boolean composts(StopPlan plan) {
+        return plan.isVisit() && plan.getStop().getActions().contains(RunStop.StopAction.COMPOST);
     }
 
     /** The runes one cast takes. */
     static Map<Rune, Integer> runesPerCast() {
         return Teleports.runesFor(Capability.FERTILE_SOIL);
-    }
-
-    private static boolean treats(StopPlan plan) {
-        RunStop stop = plan.getStop();
-        return plan.isVisit() && stop.getActions().contains(RunStop.StopAction.COMPOST) && stop.patchType() != PatchType.SEAWEED;
     }
 }

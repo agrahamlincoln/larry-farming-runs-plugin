@@ -12,7 +12,8 @@ import net.runelite.client.ui.FontManager;
  * <p>Drawn like an {@link ItemSquare}, with three states on top. On draws a green outline, the
  * spellbook picker's live-choice green, because faint alone reads too close to full colour on
  * a grid of similar sprites. Off draws the sprite faint with no outline. Locked draws it grey,
- * faint, with a padlock and the level it needs. Missing, for an item the player does not own,
+ * faint, with a padlock and the level it needs; a square not yet plantable but not impossible
+ * shows the level alone, at full colour. Missing, for an item the player does not own,
  * draws it grey with no padlock and stays clickable; off as well draws it grey and faint.
  *
  * <p>Every setting grid in the panel uses this one square, so on and off read the same in each.
@@ -42,6 +43,12 @@ class SettingSquare extends JPanel
 	private final boolean locked;
 	private final boolean missing;
 	private boolean on;
+	/** Whether a locked square that is on still shows the outline; see {@link #outlineWhileLocked}. */
+	private boolean lockedOutline;
+	/** Whether an unlocked square shows its level in the corner; see {@link #showLevel}. */
+	private boolean levelShown;
+	/** A small icon in the bottom-right corner at full strength, or null for none. */
+	private ImageIcon badge;
 
 	/**
 	 * @param greySprite the sprite drained of colour, drawn while locked or missing
@@ -86,10 +93,36 @@ class SettingSquare extends JPanel
 		return locked || !on;
 	}
 
-	/** Whether the square shows the green outline that marks it on. A locked square never does. */
+	/**
+	 * Whether the square shows the green outline that marks it on. A locked square does only
+	 * when {@link #outlineWhileLocked} asked for it.
+	 */
 	boolean isOutlined()
 	{
-		return on && !locked;
+		return on && (!locked || lockedOutline);
+	}
+
+	/** Outlines the square while it is on, even locked: a preset pick above the player's level is still the pick. */
+	void outlineWhileLocked()
+	{
+		lockedOutline = true;
+		setBorder(isOutlined() ? ON_BORDER : PLAIN_BORDER);
+	}
+
+	/**
+	 * Shows the level in the corner, as a locked square does, on a square drawn at full
+	 * colour: a pick that plants once the player reaches the level, which is not impossible.
+	 */
+	void showLevel()
+	{
+		levelShown = true;
+		repaint();
+	}
+
+	void setBadge(ImageIcon badge)
+	{
+		this.badge = badge;
+		repaint();
 	}
 
 	void setOn(boolean on)
@@ -122,10 +155,13 @@ class SettingSquare extends JPanel
 				g2.setComposite(full);
 			}
 			g2.setFont(getFont());
-			if (locked)
+			if (locked || levelShown)
 			{
 				int ascent = g2.getFontMetrics().getAscent();
 				PanelText.drawShadowed(g2, level, 3, ascent + 1, COLOR_LEVEL);
+			}
+			if (locked)
+			{
 				drawLock(g2, getWidth() - 12, 3);
 			}
 			else if (tag != null && !tag.isEmpty())
@@ -135,6 +171,11 @@ class SettingSquare extends JPanel
 					g2.setComposite(DIM_TAG);
 				}
 				PanelText.drawShadowed(g2, tag, 3, getHeight() - 3, COLOR_TAG);
+			}
+			if (badge != null)
+			{
+				g2.setComposite(full);
+				badge.paintIcon(this, g2, getWidth() - badge.getIconWidth() - 2, getHeight() - badge.getIconHeight() - 2);
 			}
 		}
 		finally

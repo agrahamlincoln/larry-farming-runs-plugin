@@ -262,6 +262,10 @@ public final class Itinerary {
      * such as the Falador park tree beside the Falador farm. Keyed by the rider, valued by
      * its seat. Moving the seat without it would cast the same teleport twice, nine stops
      * apart.
+     *
+     * <p>A neighbour on the walk, not on the list: an arrival the player is not making and
+     * that is no seat lies between them unwalked. Otherwise a family coming due partway round
+     * would slot its skipped arrivals in between, part the rider from its seat, and move it.
      */
     private static Map<Integer, Integer> ridersOf(List<Integer> seats, List<List<Integer>> visits, List<StopPlan> plans) {
         Set<Integer> isSeat = new HashSet<>(seats);
@@ -271,7 +275,12 @@ public final class Itinerary {
             if (landing == null) {
                 continue;
             }
-            for (int neighbour : new int[] {seat - 1, seat + 1}) {
+            for (int step : new int[] {-1, 1}) {
+                int neighbour = seat + step;
+                while (neighbour >= 0 && neighbour < visits.size() && !isSeat.contains(neighbour)
+                        && StopRowWriter.visitsIn(visits.get(neighbour), plans).isEmpty()) {
+                    neighbour += step;
+                }
                 if (neighbour >= 0 && neighbour < visits.size() && !isSeat.contains(neighbour) && !riders.containsKey(neighbour)
                         && landing == landingOf(visits.get(neighbour), plans)) {
                     riders.put(neighbour, seat);
@@ -337,7 +346,11 @@ public final class Itinerary {
         int best = UNRANKED;
         for (int index : visit) {
             StopPlan plan = plans.get(index);
-            if (plan.getStop().isFixedCrop() || !plan.getStop().isPlanting() || !isHerbPatch(plan.getStop().primaryPatch())) {
+            // A herb patch per the world map rather than the run that named it; an
+            // unresolvable reference is no herb patch, so it never reorders the trip. A stop's
+            // patches all share one type (RunStop's builder enforces it), so the primary
+            // answers for them all.
+            if (plan.getStop().isFixedCrop() || !plan.getStop().isPlanting() || plan.getStop().primaryPatch().type() != PatchType.HERB) {
                 continue;
             }
             for (PatchRef patch : plan.getStop().getPatches()) {
@@ -349,15 +362,5 @@ public final class Itinerary {
             }
         }
         return best;
-    }
-
-    /**
-     * Whether this is a herb patch, per the world map rather than the run that named it.
-     * An unresolvable reference answers false, so it never reorders the trip. A stop's
-     * patches all share one type ({@code RunStop}'s builder enforces it), so callers pass
-     * the primary.
-     */
-    private static boolean isHerbPatch(PatchRef patch) {
-        return patch.type() == PatchType.HERB;
     }
 }

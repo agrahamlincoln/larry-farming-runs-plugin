@@ -35,7 +35,7 @@ final class PatchWork {
      * {@code LIKELY_READY} window (up to a full growth tick before a farm tick is witnessed)
      * on the side of saying nothing rather than sending the player early.
      */
-    static Act at(PatchPrediction seen, RunStop stop, long nowEpochSec) {
+    static Act at(PatchPrediction seen, RunStop stop, FarmingPreferences prefs, long nowEpochSec) {
         // Never seen is not empty: say nothing.
         if (seen == null || seen.getCrop() == null || seen.isIdle()) {
             return null;
@@ -48,7 +48,7 @@ final class PatchWork {
         }
         // A standing guard crop, such as a white lily, wants nothing while it lives. Checked
         // after disease and death, the states where a guard does need help.
-        if (stop.isStandingCrop() && FixedCrops.grows(stop, seen.getCrop())) {
+        if (FixedCrops.stands(stop, seen.getCrop(), prefs) && FixedCrops.grows(stop, seen.getCrop())) {
             return null;
         }
         if (!seen.isReadyAt(nowEpochSec)) {
@@ -102,7 +102,7 @@ final class PatchWork {
      * waiting: a hespori ready to fight decodes HARVESTABLE with no HARVEST action, and a
      * fruit tree with fruit back reports work.
      */
-    static boolean standsEmpty(PatchPrediction seen, RunStop stop, long nowEpochSec) {
+    static boolean standsEmpty(PatchPrediction seen, RunStop stop, FarmingPreferences prefs, long nowEpochSec) {
         // Unseen is not empty; treating it as empty would drop a stop with real work.
         if (seen == null || seen.getCrop() == null) {
             return false;
@@ -115,7 +115,7 @@ final class PatchWork {
         if (!stop.isPlanting() || seen.getState() != CropState.HARVESTABLE || pickingIsAllItOffers) {
             return false;
         }
-        return at(seen, stop, nowEpochSec) == null;
+        return at(seen, stop, prefs, nowEpochSec) == null;
     }
 
     /**
@@ -135,7 +135,7 @@ final class PatchWork {
      * known to be out of its seed. Otherwise digging up a bearing bush gains nothing.
      */
     static boolean comesOut(PatchPrediction seen, RunStop stop, FarmingPreferences prefs, PlayerState player) {
-        if (seen == null || seen.getCrop() == null || seen.isIdle() || seen.getCrop() == Crop.WEEDS || !growsAbushOrCactus(stop)
+        if (seen == null || seen.getCrop() == null || seen.isIdle() || !growsAbushOrCactus(stop)
                 || !stop.isFixedCrop() || !stop.isPlanting()) {
             return false;
         }

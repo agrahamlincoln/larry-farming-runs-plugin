@@ -90,7 +90,9 @@ public final class InventorySim {
          * Volcanic ash for Fertile Soil cast to give ultracompost. Ash stacks, so one slot
          * covers any amount.
          */
-        VOLCANIC_ASH
+        VOLCANIC_ASH,
+        /** Compost potion to lift a finished bin a tier. One slot holds up to four doses. */
+        COMPOST_POTION
     }
 
     /**
@@ -249,6 +251,18 @@ public final class InventorySim {
          * <p>Not {@code getBank()}: {@link Demand#getBank()} returns a grade, not a place.
          */
         private final Bank bankPlace;
+
+        /**
+         * Whether the player passes this bank between the landing and the patch, and so
+         * banks on the way in, before the patches here are worked.
+         *
+         * <p>True wherever the rung carries a figure, because the figure is walked from the
+         * landing to the bank and on to the patch. A bank graded only by its arrival could
+         * lie on either side of the patch, so it is offered once the patches are worked.
+         */
+        public boolean isOnTheWayIn() {
+            return cost != null;
+        }
     }
 
     /**

@@ -2,6 +2,7 @@ package com.larryfarming.farming.model;
 
 import com.larryfarming.data.Tables;
 import com.larryfarming.engine.farming.Crop;
+import com.larryfarming.engine.farming.FarmingWorldMap;
 import java.util.*;
 
 /**
@@ -22,9 +23,24 @@ public final class FarmingKeys {
      * Every site's key, each true while the run includes the site, in the stops table's
      * order: its {@code switch} lines. Callers read it as a set. Each key is named for its
      * place rather than derived from the site's key. The herb run's extras have their crop
-     * switches instead.
+     * switches or their picks instead.
      */
-    public static final List<String> SITES = siteKeys();
+    public static final List<String> SITES;
+
+    /**
+     * The allotments and flower patches whose crop the player picks, in the stops table's
+     * order: its {@code pick} lines. Keyed by site.
+     */
+    public static final Map<String, PatchPick> PICKS;
+
+    static {
+        List<Tables.Row> stops = Tables.read("/com/larryfarming/stops.tsv");
+        SITES = siteKeys(stops);
+        PICKS = picks(stops);
+    }
+
+    /** A pick's value when the patch plants nothing. */
+    public static final String OFF = "OFF";
 
     // How the planner ranks and paces. The favourite herb holds a herb's Crop name, or
     // NO_FAVOURITE; the others are booleans.
@@ -36,6 +52,10 @@ public final class FarmingKeys {
     public static final String REPLANT_GROWN_TREES = "replantGrownTrees";
     public static final String HERB_RUNS_WAIT_FOR_LEVEL = "herbRunsWaitForLevel";
     public static final String COMPOST_WITH_FERTILE_SOIL = "compostWithFertileSoil";
+
+    // The compost thresholds hold whole numbers.
+    public static final String MAKE_COMPOST_BELOW = "makeCompostBelow";
+    public static final String STOP_COMPOST_AT = "stopCompostAt";
 
     /** The favourite herb's value when there is none. */
     public static final String NO_FAVOURITE = "none";
@@ -66,9 +86,9 @@ public final class FarmingKeys {
     }
 
     /** The stops table's switch keys, in its order. */
-    private static List<String> siteKeys() {
+    private static List<String> siteKeys(List<Tables.Row> stops) {
         List<String> keys = new ArrayList<>();
-        for (Tables.Row row : Tables.read("/com/larryfarming/stops.tsv")) {
+        for (Tables.Row row : stops) {
             if (row.text(0).equals("switch")) {
                 String key = row.requireWidth(3).text(1);
                 if (keys.contains(key)) {
@@ -80,24 +100,49 @@ public final class FarmingKeys {
         return List.copyOf(keys);
     }
 
+    /**
+     * The stops table's pick lines, each under the site it picks for: the pick's key, the
+     * For compost key or - for a patch with no bin, the farm, the picker's title, and the crop
+     * switches read while the pick is unsaved.
+     */
+    private static Map<String, PatchPick> picks(List<Tables.Row> stops) {
+        Map<String, PatchPick> picks = new LinkedHashMap<>();
+        String site = null;
+        for (Tables.Row row : stops) {
+            if (row.text(0).equals("site")) {
+                site = row.text(1);
+            } else if (row.text(0).equals("pick")) {
+                row.requireWidth(6);
+                if (FarmingWorldMap.byCatalogueKey(site) == null) {
+                    throw row.error("a pick at " + site + ", which is no patch's key");
+                }
+                if (picks.put(site, new PatchPick(site, row.text(1), row.optionalText(2), row.text(3), row.text(4),
+                        row.constants(Crop.class, 5))) != null) {
+                    throw row.error("a second pick at " + site);
+                }
+            }
+        }
+        return Collections.unmodifiableMap(picks);
+    }
+
     private static Set<String> allKeys() {
         Set<String> all = new HashSet<>(CROPS.values());
-        all.add(PICK_FRUIT_IN_PASSING);
+        all.addAll(List.of(PICK_FRUIT_IN_PASSING, FAVOURITE_HERB, BEST_SEEDS_EVERYWHERE, HERB_RUN_FIRST, WAIT_FOR_EVERY_PATCH,
+                FRUIT_TREES_WAIT_FOR_SAPLINGS, REPLANT_GROWN_TREES, HERB_RUNS_WAIT_FOR_LEVEL, COMPOST_WITH_FERTILE_SOIL,
+                MAKE_COMPOST_BELOW, STOP_COMPOST_AT));
         for (TravelMethod method : TravelMethod.values()) {
             all.add(method.getKey());
         }
         all.addAll(SITES);
+        for (PatchPick pick : PICKS.values()) {
+            all.add(pick.getKey());
+            if (pick.getCompostKey() != null) {
+                all.add(pick.getCompostKey());
+            }
+        }
         for (HouseItem item : HouseItem.values()) {
             all.add(item.getKey());
         }
-        all.add(FAVOURITE_HERB);
-        all.add(BEST_SEEDS_EVERYWHERE);
-        all.add(HERB_RUN_FIRST);
-        all.add(WAIT_FOR_EVERY_PATCH);
-        all.add(FRUIT_TREES_WAIT_FOR_SAPLINGS);
-        all.add(REPLANT_GROWN_TREES);
-        all.add(HERB_RUNS_WAIT_FOR_LEVEL);
-        all.add(COMPOST_WITH_FERTILE_SOIL);
         return Collections.unmodifiableSet(all);
     }
 

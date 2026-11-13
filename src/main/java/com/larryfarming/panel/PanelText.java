@@ -80,6 +80,31 @@ final class PanelText
 		return stack(new JPanel());
 	}
 
+	/**
+	 * A new transparent, left-aligned panel on {@code layout}. The alignment matters only in
+	 * a vertical stack; any other parent ignores it.
+	 */
+	static JPanel panel(LayoutManager layout)
+	{
+		JPanel panel = new JPanel(layout);
+		panel.setOpaque(false);
+		panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		return panel;
+	}
+
+	/**
+	 * Constraints for a row's margin icon: the first cell, pinned to the top left. The
+	 * text column then goes in through {@link #addFill}.
+	 */
+	static GridBagConstraints marginConstraints()
+	{
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		gbc.anchor = GridBagConstraints.NORTHWEST;
+		return gbc;
+	}
+
 	/** Adds a row's text column at {@code column}, taking the spare width. */
 	static void addFill(JPanel row, GridBagConstraints gbc, int column, Component text)
 	{

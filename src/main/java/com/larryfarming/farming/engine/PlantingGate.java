@@ -39,21 +39,13 @@ public final class PlantingGate {
         return stop.isFixedCrop() && FixedCrops.ticked(stop, prefs).isEmpty();
     }
 
-    /** Whether the player has dropped this stop's site from their runs. */
-    private static boolean dropsSite(RunStop stop, FarmingPreferences prefs) {
-        String site = FarmingCatalogue.siteKey(stop);
-        return site != null && !prefs.visits(site);
-    }
-
     /**
-     * Whether the player has dropped every site of this run's family they can reach, which
-     * leaves the run nothing to go for. A site the account is seen unable to reach counts as
-     * dropped, so Harmony before the elite Morytania diary cannot keep a run open alone. Asked
-     * of the family, not the variant, so every spellbook's run agrees. False for a family
-     * with no site switches.
+     * Whether the player has dropped this stop's site from their runs. A farm's allotments
+     * and flower patch go with its herb site, as they are worked only beside it.
      */
-    private static boolean dropsEverySite(FarmingRun run, FarmingPreferences prefs) {
-        return prefs.dropsEverySiteOf(FarmingCatalogue.siteKeys(run.getId()));
+    private static boolean dropsSite(RunStop stop, FarmingPreferences prefs) {
+        String site = FarmingCatalogue.siteKey(stop.primaryPatch());
+        return site != null && !prefs.visits(site);
     }
 
     /**
@@ -67,8 +59,11 @@ public final class PlantingGate {
         if (run.getId() == RunId.CONTRACT) {
             return false;
         }
-        // Every site dropped: the woven-in extras are no reason to go on their own.
-        if (dropsEverySite(run, prefs)) {
+        // Every site dropped: the woven-in extras are no reason to go on their own. A site the
+        // account is seen unable to reach counts as dropped, so Harmony before the elite
+        // Morytania diary cannot keep a run open alone. Asked of the family, not the variant,
+        // so every spellbook's run agrees. False for a family with no site switches.
+        if (prefs.dropsEverySiteOf(FarmingCatalogue.siteKeys(run.getId()))) {
             return true;
         }
         // A run naming its own seeds is defined by them — every tree of the family unticked,

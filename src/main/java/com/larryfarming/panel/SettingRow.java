@@ -25,9 +25,7 @@ final class SettingRow
 
 	static JPanel of(String label, JComponent control)
 	{
-		JPanel row = new JPanel(new BorderLayout(4, 0));
-		row.setOpaque(false);
-		row.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+		JPanel row = PanelText.panel(new BorderLayout(4, 0));
 		row.setBorder(BorderFactory.createEmptyBorder(3, 2, 0, 0));
 		JLabel name = PanelText.label(label, PanelColors.HEADER);
 		name.setPreferredSize(new Dimension(LABEL_WIDTH, ROW_HEIGHT - 3));

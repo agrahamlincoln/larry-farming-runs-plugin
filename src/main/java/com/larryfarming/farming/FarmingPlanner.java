@@ -94,6 +94,18 @@ public class FarmingPlanner implements EngineListener {
     @Getter
     private HouseSight house = HouseSight.unseen();
 
+    /** The best compost step the account has reached, or null before one is saved. Saved on every change. */
+    private Crop compostStep;
+
+    /** Whether compost upkeep was last on, or null before it is decided. Saved on every change. */
+    private Boolean compostUpkeep;
+
+    /** What the bottomless bucket was last read holding, or null when never read. Saved on every change. */
+    private BottomlessBucket.Reading bucketReading;
+
+    /** Whether a compost threshold moved since the thermostat last decided, so it decides even mid-trip. */
+    private boolean thresholdMoved;
+
     /**
      * The next second at which a farming run comes ready, or zero when none is waiting.
      * Set from each rebuild and consumed by {@link #flushIfDirty()}.
@@ -146,9 +158,19 @@ public class FarmingPlanner implements EngineListener {
         loadPersistedState();
     }
 
+    /**
+     * Feeds a live varbit change into {@link #dailyTeleportLedger} when the game uses that
+     * varbit to count spent teleports. The game's count replaces the ledger's, because it
+     * stays right across time the plugin was not watching.
+     */
     @Override
     public void varbitChanged(int varbitId, int value) {
-        observeDailyTeleportVarbit(varbitId, value);
+        Capability capability = DAILY_TELEPORT_VARBITS.get(varbitId);
+        if (capability == null) {
+            return;
+        }
+        dailyTeleportLedger.observeUsesSpent(capability, value, now());
+        saveDailyTeleportLedger();
     }
 
     @Override
@@ -174,6 +196,9 @@ public class FarmingPlanner implements EngineListener {
         plantingWatch.clear();
         contractCrop = null;
         house = HouseSight.unseen();
+        compostStep = null;
+        compostUpkeep = null;
+        bucketReading = null;
         // The book this account is not on; another account may be on it.
         spellbookPreview = null;
         tripRecord = DepositPlanner.TripRecord.EMPTY;
@@ -188,6 +213,9 @@ public class FarmingPlanner implements EngineListener {
         contractCrop = persistence.loadFarmingContract();
 
         house = persistence.loadHouse();
+        compostStep = persistence.loadCompostStep();
+        compostUpkeep = persistence.loadCompostUpkeep();
+        bucketReading = persistence.loadBottomlessBucket();
 
         FarmingPlannerPersistence.DailyTeleportLedgerState ledgerState = persistence.loadDailyTeleportLedger();
         dailyTeleportLedger.loadPersisted(ledgerState.getDay(), ledgerState.getUsed());
@@ -201,15 +229,30 @@ public class FarmingPlanner implements EngineListener {
      * Take the player's crop settings and plan against them.
      *
      * <p>A no-op when nothing changed, so unrelated settings in the config group do not cost
-     * a re-plan.
+     * a re-plan. A new compost threshold keeps the thermostat's last decision while the
+     * stock is inside the new pair, and decides at once, even mid-trip, outside it.
      */
     public void setPreferences(FarmingPreferences preferences) {
         FarmingPreferences wanted = preferences != null ? preferences : FarmingPreferences.defaults();
         if (wanted.equals(this.preferences)) {
             return;
         }
+        thresholdMoved |= wanted.makeCompostBelow() != this.preferences.makeCompostBelow()
+                || wanted.stopCompostAt() != this.preferences.stopCompostAt();
         this.preferences = wanted;
         dirty = true;
+    }
+
+    /**
+     * The player has compost enough for now. The thermostat switches off and saves at once,
+     * even mid-trip, and switches back on once the stock falls below "Restock below".
+     */
+    public void stopCompost() {
+        if (!Boolean.FALSE.equals(compostUpkeep)) {
+            compostUpkeep = false;
+            persistence.saveCompostUpkeep(false);
+            dirty = true;
+        }
     }
 
     /**
@@ -282,25 +325,61 @@ public class FarmingPlanner implements EngineListener {
     }
 
 
+    /** The bottomless bucket said what it holds, on a check or a fill. Replaces the last reading. */
+    public void bottomlessBucketRead(BottomlessBucket.Reading reading) {
+        if (takeBucket(reading)) {
+            dirty = true;
+        }
+    }
+
+    /**
+     * Takes and saves a new bucket reading. Marks nothing dirty: the stock count calls it
+     * from inside a rebuild.
+     *
+     * @return whether it differs from the last reading
+     */
+    private boolean takeBucket(BottomlessBucket.Reading reading) {
+        if (reading.equals(bucketReading)) {
+            return false;
+        }
+        bucketReading = reading;
+        persistence.saveBottomlessBucket(reading);
+        return true;
+    }
+
+    /**
+     * Counts the compost stock and moves what it decides into the saved state.
+     *
+     * <p>A bucket stored at the leprechaun gives its reading exactly, so it replaces the last
+     * one. While the trip is underway the thermostat keeps its saved state, so a stock that
+     * crosses a threshold mid-trip does not add or drop bins, unless the player moved one.
+     */
+    private CompostStock compostStock(PlayerState state) {
+        BottomlessBucket.Reading stored = BottomlessBucket.stored(state);
+        if (stored != null) {
+            takeBucket(stored);
+        }
+        CompostStock stock = CompostStock.of(state, compostStep, compostUpkeep, bucketReading, preferences);
+        if (stock.getStep() != compostStep) {
+            compostStep = stock.getStep();
+            persistence.saveCompostStep(compostStep);
+        }
+        if (compostUpkeep != null && advice != null && advice.isUnderway() && !thresholdMoved) {
+            return stock.withOn(compostUpkeep);
+        }
+        thresholdMoved = false;
+        if (stock.isDecided() && !Boolean.valueOf(stock.isOn()).equals(compostUpkeep)) {
+            log.debug("Compost upkeep {} at {} uses", stock.isOn() ? "on" : "off", stock.getUses());
+            compostUpkeep = stock.isOn();
+            persistence.saveCompostUpkeep(compostUpkeep);
+        }
+        return stock;
+    }
+
     /** Takes and saves a new sight of the house, and re-plans against it. */
     private void observeHouse(HouseSight next) {
         house = next;
         persistence.saveHouse(next);
-        dirty = true;
-    }
-
-    /**
-     * Feeds a live varbit change into {@link #dailyTeleportLedger} when the game uses that
-     * varbit to count spent teleports. The game's count replaces the ledger's, because it
-     * stays right across time the plugin was not watching.
-     */
-    private void observeDailyTeleportVarbit(int varbitId, int value) {
-        Capability capability = DAILY_TELEPORT_VARBITS.get(varbitId);
-        if (capability == null) {
-            return;
-        }
-        dailyTeleportLedger.observeUsesSpent(capability, value, now());
-        saveDailyTeleportLedger();
         dirty = true;
     }
 
@@ -323,13 +402,12 @@ public class FarmingPlanner implements EngineListener {
             }
         }
         saveDailyTeleportLedger();
-        dirty = true;
     }
 
     /**
      * Charges one Ardougne farm teleport against the cloak the player actually holds.
      *
-     * <p>The counterpart to {@link #observeDailyTeleportVarbit} for the rationed route with no
+     * <p>The counterpart to {@link #varbitChanged} for the rationed route with no
      * readable game counter. Called when {@link ArdougneFarmTeleportWatch} has seen a click
      * land, not when it was made.
      *
@@ -349,11 +427,12 @@ public class FarmingPlanner implements EngineListener {
         dailyTeleportLedger.recordUse(held, now());
         log.debug("Ardougne cloak farm teleport charged against {}", held);
         saveDailyTeleportLedger();
-        dirty = true;
     }
 
+    /** Saves the ledger after a change, and re-plans against it. */
     private void saveDailyTeleportLedger() {
         persistence.saveDailyTeleportLedger(dailyTeleportLedger.exportDay(), dailyTeleportLedger.exportForPersist());
+        dirty = true;
     }
 
     // ---------------------------------------------------------------
@@ -479,7 +558,8 @@ public class FarmingPlanner implements EngineListener {
         }
         // The clock enters the farming layer here and nowhere below it. Everything under
         // the scheduler takes the epoch second as an argument, so the time can be fixed.
-        FarmingInputs inputs = inputs(nowEpochSec);
+        CompostStock compost = compostStock(state);
+        FarmingInputs inputs = inputs(nowEpochSec).withCompost(compost);
         FarmingAdvice next = advisor.advise(state, inputs, nowEpochSec);
         // The watch judged its teleport against the stop on screen. A plan that moves on to
         // another stop is judged again now, so the new stop never shows the old one's
@@ -487,7 +567,7 @@ public class FarmingPlanner implements EngineListener {
         FarmingStopAdvice heading = headingStop(next);
         if (travelWatch.retarget(state, nameOf(heading), landingOf(heading))) {
             log.debug("Teleport no longer paid for: the next stop is {}", nameOf(heading));
-            inputs = inputs(nowEpochSec);
+            inputs = inputs(nowEpochSec).withCompost(compost);
             next = advisor.advise(state, inputs, nowEpochSec);
         }
         // The trip record reads the advice it feeds. A changed packed set plans once more

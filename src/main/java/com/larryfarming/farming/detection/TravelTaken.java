@@ -24,7 +24,7 @@ public class TravelTaken {
      */
     Set<Destination> places;
 
-    /** The travel item the teleport used up: a ring's last charge, a full ectophial. */
+    /** The travel item the teleport used up: a ring's last charge, a broken tablet. */
     Set<Capability> items;
 
     public static TravelTaken to(Set<Destination> places) {

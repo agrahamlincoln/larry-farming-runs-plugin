@@ -70,7 +70,6 @@ final class RunPlanning {
         // Read once so the quota and the allocation below rank patches the same way.
         int[] walk = CropAssigner.walkPositions(plans, tripBook);
 
-        SeedPolicy policy = FarmingCatalogue.seedPolicy();
         // Counts only patches worth a good seed, which enforces the reserved band: the
         // contract's guild patch is its own whole family, so assignCrops would otherwise
         // give it the top seat and the player's best herb.
@@ -86,14 +85,14 @@ final class RunPlanning {
         //
         // A player who puts the best seeds everywhere has no quota: every patch worth a good
         // seed takes one. The reserved guild patch still is not, so it keeps the filler.
-        int quota = policy.getGoodSeedsPerRun();
+        int quota = FarmingCatalogue.seedPolicy().getGoodSeedsPerRun();
         int goodPatches = inputs.getPreferences().plantsBestSeedsEverywhere() ? Math.min(countGoodHomes(plans), rotationPatches)
                 : Math.min(countGoodHomes(plans), quota - CropAssigner.goodSeatsSpent(plans, state, inputs, quota, walk));
         // A run naming its own seeds (every tree run) gets a ranked ladder, not the herb
         // rotation. Only the rotation draws from the shared stock: a tree run's ladder
         // covers one patch type, so two tree families never compete for a sapling. A patch
         // a diary claims takes its crop in assignCrops, outside the ladder.
-        SeedPlan seeds = run.getSeedPatchType() == null ? SeedSelector.select(policy, inputs.getPreferences(), state, goodPatches,
+        SeedPlan seeds = run.getSeedPatchType() == null ? SeedSelector.select(inputs.getPreferences(), state, goodPatches,
                         rotationPatches - goodPatches, rotationStock) : SeedSelector.forPreference(inputs.getPreferences(),
                         run.getSeedPatchType(), state, countPlanting(plans) - countDiaryClaims(plans, state, inputs),
                         DiaryPlantings.withheld(state, inputs.getPreferences()));

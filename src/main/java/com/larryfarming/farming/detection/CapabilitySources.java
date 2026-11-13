@@ -12,6 +12,8 @@ import java.util.*;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import net.runelite.api.gameval.ItemID;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Value;
 import net.runelite.api.gameval.VarbitID;
 
@@ -81,18 +83,17 @@ public final class CapabilitySources {
      * <p>The towns come from the client's names for these ids. Edgeville and the Wilderness
      * also carry a separate {@code _UNLOCKED} varbit, which indicates the bare flag records
      * the choice rather than the unlock.
+     *
+     * <p>Unordered: one set flag names one town, and two set flags name none, whichever is
+     * read first.
      */
-    private static final int RESPAWN_FALADOR_VARBIT = VarbitID.FALADOR_SPAWN;
-    private static final int RESPAWN_EDGEVILLE_VARBIT = VarbitID.EDGEVILLE_SPAWN;
-    private static final int RESPAWN_CAMELOT_VARBIT = VarbitID.CAMELOT_SPAWN;
-    private static final int RESPAWN_FEROX_VARBIT = VarbitID.WILDERNESS_SPAWN;
-    private static final int RESPAWN_CIVITAS_VARBIT = VarbitID.CIVITAS_SPAWN;
-    private static final int RESPAWN_KOUREND_VARBIT = VarbitID.KOUREND_SPAWN;
-
-    private static final int[] RESPAWN_VARBIT_IDS = {
-        RESPAWN_FALADOR_VARBIT, RESPAWN_EDGEVILLE_VARBIT, RESPAWN_CAMELOT_VARBIT,
-        RESPAWN_FEROX_VARBIT, RESPAWN_CIVITAS_VARBIT, RESPAWN_KOUREND_VARBIT,
-    };
+    private static final Map<Integer, String> RESPAWN_TOWNS = Map.of(
+            VarbitID.FALADOR_SPAWN, "Falador",
+            VarbitID.EDGEVILLE_SPAWN, "Edgeville",
+            VarbitID.CAMELOT_SPAWN, "Camelot",
+            VarbitID.WILDERNESS_SPAWN, "Ferox Enclave",
+            VarbitID.CIVITAS_SPAWN, "Civitas illa Fortis",
+            VarbitID.KOUREND_SPAWN, "Kourend Castle");
 
     /** What opens each respawn town, separate from whether it is the chosen one. */
     private static final Map<String, Detector> RESPAWN_UNLOCKS = respawnUnlocks();
@@ -132,8 +133,8 @@ public final class CapabilitySources {
         }
         boolean scanned = false;
         String chosen = null;
-        for (int varbit : RESPAWN_VARBIT_IDS) {
-            Integer value = state.getVarbits().get(varbit);
+        for (Map.Entry<Integer, String> town : RESPAWN_TOWNS.entrySet()) {
+            Integer value = state.getVarbits().get(town.getKey());
             if (value == null) {
                 continue;
             }
@@ -146,29 +147,12 @@ public final class CapabilitySources {
             if (chosen != null) {
                 return null;
             }
-            chosen = townFor(varbit);
+            chosen = town.getValue();
         }
         if (chosen != null) {
             return chosen;
         }
         return scanned ? "Lumbridge" : null;
-    }
-
-    private static String townFor(int varbit) {
-        switch (varbit) {
-            case RESPAWN_FALADOR_VARBIT:
-                return "Falador";
-            case RESPAWN_EDGEVILLE_VARBIT:
-                return "Edgeville";
-            case RESPAWN_CAMELOT_VARBIT:
-                return "Camelot";
-            case RESPAWN_FEROX_VARBIT:
-                return "Ferox Enclave";
-            case RESPAWN_CIVITAS_VARBIT:
-                return "Civitas illa Fortis";
-            default:
-                return "Kourend Castle";
-        }
     }
 
     /** The assigned farming contract's crop, and whether it has finished growing. */
@@ -185,15 +169,6 @@ public final class CapabilitySources {
     private static final int[] LANCALLIUMS_BOOK_IDS = {
         ItemID.VEOS_KHAREDSTS_MEMOIRS, ItemID.BOOK_OF_THE_DEAD,
     };
-
-    /**
-     * Counters of rationed teleports spent today, scanned at login because a day's allowance
-     * can be part spent before the plugin starts.
-     *
-     * <p>Must stay declared above {@link #LOGIN_SCAN_VARBIT_IDS}, whose initialiser reads it
-     * (static fields initialise in source order).
-     */
-    private static final int[] DAILY_USE_VARBIT_IDS = DiaryRewards.usesSpentVarbitIds();
 
     /**
      * The simple rules, one row each, and two tables of facts: the quest gating an item only
@@ -227,9 +202,12 @@ public final class CapabilitySources {
             CONTRACT_COMPLETE_VARBIT,
         };
         int[] books = {LANCALLIUMS_PAGE_VARBIT, MEMOIRS_CHARGES_VARBIT};
-        IntStream fixed = Stream.of(own, RESPAWN_VARBIT_IDS, books, DiaryTiers.allVarbits(), DAILY_USE_VARBIT_IDS)
-                .flatMapToInt(IntStream::of);
-        return IntStream.concat(fixed, flags).toArray();
+        IntStream fixed = Stream.of(own, books, DiaryTiers.allVarbits()).flatMapToInt(IntStream::of);
+        // The respawn flags, and the counters of rationed teleports spent today: a day's
+        // allowance can be part spent before the plugin starts.
+        IntStream keyed = Stream.concat(RESPAWN_TOWNS.keySet().stream(), DiaryRewards.USES_SPENT_BY_VARBIT.keySet().stream())
+                .mapToInt(Integer::intValue);
+        return IntStream.concat(IntStream.concat(fixed, keyed), flags).toArray();
     }
 
     /** A quest, and how far along it a player must be. */
@@ -359,86 +337,80 @@ public final class CapabilitySources {
     /**
      * One capability built in the player's house: what settles it from a sighting, the
      * levels and quests below which it cannot exist, and the words for each answer.
+     *
+     * <p>Either a piece of furniture, answered from the last scan of the house, or a Portal
+     * Nexus destination, answered from the Nexus. See {@link #built} and {@link #attuned}.
      */
-    private abstract static class HouseRule {
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    private static final class HouseRule {
         private final Floor floor;
 
-        HouseRule(Floor floor) {
-            this.floor = floor;
-        }
+        /** The furniture looked for, or null for a Portal Nexus destination. */
+        private final HouseFeature feature;
 
-        /** What the house as last seen says about this item. */
-        abstract HouseSighting sighting(HouseSight house);
+        /** The Nexus destination's enum 1377 key; unused for furniture. */
+        private final int destination;
+
+        /** What the rule counts, as the "isn't counted until you …" answer names it: "a Weiss portal". */
+        private final String subject;
 
         /** Why it counts once seen: "your house has a Weiss portal". */
-        abstract String seenBuilt();
+        private final String seenBuilt;
 
         /** Why it does not once seen without it: "your house has no Weiss portal". */
-        abstract String seenAbsent(HouseSight house);
+        private final String seenAbsent;
 
-        /** Why it counts on the player's word alone. */
-        abstract String declared();
+        /** What the house as last seen says about this item. */
+        HouseSighting sighting(HouseSight house) {
+            if (feature != null) {
+                if (house.has(feature)) {
+                    return HouseSighting.BUILT;
+                }
+                return house.isScanned() ? HouseSighting.ABSENT : HouseSighting.UNSEEN;
+            }
+            if (house.isAttuned(destination)) {
+                return HouseSighting.BUILT;
+            }
+            return nexusGone(house) || house.isNexusRead() ? HouseSighting.ABSENT : HouseSighting.UNSEEN;
+        }
 
-        /** Why it does not before it is seen or declared, naming what would settle it. */
-        abstract String unseen(HouseSight house);
+        /** Whether this is a Nexus destination in a house scanned without a Nexus. */
+        private boolean nexusGone(HouseSight house) {
+            return feature == null && house.isScanned() && !house.has(HouseFeature.PORTAL_NEXUS);
+        }
 
         /**
          * The answer, in this order. Seen built is a yes, whatever the levels say. Then the
          * floor answers no when a level or quest rules the item out, since its reason names
          * what the player is missing. Then seen without it is a detected no, which no
          * declaration overrides. Then a declaration is a yes. A house never seen is a no
-         * too, marked {@code INFERRED}: assuming absence costs at worst a slower route.
+         * too, marked {@code INFERRED}: assuming absence costs at worst a slower route. The
+         * "isn't counted until" answer names what would settle it: opening a Nexus that stands
+         * but was never read, otherwise visiting the house.
          */
         CapabilityVerdict detect(PlayerState state, HouseSight house, boolean declared) {
             HouseSighting seen = sighting(house);
             if (seen == HouseSighting.BUILT) {
-                return CapabilityVerdict.have(Source.DETECTED, seenBuilt());
+                return CapabilityVerdict.have(Source.DETECTED, seenBuilt);
             }
             CapabilityVerdict tooEarly = floor.detect(state);
             if (tooEarly.getState() == CapabilityState.LACK) {
                 return tooEarly;
             }
             if (seen == HouseSighting.ABSENT) {
-                return CapabilityVerdict.lack(Source.DETECTED, seenAbsent(house));
+                return CapabilityVerdict.lack(Source.DETECTED, nexusGone(house) ? "your house has no Portal Nexus" : seenAbsent);
             }
             if (declared) {
-                return CapabilityVerdict.have(Source.DECLARED, declared());
+                return CapabilityVerdict.have(Source.DECLARED, "you said " + seenBuilt);
             }
-            return CapabilityVerdict.lack(Source.INFERRED, unseen(house));
+            String settle = feature == null && house.has(HouseFeature.PORTAL_NEXUS) ? "open the Nexus" : "visit your house";
+            return CapabilityVerdict.lack(Source.INFERRED, subject + " isn't counted until you " + settle + TICK_IT);
         }
     }
 
     /** A piece of furniture, answered from the last scan of the house. */
     private static HouseRule built(HouseFeature feature, String what, Floor floor) {
-        return new HouseRule(floor) {
-            @Override
-            HouseSighting sighting(HouseSight house) {
-                if (house.has(feature)) {
-                    return HouseSighting.BUILT;
-                }
-                return house.isScanned() ? HouseSighting.ABSENT : HouseSighting.UNSEEN;
-            }
-
-            @Override
-            String seenBuilt() {
-                return "your house has " + what;
-            }
-
-            @Override
-            String seenAbsent(HouseSight house) {
-                return "your house has no " + bare(what);
-            }
-
-            @Override
-            String declared() {
-                return "you said your house has " + what;
-            }
-
-            @Override
-            String unseen(HouseSight house) {
-                return what + " isn't counted until you visit your house" + TICK_IT;
-            }
-        };
+        return new HouseRule(floor, feature, 0, what, "your house has " + what, "your house has no " + bare(what));
     }
 
     /**
@@ -449,40 +421,8 @@ public final class CapabilitySources {
      * is not seen yet: the scan shows the Nexus stands, not what it is attuned to.
      */
     private static HouseRule attuned(int destination, String where, Floor floor) {
-        return new HouseRule(floor) {
-            @Override
-            HouseSighting sighting(HouseSight house) {
-                if (house.isAttuned(destination)) {
-                    return HouseSighting.BUILT;
-                }
-                if (house.isScanned() && !house.has(HouseFeature.PORTAL_NEXUS) || house.isNexusRead()) {
-                    return HouseSighting.ABSENT;
-                }
-                return HouseSighting.UNSEEN;
-            }
-
-            @Override
-            String seenBuilt() {
-                return "your Portal Nexus is attuned to " + where;
-            }
-
-            @Override
-            String seenAbsent(HouseSight house) {
-                return house.isScanned() && !house.has(HouseFeature.PORTAL_NEXUS) ? "your house has no Portal Nexus"
-                        : "your Portal Nexus isn't attuned to " + where;
-            }
-
-            @Override
-            String declared() {
-                return "you said your Portal Nexus is attuned to " + where;
-            }
-
-            @Override
-            String unseen(HouseSight house) {
-                return house.has(HouseFeature.PORTAL_NEXUS) ? where + " in your Portal Nexus isn't counted until you open the Nexus"
-                                + TICK_IT : where + " in your Portal Nexus isn't counted until you visit your house" + TICK_IT;
-            }
-        };
+        return new HouseRule(floor, null, destination, where + " in your Portal Nexus",
+                "your Portal Nexus is attuned to " + where, "your Portal Nexus isn't attuned to " + where);
     }
 
     /**
@@ -524,7 +464,7 @@ public final class CapabilitySources {
                 .quest("Tree Gnome Village");
         return (state, sight) -> {
             CapabilityVerdict tooEarly = cannotExist.detect(state);
-            if (tooEarly != null && tooEarly.getState() == CapabilityState.LACK) {
+            if (tooEarly.getState() == CapabilityState.LACK) {
                 return tooEarly;
             }
             PatchPrediction seen = sight.at(FarmingCatalogue.patchFor(capability));
@@ -625,21 +565,8 @@ public final class CapabilitySources {
         rules.put(Capability.RESPAWN_AVAILABLE_CAMELOT, respawnPoint("Camelot", "Merlin in Camelot Castle"));
 
         // --- Quest-gated networks -------------------------------------------------
-        // The elite Lumbridge & Draynor diary lifts the staff requirement (wiki "Fairy
-        // ring"). No quest does. An unread diary flag stays UNKNOWN, so the bag keeps
-        // packing the staff.
-        Detector staffless = diaryTier("Lumbridge", DiaryTiers.ELITE,
-                "your elite Lumbridge & Draynor diary lets you use fairy rings without a staff",
-                "wield a dramen or lunar staff to use fairy rings",
-                "not sure whether you have the elite Lumbridge & Draynor diary");
-        rules.put(Capability.STAFFLESS_FAIRY_RINGS, staffless);
-        // Varbit 4480. Varbit 4585 holds the player's default landing, which the house
-        // portal follows; the spell and the tablet offer the Exchange whatever it holds.
-        rules.put(Capability.VARROCK_DIARY_MEDIUM, diaryTier("Varrock", DiaryTiers.MEDIUM,
-                "your medium Varrock diary lets the Varrock teleport land at the Grand Exchange",
-                "the Varrock teleport lands at the Grand Exchange only after the medium Varrock diary",
-                "not sure whether you have the medium Varrock diary"));
-        rules.put(Capability.FAIRY_RINGS, fairyRings(staffless));
+        // The table's diary row answers whether the staff is needed.
+        rules.put(Capability.FAIRY_RINGS, fairyRings(rules.get(Capability.STAFFLESS_FAIRY_RINGS)));
         // House items and planted trees are answered from the house and the patch; see
         // houseRules() and patchRules().
         return Collections.unmodifiableMap(rules);
@@ -691,6 +618,11 @@ public final class CapabilitySources {
                 return skill(row.requireWidth(5).constant(Skill.class, 2), row.integer(3), row.text(4));
             case "houseIn":
                 return houseIn(capability, row.requireWidth(3).text(2));
+            case "diary":
+                if (DiaryTiers.varbitFor(row.requireWidth(7).text(2), row.text(3)) == null) {
+                    throw row.error("no diary flag for " + row.text(2) + " " + row.text(3));
+                }
+                return diaryTier(row.text(2), row.text(3), row.text(4), row.text(5), row.text(6));
             case "open":
                 String because = row.requireWidth(3).text(2);
                 return state -> CapabilityVerdict.have(Source.DETECTED, because);
@@ -726,7 +658,11 @@ public final class CapabilitySources {
      * @param capability the {@link CarryItems} row to take ids from
      */
     private static Detector carried(String description, Capability capability) {
-        return items(description, idsFor(capability));
+        CarryItems.Carry carry = CarryItems.forCapability(capability);
+        if (carry == null) {
+            throw new IllegalStateException("no carry item for " + capability);
+        }
+        return items(description, carry.getItemIds());
     }
 
     /**
@@ -766,14 +702,6 @@ public final class CapabilitySources {
             }
             return holding;
         };
-    }
-
-    private static int[] idsFor(Capability capability) {
-        CarryItems.Carry carry = CarryItems.forCapability(capability);
-        if (carry == null) {
-            throw new IllegalStateException("no carry item for " + capability);
-        }
-        return carry.getItemIds();
     }
 
     /**
@@ -1030,18 +958,20 @@ public final class CapabilitySources {
      */
     private static final class Floor implements Detector {
         private final String what;
-        private int construction;
+
+        /**
+         * Each skill's level, checked and named in the order the builder added them. Every
+         * floor adds Construction first, so a Construction shortfall is the one named.
+         */
+        private final Map<Skill, Integer> levels = new LinkedHashMap<>();
         private String questName;
-        private Skill skill;
-        private int skillLevel;
 
         Floor(String what) {
             this.what = what;
         }
 
         Floor construction(int level) {
-            this.construction = level;
-            return this;
+            return skill(Skill.CONSTRUCTION, level);
         }
 
         Floor quest(String questName) {
@@ -1050,24 +980,17 @@ public final class CapabilitySources {
         }
 
         Floor skill(Skill skill, int level) {
-            this.skill = skill;
-            this.skillLevel = level;
+            levels.put(skill, level);
             return this;
         }
 
         @Override
         public CapabilityVerdict detect(PlayerState state) {
-            if (construction > 0) {
-                int level = state.getSkillLevel(Skill.CONSTRUCTION);
-                if (level < construction) {
-                    return CapabilityVerdict.lack(Source.INFERRED, what + " needs " + construction + " Construction and you have " + level);
-                }
-            }
-            if (skill != null) {
-                int level = state.getSkillLevel(skill);
-                if (level < skillLevel) {
-                    return CapabilityVerdict.lack(Source.INFERRED, what + " needs " + skillLevel + " "
-                                    + skill.getDisplayName() + " and you have " + level);
+            for (Map.Entry<Skill, Integer> needed : levels.entrySet()) {
+                int level = state.getSkillLevel(needed.getKey());
+                if (level < needed.getValue()) {
+                    return CapabilityVerdict.lack(Source.INFERRED, what + " needs " + needed.getValue() + " "
+                                    + needed.getKey().getDisplayName() + " and you have " + level);
                 }
             }
             if (questName != null) {
@@ -1081,11 +1004,10 @@ public final class CapabilitySources {
 
         /** The first level {@link #detect} would name as short, or 0 for none. */
         int levelShort(PlayerState state) {
-            if (construction > 0 && state.getSkillLevel(Skill.CONSTRUCTION) < construction) {
-                return construction;
-            }
-            if (skill != null && state.getSkillLevel(skill) < skillLevel) {
-                return skillLevel;
+            for (Map.Entry<Skill, Integer> needed : levels.entrySet()) {
+                if (state.getSkillLevel(needed.getKey()) < needed.getValue()) {
+                    return needed.getValue();
+                }
             }
             return 0;
         }
@@ -1141,16 +1063,10 @@ public final class CapabilitySources {
 
     /**
      * Every capability whose daily teleport allowance the game itself counts, keyed by the
-     * counting varbit. Used for live varbit changes and to prime a fresh login. A view of
-     * {@link DiaryRewards}, which owns the varbit facts.
+     * counting varbit. Used for live varbit changes and to prime a fresh login. Owned by
+     * {@link DiaryRewards}, which holds the varbit facts.
      */
     public static Map<Integer, Capability> dailyUsesCapabilitiesByVarbit() {
-        Map<Integer, Capability> byVarbit = new LinkedHashMap<>();
-        for (Capability capability : Capability.values()) {
-            if (DiaryRewards.reportsUsesSpent(capability)) {
-                byVarbit.put(DiaryRewards.usesSpentVarbit(capability), capability);
-            }
-        }
-        return Collections.unmodifiableMap(byVarbit);
+        return DiaryRewards.USES_SPENT_BY_VARBIT;
     }
 }

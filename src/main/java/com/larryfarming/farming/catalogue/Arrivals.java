@@ -49,12 +49,4 @@ public final class Arrivals {
     public static int seat(Arrival arrival) {
         return SEATS.get(arrival);
     }
-
-    /**
-     * How to reach this arrival when several of its patches are being worked, or empty
-     * when its stops' own chains already agree.
-     */
-    static List<TravelOption> combinedChain(Arrival arrival) {
-        return CatalogueLoader.loaded().combined.get(arrival);
-    }
 }

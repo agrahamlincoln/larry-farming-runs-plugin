@@ -38,17 +38,8 @@ public class FarmingRunStatus {
      */
     long readyAtEpochSec;
 
-    /** How many patches want attention. */
-    int actionableCount;
-
     /** The run's characteristic item, for the row icon and the infobox. */
     int iconItemId;
-
-    /**
-     * True when this verdict rests on predictions rather than on patches seen recently.
-     * Prediction is the normal case: a patch only reports while the player stands beside it.
-     */
-    boolean predicted;
 
     /**
      * True when the player is out on this run right now and one of its woven-in extras is

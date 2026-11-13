@@ -12,7 +12,7 @@ import lombok.Value;
  * name.
  */
 @Value
-@Builder
+@Builder(toBuilder = true)
 public class FarmingRunSettings {
 
     /** How the run's settings are drawn. */
@@ -43,6 +43,9 @@ public class FarmingRunSettings {
     /** Crops the run plants in passing, each with its own tick. */
     List<FarmingSettingChoice> extras;
 
+    /** The allotments and flower patches at the herb farms, farm by farm. */
+    List<FarmingPatchPick> patchPicks;
+
     /** Checkboxes under the grid, such as the level wait or picking fruit. */
     List<FarmingSettingChoice> switches;
 
@@ -51,6 +54,18 @@ public class FarmingRunSettings {
      * herb run's favourite herb and where its best seeds go. Null or empty for most runs.
      */
     List<FarmingSettingPick> picks;
+
+    /** A quiet line under the herb run's row while compost holds the run back; null otherwise. */
+    String paused;
+
+    /**
+     * The compost stock beside the herb run's thresholds while Larry makes compost and the
+     * count is whole, as "450 uses", with a button that stops making it now; null otherwise.
+     */
+    String stocked;
+
+    /** The tooltip of the button beside {@link #stocked}, naming the stock it resumes below. */
+    String stockedTip;
 
     /** The row's checkbox, for {@link Shape#SWITCH}; null otherwise. */
     FarmingSettingChoice runSwitch;

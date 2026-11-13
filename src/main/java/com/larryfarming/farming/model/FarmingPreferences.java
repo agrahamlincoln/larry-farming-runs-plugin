@@ -2,6 +2,7 @@ package com.larryfarming.farming.model;
 
 import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.engine.farming.PatchType;
+import com.larryfarming.farming.catalogue.CropData;
 import java.util.*;
 import lombok.*;
 import lombok.experimental.Accessors;
@@ -41,17 +42,16 @@ public final class FarmingPreferences {
     public static final List<Crop> HERB_CHOICES = Preset.DEFAULT.getHerbRanking();
 
     /**
-     * Every crop of each tree family, best first, which for trees is level order. Each list
-     * must match {@code CropData.plantableIn}.
+     * Every crop of each tree family, best first, which for trees is level order: each is
+     * every crop its patch takes, so no tree is missing a tick.
      */
     public static final Map<PatchType, List<Crop>> TREE_CHOICES = treeChoices();
 
     private static Map<PatchType, List<Crop>> treeChoices() {
         Map<PatchType, List<Crop>> families = new EnumMap<>(PatchType.class);
-        families.put(PatchType.TREE, List.of(Crop.MAGIC, Crop.YEW, Crop.MAPLE, Crop.WILLOW, Crop.OAK));
-        families.put(PatchType.FRUIT_TREE, List.of(Crop.DRAGONFRUIT, Crop.PALM, Crop.PAPAYA, Crop.PINEAPPLE, Crop.CURRY,
-                Crop.ORANGE, Crop.BANANA, Crop.APPLE));
-        families.put(PatchType.HARDWOOD_TREE, List.of(Crop.MAHOGANY, Crop.TEAK));
+        for (PatchType family : EnumSet.of(PatchType.TREE, PatchType.FRUIT_TREE, PatchType.HARDWOOD_TREE)) {
+            families.put(family, CropData.plantableIn(family));
+        }
         return Collections.unmodifiableMap(families);
     }
 
@@ -124,12 +124,55 @@ public final class FarmingPreferences {
     private final boolean compostsWithFertileSoil;
 
     /**
+     * The compost stock, in patches it can treat, below which the bins are worked again.
+     * Always a whole step, from {@link #COMPOST_STEP} up to one step below {@link #COMPOST_MOST}.
+     */
+    private final int makeCompostBelow;
+
+    /**
+     * The compost stock at which the bins are left alone. Always a step above
+     * {@link #makeCompostBelow}, and at most {@link #COMPOST_MOST}.
+     */
+    private final int stopCompostAt;
+
+    /** The compost thresholds move in steps of this many patches, starting at one step. */
+    public static final int COMPOST_STEP = 100;
+
+    /** The highest compost threshold: the tool leprechaun holds 1,000 of each compost. */
+    public static final int COMPOST_MOST = 1000;
+
+    /** Each picked patch's crop, by site ({@link FarmingKeys#PICKS}); a patch missing plants nothing. */
+    private final Map<String, Crop> picks;
+
+    /** The picked allotments that plant for compost, by site. */
+    private final Set<String> forCompost;
+
+    /**
+     * The picked patches whose crop the player chose, by site, as against the preset's. A
+     * crop the player chose says why it isn't planting; the preset's stays quiet.
+     */
+    private final Set<String> picksChosen;
+
+    /**
+     * The picked patches that plant nothing and say nothing for now, by site, and the
+     * settings still show their pick. A pick is quiet while the account can't plant its
+     * preset crop yet. It is also quiet while its farm's compost thermostat holds it: the
+     * thermostat is off, the bank is unseen, or Larry leaves the bin beside it this run with
+     * a crop standing in the patch (the bin rotting, full, short of potion, ash or buckets,
+     * or at Ortus Farm with no bottomless bucket).
+     */
+    private final Set<String> picksQuiet;
+
+    /**
      * @param enabled every crop the player has ticked; a crop missing from it is unticked
      * @param travelOff every travel method switched off
      * @param sitesOff every site dropped, by key; a key naming no site is ignored
      * @param sitesShut every site the account is seen unable to reach, by key
      * @param houseDeclared every house item declared built; any other capability is ignored
      * @param favouriteHerb read as none unless it is a ticked herb
+     * @param makeCompostBelow rounded down to a step and kept below {@link #COMPOST_MOST}
+     * @param stopCompostAt rounded down to a step, and raised a step above
+     *     {@code makeCompostBelow} if it is not already above it
      */
     // Copied into fresh EnumSets because EnumSet.copyOf throws on an empty plain
     // collection, which "everything switched off" produces.
@@ -141,7 +184,8 @@ public final class FarmingPreferences {
     private FarmingPreferences(Set<Crop> enabled, boolean picksFruitInPassing, Set<TravelMethod> travelOff, Set<String> sitesOff,
             Set<String> sitesShut, Set<Capability> houseDeclared, Crop favouriteHerb,
             boolean plantsBestSeedsEverywhere, boolean herbRunFirst, boolean waitsForEveryPatch, boolean fruitTreesWaitForSaplings,
-            boolean replantsGrownTrees, boolean herbRunsWaitForLevel, boolean compostsWithFertileSoil) {
+            boolean replantsGrownTrees, boolean herbRunsWaitForLevel, boolean compostsWithFertileSoil, Map<String, Crop> picks,
+            Set<String> forCompost, Set<String> picksChosen, Set<String> picksQuiet, int makeCompostBelow, int stopCompostAt) {
         this.enabled = copy(Crop.class, enabled);
         this.picksFruitInPassing = picksFruitInPassing;
         this.travelOff = copy(TravelMethod.class, travelOff);
@@ -167,6 +211,31 @@ public final class FarmingPreferences {
         this.replantsGrownTrees = replantsGrownTrees;
         this.herbRunsWaitForLevel = herbRunsWaitForLevel;
         this.compostsWithFertileSoil = compostsWithFertileSoil;
+        // The pair stays valid whatever was saved: the low threshold leaves room for one
+        // step above it, and the high one is always above the low one.
+        this.makeCompostBelow = toStep(makeCompostBelow, COMPOST_STEP, COMPOST_MOST - COMPOST_STEP);
+        this.stopCompostAt = toStep(stopCompostAt, this.makeCompostBelow + COMPOST_STEP, COMPOST_MOST);
+        // Sorted, less any site the settings don't know, any patch picked for nothing and any
+        // crop its patch can't grow.
+        Map<String, Crop> picked = new TreeMap<>(picks != null ? picks : Map.of());
+        picked.keySet().retainAll(FarmingKeys.PICKS.keySet());
+        picked.values().removeIf(Objects::isNull);
+        picked.entrySet().removeIf(pick -> !CropData.plantableIn(FarmingKeys.PICKS.get(pick.getKey()).getPatchType())
+                .contains(pick.getValue()));
+        this.picks = Collections.unmodifiableMap(picked);
+        this.forCompost = knownPicks(forCompost);
+        this.picksChosen = knownPicks(picksChosen);
+        this.picksQuiet = knownPicks(picksQuiet);
+    }
+
+    /** A threshold rounded down to a whole step and held between the two bounds. */
+    private static int toStep(int value, int least, int most) {
+        int stepped = value / COMPOST_STEP * COMPOST_STEP;
+        return Math.max(least, Math.min(most, stepped));
+    }
+
+    private static Set<String> knownPicks(Set<String> sites) {
+        return known(sites, FarmingKeys.PICKS.keySet());
     }
 
     private static <E extends Enum<E>> Set<E> copy(Class<E> type, Set<E> from) {
@@ -178,10 +247,15 @@ public final class FarmingPreferences {
     }
 
     private static Set<String> knownSites(Set<String> keys) {
+        return known(keys, FarmingKeys.SITES);
+    }
+
+    /** These keys less any the settings don't know, sorted. */
+    private static Set<String> known(Set<String> keys, Collection<String> known) {
         Set<String> copy = new TreeSet<>();
         if (keys != null) {
             for (String site : keys) {
-                if (FarmingKeys.SITES.contains(site)) {
+                if (known.contains(site)) {
                     copy.add(site);
                 }
             }
@@ -232,6 +306,21 @@ public final class FarmingPreferences {
         return knownSites(shut).equals(sitesShut) ? this : toBuilder().sitesShut(shut).build();
     }
 
+    /** The same preferences with these picked patches quiet. See {@link #picksQuiet}. */
+    public FarmingPreferences withPicksQuiet(Set<String> quiet) {
+        return knownPicks(quiet).equals(picksQuiet) ? this : toBuilder().picksQuiet(quiet).build();
+    }
+
+    /** The crop this picked patch plants, or null for none or for a quiet preset crop. */
+    public Crop pickAt(String site) {
+        return picksQuiet.contains(site) ? null : picks.get(site);
+    }
+
+    /** Whether this picked allotment plants for compost. */
+    public boolean plantsForCompost(String site) {
+        return forCompost.contains(site);
+    }
+
     /** Whether the player says their house holds this. Nothing is declared by default. */
     public boolean declares(HouseItem item) {
         return houseDeclared.contains(item.getCapability());
@@ -245,13 +334,9 @@ public final class FarmingPreferences {
         if (favouriteHerb == null || !ranking.contains(favouriteHerb)) {
             return ranking;
         }
-        List<Crop> ranked = new ArrayList<>(ranking.size());
-        ranked.add(favouriteHerb);
-        for (Crop herb : ranking) {
-            if (herb != favouriteHerb) {
-                ranked.add(herb);
-            }
-        }
+        List<Crop> ranked = new ArrayList<>(ranking);
+        ranked.removeIf(herb -> herb == favouriteHerb);
+        ranked.add(0, favouriteHerb);
         return List.copyOf(ranked);
     }
 
@@ -301,12 +386,8 @@ public final class FarmingPreferences {
      * @param ranking every crop a patch could take, best first
      */
     public List<Crop> ticked(List<Crop> ranking) {
-        List<Crop> wanted = new ArrayList<>(ranking.size());
-        for (Crop crop : ranking) {
-            if (enabled.contains(crop)) {
-                wanted.add(crop);
-            }
-        }
+        List<Crop> wanted = new ArrayList<>(ranking);
+        wanted.retainAll(enabled);
         return List.copyOf(wanted);
     }
 }

@@ -80,9 +80,20 @@ JANGERBERRIES	48	BUSH	JANG	Jangerberry seed	5104	JANGERBERRY_BUSH_SEED	-	-	-	-	-
 WHITEBERRIES	59	BUSH	WHIT	Whiteberry seed	5105	WHITEBERRY_BUSH_SEED	-	-	-	-	-	-	plantWhiteberries	-
 POISON_IVY	70	BUSH	POI	Poison ivy seed	5106	POISONIVY_BUSH_SEED	-	-	-	-	-	-	plantPoisonIvy	-
 
-# Flowers and allotments.
+# Flowers and allotments. Each herb farm's allotments and flower patch hold their own pick.
+# A crop with a config key here also has a crop switch: a patch with no saved pick plants the
+# first switched-on crop once the player has changed a switch, and the preset's pick otherwise.
+MARIGOLD	2	FLOWER	MARI	Marigold seed	5096	MARIGOLD_SEED	-	-	-	-	-	-	-	-
+ROSEMARY	11	FLOWER	ROSE	Rosemary seed	5097	ROSEMARY_SEED	-	-	-	-	-	-	-	-
+NASTURTIUM	24	FLOWER	NAS	Nasturtium seed	5098	NASTURTIUM_SEED	-	-	-	-	-	-	-	-
+WOAD	25	FLOWER	WOAD	Woad seed	5099	WOAD_SEED	-	-	-	-	-	-	-	-
 LIMPWURT	26	FLOWER	LIMP	Limpwurt seed	5100	LIMPWURT_SEED	-	-	-	-	-	-	plantLimpwurt	-
 WHITE_LILY	58	FLOWER	LILY	White lily seed	22887	WHITE_LILY_SEED	-	-	-	-	-	-	plantWhiteLily	-
+POTATO	1	ALLOTMENT	POT	Potato seed	5318	POTATO_SEED	-	-	-	-	-	-	-	-
+ONION	5	ALLOTMENT	ONI	Onion seed	5319	ONION_SEED	-	-	-	-	-	-	-	-
+CABBAGE	7	ALLOTMENT	CAB	Cabbage seed	5324	CABBAGE_SEED	-	-	-	-	-	-	-	-
+TOMATO	12	ALLOTMENT	TOM	Tomato seed	5322	TOMATO_SEED	-	-	-	-	-	-	-	-
+SWEETCORN	20	ALLOTMENT	CORN	Sweetcorn seed	5320	SWEETCORN_SEED	-	-	-	-	-	-	-	-
 STRAWBERRY	31	ALLOTMENT	STRA	Strawberry seed	5323	STRAWBERRY_SEED	-	-	-	-	-	-	-	-
 WATERMELON	47	ALLOTMENT	MEL	Watermelon seed	5321	WATERMELON_SEED	-	-	-	-	-	-	plantWatermelon	-
 SNAPE_GRASS	61	ALLOTMENT	SNA	Snape grass seed	22879	SNAPE_GRASS_SEED	-	-	-	-	-	-	plantSnapeGrass	-

@@ -114,6 +114,7 @@ final class CatalogueLoader {
         private final List<PatchAttributes.BonusTier> xpTiers = new ArrayList<>();
         private SeedPolicy.DiaryOverride claim;
         private Tables.Row siteSwitch;
+        private boolean picked;
 
         private Tables.Row stopRow;
         private RunStop.Builder stop;
@@ -174,6 +175,11 @@ final class CatalogueLoader {
                         throw row.error("a second switch " + row.text(1));
                     }
                     break;
+                // FarmingKeys reads the pick's keys; here it marks the site's stops picked.
+                case "pick":
+                    openSite(row);
+                    picked = true;
+                    break;
                 case "attributes":
                     openSite(row);
                     attributes = row.requireWidth(7);
@@ -205,6 +211,9 @@ final class CatalogueLoader {
                         patches[i] = patch(row, keys[i]);
                     }
                     stop = RunStop.builder(patches);
+                    if (picked) {
+                        stop.picked();
+                    }
                     stopRow = row;
                     rungs = new ArrayList<>();
                     break;
@@ -233,9 +242,6 @@ final class CatalogueLoader {
                     break;
                 case "everyNthRun":
                     stop(row).everyNthRun(row.requireWidth(2).integer(1));
-                    break;
-                case "standingCrop":
-                    stop(row.requireWidth(1)).standingCrop();
                     break;
                 case "skipIfUnreachable":
                     stop(row.requireWidth(1)).skipIfUnreachable();
@@ -353,6 +359,7 @@ final class CatalogueLoader {
             xpTiers.clear();
             claim = null;
             siteSwitch = null;
+            picked = false;
         }
 
         private static PatchRef patch(Tables.Row row, String key) {

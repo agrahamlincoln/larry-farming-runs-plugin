@@ -1,5 +1,6 @@
 package com.larryfarming.farming.model;
 
+import com.larryfarming.data.Tables;
 import lombok.Getter;
 
 /**
@@ -15,31 +16,37 @@ import lombok.Getter;
  * null for destinations whose regions have not been walked, so the shortcut never fires
  * there. A zone is set only from a walked or checked tile. A wrong one would drop a
  * teleport from the packing list that the player then needs.
+ *
+ * <p>Each destination's name and zone come from the destinations table.
  */
 public enum Destination {
 
-    CATHERBY("Catherby"),
-    CAMELOT("Camelot"),
-    VARROCK("Varrock"),
+    CATHERBY,
+    CAMELOT,
+    VARROCK,
     /**
      * The Varrock teleport's second landing (3165, 3479), which the medium Varrock diary
      * adds. Its means are Varrock's spell and tablet, which carry no diary gate, so every
      * rung that asks for this place also asks for {@link Capability#VARROCK_DIARY_MEDIUM}.
      */
-    GRAND_EXCHANGE("the Grand Exchange"),
-    LUMBRIDGE("Lumbridge"),
-    FALADOR("Falador"),
-    ARDOUGNE("Ardougne"),
+    GRAND_EXCHANGE,
+    LUMBRIDGE,
+    FALADOR,
+    ARDOUGNE,
     /** Never zoned: the house is wherever the player built it, which nothing reports. */
-    HOUSE("your house"),
-    FISHING_GUILD("the Fishing Guild"),
-    FENKENSTRAINS_CASTLE("Fenkenstrain's Castle"),
-    SALVE_GRAVEYARD("the Salve graveyard"),
-    DRAYNOR_MANOR("Draynor Manor"),
-    ARCEUUS_LIBRARY("the Arceuus Library"),
-    HARMONY_ISLAND("Harmony Island"),
-    KOUREND_CASTLE("Kourend Castle"),
-    CIVITAS_ILLA_FORTIS("Civitas illa Fortis", Zone.CIVITAS_ILLA_FORTIS);
+    HOUSE,
+    FISHING_GUILD,
+    FENKENSTRAINS_CASTLE,
+    SALVE_GRAVEYARD,
+    DRAYNOR_MANOR,
+    ARCEUUS_LIBRARY,
+    HARMONY_ISLAND,
+    KOUREND_CASTLE,
+    CIVITAS_ILLA_FORTIS;
+
+    static {
+        Rows.TABLE.requireAll(values());
+    }
 
     @Getter
     private final String displayName;
@@ -47,12 +54,17 @@ public enum Destination {
     @Getter
     private final Zone zone;
 
-    Destination(String displayName) {
-        this(displayName, null);
+    Destination() {
+        Tables.Row row = Rows.TABLE.of(name());
+        this.displayName = row.text(1);
+        this.zone = row.optionalConstant(Zone.class, 2);
     }
 
-    Destination(String displayName, Zone zone) {
-        this.displayName = displayName;
-        this.zone = zone;
+    /**
+     * The destinations table, held apart so the constructors can read it; see
+     * {@link Tables#byName}.
+     */
+    private static final class Rows {
+        static final Tables.Named TABLE = Tables.byName("/com/larryfarming/destinations.tsv", 3);
     }
 }

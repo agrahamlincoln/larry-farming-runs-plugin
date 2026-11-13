@@ -46,16 +46,17 @@ public final class TravelWatch {
 
     /**
      * The travel items a teleport can use up: jewellery crumbling or going uncharged on its
-     * last charge, a basalt or tablet broken, an ectophial emptied. A cape, a cloak, an
-     * eternal glory or a ring of unlimited use leaves the bag only when the player puts it
-     * somewhere, never on a teleport.
+     * last charge, a basalt or tablet broken. A cape, a cloak, an eternal glory or a ring of
+     * unlimited use leaves the bag only when the player puts it somewhere, never on a
+     * teleport. Nor does the ectophial: emptied, it still counts, and it refills itself on
+     * arrival.
      */
     private static final Set<Capability> USED_UP = EnumSet.of(
             Capability.RING_OF_DUELING, Capability.GAMES_NECKLACE, Capability.COMBAT_BRACELET,
             Capability.DIGSITE_PENDANT, Capability.RING_OF_WEALTH, Capability.AMULET_OF_GLORY,
             Capability.SKILLS_NECKLACE,
             Capability.SLAYER_RING, Capability.NECKLACE_OF_PASSAGE,
-            Capability.TELEPORT_CRYSTAL, Capability.ECTOPHIAL, Capability.ICY_BASALT, Capability.STONY_BASALT, Capability.BRIMHAVEN_TABLET);
+            Capability.TELEPORT_CRYSTAL, Capability.ICY_BASALT, Capability.STONY_BASALT, Capability.BRIMHAVEN_TABLET);
 
     private Map<Integer, Integer> carriedBefore;
     private List<ItemStack> bankBefore;

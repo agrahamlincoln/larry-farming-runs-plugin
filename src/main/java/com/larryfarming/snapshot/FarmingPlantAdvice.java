@@ -1,6 +1,8 @@
 package com.larryfarming.snapshot;
 
+import lombok.AllArgsConstructor;
 import lombok.Value;
+import lombok.With;
 
 /**
  * One thing to put in the ground at a stop.
@@ -9,6 +11,7 @@ import lombok.Value;
  * flower patch and an allotment reached by one teleport. So a stop carries a list of these.
  */
 @Value
+@AllArgsConstructor
 public class FarmingPlantAdvice {
 
     /** Named for a player: "Toadflax", "Snape grass". */
@@ -25,6 +28,18 @@ public class FarmingPlantAdvice {
      * seeds for one planting. The packing list carries the seed count.
      */
     int patches;
+
+    /**
+     * Whether an act line already says to replant this crop ("Chop down, replant
+     * dragonfruit"), so the planting line leaves it out. The margin still pictures it.
+     */
+    @With
+    boolean said;
+
+    /** A planting no act line has claimed. */
+    public FarmingPlantAdvice(String name, int produceItemId, int patches) {
+        this(name, produceItemId, patches, false);
+    }
 
     /** A patch count as every stop row writes it after the crop: " ×3", nothing for one. */
     public static String countOf(int patches) {

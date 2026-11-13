@@ -18,22 +18,13 @@ import net.runelite.client.ui.FontManager;
  */
 class RunsListView extends JPanel
 {
-	private static final Color COLOR_DUE = FarmingPanel.COLOR_DUE;
-	private static final Color COLOR_ROUTE = ColorScheme.LIGHT_GRAY_COLOR;
-	/** Grey means "not possible": a run the player has not unlocked, or has no route for. */
-	private static final Color COLOR_SKIPPED = ColorScheme.MEDIUM_GRAY_COLOR;
-	/** The status line of a run not due yet: quieter than the name, never grey. */
-	private static final Color COLOR_QUIET = PanelColors.META;
 	/** A run switched off: the light text faded, as an unticked square fades its sprite. */
 	static final Color COLOR_OFF = new Color(ColorScheme.LIGHT_GRAY_COLOR.getRed(), ColorScheme.LIGHT_GRAY_COLOR.getGreen(),
 		ColorScheme.LIGHT_GRAY_COLOR.getBlue(), 90);
 	/** An opened run and its settings share this, so they read as one block. */
 	private static final Color COLOR_OPEN = ColorScheme.DARKER_GRAY_COLOR;
-	/** The arrow beside a run with settings, in the folds' own characters. */
-	private static final String CHEVRON_SHUT = "▸";
-	private static final String CHEVRON_OPEN = "▾";
-
-	private static final String STATUS_DUE = "DUE";
+	/** {@code RunStatus} names, as the runs list carries them. */
+	static final String STATUS_DUE = "DUE";
 	private static final String STATUS_LOCKED = "LOCKED";
 
 	private final JPanel container;
@@ -45,6 +36,9 @@ class RunsListView extends JPanel
 	 */
 	private final Set<String> openRuns = new HashSet<>();
 
+	/** The key of the patch whose picker is open, or null; kept across rebuilds as above. */
+	private String openPick;
+
 	/**
 	 * The detail label of each run row, by run id. The engine words this countdown itself,
 	 * so each refresh copies the newest text onto the existing label. The label does not
@@ -52,11 +46,27 @@ class RunsListView extends JPanel
 	 */
 	private final Map<String, JLabel> runDetails = new HashMap<>();
 
-	/** @param send receives each setting changed here as its config key and new value */
-	RunsListView(JLabel heading, JPanel container, BiConsumer<String, String> send)
+	/**
+	 * The paused line under each run row, by run id. Its stock count changes with every
+	 * bucket reading, so only the line's wording without its numbers is in the signature, and
+	 * each refresh copies the newest text onto the existing area.
+	 */
+	private final Map<String, JTextArea> pausedLines = new HashMap<>();
+
+	/** The compost stock beside the thresholds, by run id; updated in place as {@link #pausedLines} are. */
+	private final Map<String, JLabel> stockedCounts = new HashMap<>();
+
+	private final Runnable stopCompost;
+
+	/**
+	 * @param send receives each setting changed here as its config key and new value
+	 * @param stopCompost runs when the player clicks "Stop now" beside the compost stock
+	 */
+	RunsListView(JLabel heading, JPanel container, BiConsumer<String, String> send, Runnable stopCompost)
 	{
 		this.container = container;
 		this.send = send;
+		this.stopCompost = stopCompost;
 		PanelText.stack(this);
 		add(heading);
 		add(container);
@@ -65,9 +75,20 @@ class RunsListView extends JPanel
 	/** Empties the list, for a panel with no advice. */
 	void clear()
 	{
-		runDetails.clear();
-		container.removeAll();
+		dropRows();
 		setVisible(false);
+	}
+
+	/**
+	 * Forgets every row and its remembered lines without touching visibility, so a rebuild
+	 * never hides the list between the old rows and the new.
+	 */
+	private void dropRows()
+	{
+		runDetails.clear();
+		pausedLines.clear();
+		stockedCounts.clear();
+		container.removeAll();
 	}
 
 	/**
@@ -76,8 +97,7 @@ class RunsListView extends JPanel
 	 */
 	void rebuild(FarmingAdvice advice, IconProvider icons, int width)
 	{
-		runDetails.clear();
-		container.removeAll();
+		dropRows();
 		Map<String, FarmingRunSettings> settingsFor = settingsByRun(advice);
 		List<FarmingRunStatus> off = PanelText.listOf(advice.getSwitchedOff());
 		boolean divider = false;
@@ -105,14 +125,10 @@ class RunsListView extends JPanel
 		setVisible(!PanelText.listOf(advice.getRuns()).isEmpty() || !off.isEmpty());
 	}
 
-	/** Copies each run row's detail text from the newest advice onto the existing label. */
-	void showDetails(List<FarmingRunStatus> runs)
+	/** Copies each run row's detail text and paused line from the newest advice onto the existing ones. */
+	void showDetails(FarmingAdvice advice)
 	{
-		if (runs == null)
-		{
-			return;
-		}
-		for (FarmingRunStatus run : runs)
+		for (FarmingRunStatus run : PanelText.listOf(advice.getRuns()))
 		{
 			JLabel detail = runDetails.get(run.getRunId());
 			if (detail != null)
@@ -120,12 +136,27 @@ class RunsListView extends JPanel
 				showRunDetail(detail, run.getDetail());
 			}
 		}
+		for (FarmingRunSettings settings : PanelText.listOf(advice.getRunSettings()))
+		{
+			JTextArea paused = pausedLines.get(settings.getRunId());
+			// The signature holds the line's presence, so a shown line still has text.
+			if (paused != null && !paused.getText().equals(settings.getPaused()))
+			{
+				paused.setText(settings.getPaused());
+			}
+			JLabel stocked = stockedCounts.get(settings.getRunId());
+			if (stocked != null && !stocked.getText().equals(settings.getStocked()))
+			{
+				stocked.setText(settings.getStocked());
+			}
+		}
 	}
 
 	/**
 	 * The list's structural inputs, for the panel's guard. A scheduled run gives its id and
 	 * status only: its detail text is a worded countdown, updated in place through
-	 * {@link #runDetails}.
+	 * {@link #runDetails}. A paused line gives its wording without numbers, as
+	 * {@link #pausedLines} explains, and the compost stock likewise.
 	 * Which runs are open is not here either: a click shows and hides a block in place, and
 	 * a rebuild reopens it from {@link #openRuns}.
 	 */
@@ -149,7 +180,16 @@ class RunsListView extends JPanel
 			off.add(Arrays.asList(run.getRunId(), run.getDetail()));
 		}
 		signature.add(off);
-		signature.add(PanelText.listOf(advice.getRunSettings()));
+		for (FarmingRunSettings run : PanelText.listOf(advice.getRunSettings()))
+		{
+			signature.add(run.toBuilder().paused(withoutNumbers(run.getPaused())).stocked(withoutNumbers(run.getStocked())).build());
+		}
+	}
+
+	/** A line's wording without its counts, "null" for no line. */
+	private static String withoutNumbers(String line)
+	{
+		return String.valueOf(line).replaceAll("[\\d,]", "");
 	}
 
 	/**
@@ -177,12 +217,7 @@ class RunsListView extends JPanel
 		row.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 4));
 		row.setAlignmentX(LEFT_ALIGNMENT);
 
-		GridBagConstraints gbc = new GridBagConstraints();
-		gbc.gridx = 0;
-		gbc.gridy = 0;
-		gbc.weightx = 0;
-		gbc.anchor = GridBagConstraints.NORTHWEST;
-		gbc.fill = GridBagConstraints.NONE;
+		GridBagConstraints gbc = PanelText.marginConstraints();
 
 		JLabel icon = null;
 		if (icons != null && run.getIconItemId() > 0)
@@ -209,17 +244,30 @@ class RunsListView extends JPanel
 		// Always added, even when empty, so showDetails can fill it in place later. Its
 		// colour depends on status, which is in the signature. A run not due yet keeps a
 		// quieter status line, but grey only when the run is not possible.
-		JLabel detail = PanelText.label("", switchedOff ? COLOR_OFF : due ? COLOR_ROUTE : impossible ? COLOR_SKIPPED : COLOR_QUIET);
+		JLabel detail = PanelText.label("", switchedOff ? COLOR_OFF : due ? PanelColors.ROUTE : impossible ? PanelColors.SKIPPED : PanelColors.META);
 		detail.setAlignmentX(LEFT_ALIGNMENT);
 		text.add(detail);
 		runDetails.put(run.getRunId(), detail);
 		showRunDetail(detail, run.getDetail());
 
 		PanelText.addFill(row, gbc, 1, text);
+		// Its wording is in the signature and its count is updated in place, so only a new
+		// wording rebuilds the wrapping area. In the row's own grid, so sizing the row wraps
+		// it. The area takes its own clicks, so the row's control is wired to it too.
+		JTextArea paused = null;
+		if (settings != null && PanelText.hasText(settings.getPaused()))
+		{
+			paused = PanelText.small(settings.getPaused(), PanelColors.META);
+			pausedLines.put(run.getRunId(), paused);
+			gbc.gridy = 1;
+			row.add(paused, gbc);
+			gbc.gridy = 0;
+		}
 
-		JComponent accessory = accessory(settings, row, name, detail, icon, opened);
+		JComponent accessory = accessory(settings, row, paused, name, detail, icon, opened);
 		if (accessory != null)
 		{
+			gbc.gridheight = GridBagConstraints.REMAINDER;
 			gbc.gridx = 2;
 			gbc.weightx = 0;
 			gbc.fill = GridBagConstraints.NONE;
@@ -242,8 +290,11 @@ class RunsListView extends JPanel
 	 * chevron for a run with a settings block, or null for a run with neither. Either way a
 	 * left click on the whole row does what the control does: it flips the box, or it opens
 	 * and shuts the block.
+	 *
+	 * @param paused the row's paused line, or null for none
 	 */
-	private JComponent accessory(FarmingRunSettings settings, JPanel row, JLabel name, JLabel detail, JLabel icon, JPanel opened)
+	private JComponent accessory(FarmingRunSettings settings, JPanel row, JTextArea paused, JLabel name, JLabel detail, JLabel icon,
+		JPanel opened)
 	{
 		if (settings == null)
 		{
@@ -255,7 +306,7 @@ class RunsListView extends JPanel
 			JCheckBox box = runSwitch(only, settings.getRunId(), name, detail, icon);
 			// A click anywhere on the row flips the box, as a click on a family row opens
 			// it. The box itself takes its own clicks, so they never reach the row.
-			PanelText.onLeftClick(row, () -> box.doClick(0));
+			onRowClick(row, paused, () -> box.doClick(0));
 			return box;
 		}
 		if (opened == null)
@@ -267,7 +318,7 @@ class RunsListView extends JPanel
 		chevron.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 2));
 		showChevron(chevron, opened.isVisible());
 		String runId = settings.getRunId();
-		PanelText.onLeftClick(row, () ->
+		onRowClick(row, paused, () ->
 		{
 			boolean open = !opened.isVisible();
 			if (open)
@@ -287,9 +338,20 @@ class RunsListView extends JPanel
 		return chevron;
 	}
 
+	/** Runs the row's control on a left click on the row, or on its paused line, which takes its own clicks. */
+	private static void onRowClick(JPanel row, JTextArea paused, Runnable toggle)
+	{
+		PanelText.onLeftClick(row, toggle);
+		if (paused != null)
+		{
+			PanelText.onLeftClick(paused, toggle);
+		}
+	}
+
 	private static void showChevron(JLabel chevron, boolean open)
 	{
-		chevron.setText(open ? CHEVRON_OPEN : CHEVRON_SHUT);
+		// The folds' own arrows.
+		chevron.setText(open ? Fold.OPEN : Fold.SHUT);
 		chevron.setForeground(open ? Color.WHITE : PanelColors.HEADER);
 	}
 
@@ -399,6 +461,12 @@ class RunsListView extends JPanel
 			block.add(SiteList.caption("Also plant on this run", 6));
 			block.add(SettingGrid.toggles(extras, icons, send));
 		}
+		List<FarmingPatchPick> patchPicks = PanelText.listOf(settings.getPatchPicks());
+		if (!patchPicks.isEmpty())
+		{
+			block.add(SiteList.caption("Allotments and flowers", 6));
+			block.add(new PatchPicks(patchPicks, openPick, icons, send, key -> openPick = key));
+		}
 		for (FarmingSettingChoice choice : PanelText.listOf(settings.getSwitches()))
 		{
 			JCheckBox box = FarmingPanel.checkbox(choice.getLabel(), 5);
@@ -418,6 +486,19 @@ class RunsListView extends JPanel
 			}
 			block.add(row);
 		}
+		if (PanelText.hasText(settings.getStocked()))
+		{
+			// Its count is updated in place, so only its coming and going rebuilds the block.
+			JLabel count = PanelText.label(settings.getStocked(), PanelColors.ROUTE);
+			stockedCounts.put(settings.getRunId(), count);
+			SmallButton stop = new SmallButton("Stop now");
+			stop.setToolTipText(settings.getStockedTip());
+			stop.addActionListener(e -> stopCompost.run());
+			JPanel control = PanelText.panel(new BorderLayout(4, 0));
+			control.add(count, BorderLayout.CENTER);
+			control.add(stop, BorderLayout.EAST);
+			block.add(SettingRow.of("Stocked", control));
+		}
 		return block;
 	}
 
@@ -433,10 +514,10 @@ class RunsListView extends JPanel
 		}
 		if (STATUS_DUE.equals(status))
 		{
-			return COLOR_DUE;
+			return FarmingPanel.COLOR_DUE;
 		}
 		// Grey only for a run that cannot be done. Waiting, unseen or growing is not that.
-		return STATUS_LOCKED.equals(status) ? COLOR_SKIPPED : COLOR_ROUTE;
+		return STATUS_LOCKED.equals(status) ? PanelColors.SKIPPED : PanelColors.ROUTE;
 	}
 
 	/**

@@ -1,7 +1,6 @@
 package com.larryfarming.farming.engine;
 
-import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.engine.farming.PatchType;
+import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.catalogue.*;
 import com.larryfarming.engine.ItemCounts;
 import com.larryfarming.farming.detection.*;
@@ -43,7 +42,7 @@ public final class RunSettings {
             RunId id = entry.getKey();
             // Named, so a run whose crop switches are still on does not read as plainly off.
             String detail = prefs.dropsEverySiteOf(FarmingCatalogue.siteKeys(id)) ? "no patches on" : "off";
-            off.add(new FarmingRunStatus(id.name(), id.getDisplayName(), STATUS_OFF, detail, 0L, 0, id.getIconItemId(), false, false, false));
+            off.add(new FarmingRunStatus(id.name(), id.getDisplayName(), STATUS_OFF, detail, 0L, id.getIconItemId(), false, false));
         }
         off.sort(Comparator.comparingInt(s -> RunId.valueOf(s.getRunId()).getPriority()));
         return off;
@@ -54,13 +53,15 @@ public final class RunSettings {
      *
      * @param sight what the patches were last seen holding, which settles whether some
      *     sites are open, such as Weiss once its patch has been seen
+     * @param quiet {@link #quietPicks} for these preferences, this player and this sight
      */
-    public static List<FarmingRunSettings> forRuns(FarmingPreferences prefs, PlayerState state, PatchSight sight) {
+    public static List<FarmingRunSettings> forRuns(FarmingPreferences prefs, PlayerState state, PatchSight sight,
+            CompostStock compost, Set<String> quiet) {
         int level = farmingLevel(state);
         List<FarmingRunSettings> all = new ArrayList<>();
         for (Map.Entry<RunId, List<FarmingRun>> entry : FarmingCatalogue.runsById().entrySet()) {
             FarmingRunSettings settings = forRun(entry.getKey(), entry.getValue(), prefs, level, sites(entry.getKey(), prefs, state, sight),
-                    FertileSoil.couldCast(state));
+                    FertileSoil.couldCast(state), quiet, compost);
             if (settings != null) {
                 all.add(settings);
             }
@@ -70,7 +71,8 @@ public final class RunSettings {
 
     /** Null for a run the player has no say over, such as the contract. */
     private static FarmingRunSettings forRun(RunId id, List<FarmingRun> variants,
-            FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites, boolean castsFertileSoil) {
+            FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites, boolean castsFertileSoil,
+            Set<String> quiet, CompostStock compost) {
         // Jane decides what the contract grows.
         if (id == RunId.CONTRACT) {
             return null;
@@ -81,7 +83,7 @@ public final class RunSettings {
         }
         PatchType rotation = PlantingGate.rotationFamilyOf(run);
         if (rotation == PatchType.HERB) {
-            return herbs(id, variants, prefs, level, sites, castsFertileSoil);
+            return herbs(id, variants, prefs, level, sites, castsFertileSoil, quiet, compost);
         }
         Set<Crop> fixed = switchableFixedCrops(variants);
         if (fixed.size() == 1) {
@@ -132,7 +134,8 @@ public final class RunSettings {
      * The herb grid in Farming level order and the crops the run plants in passing.
      */
     private static FarmingRunSettings herbs(RunId id, List<FarmingRun> variants,
-            FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites, boolean castsFertileSoil) {
+            FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites, boolean castsFertileSoil,
+            Set<String> quiet, CompostStock compost) {
         // The herb drawn, not its seed: every herb seed is the same pile of seeds. The tags
         // are longer than the bag's one-letter ones, since here they are the only name.
         List<FarmingSettingChoice> seeds = new ArrayList<>();
@@ -156,8 +159,69 @@ public final class RunSettings {
             switches.add(checkbox(FarmingKeys.COMPOST_WITH_FERTILE_SOIL,
                     "Cast Fertile Soil with volcanic ash", prefs.compostsWithFertileSoil()));
         }
-        return seeds(id, seeds, sites).choicesCaption("Herbs to plant").extras(extras).switches(switches)
-                .picks(List.of(favouriteHerb(prefs), bestSeeds(prefs))).build();
+        List<FarmingPatchPick> patchPicks = patchPicks(prefs, level, sites, quiet);
+        // The thresholds, the stock and the paused line show only while some allotment would
+        // plant for compost. The thresholds come last, so the stock sits under them and their
+        // coming and going moves no other row.
+        boolean composting = patchPicks.stream().anyMatch(FarmingPatchPick::isComposting);
+        List<FarmingSettingPick> picks = new ArrayList<>();
+        picks.add(favouriteHerb(prefs));
+        picks.add(bestSeeds(prefs));
+        String stocked = null;
+        if (composting) {
+            stocked = compost.stockedLine(prefs.makeCompostBelow());
+            // Each offers only steps that keep "Stop at" above "Restock below", so the saved
+            // pair is the pair in force.
+            picks.add(compostSteps("Restock below", FarmingKeys.MAKE_COMPOST_BELOW, FarmingPreferences.COMPOST_STEP,
+                    prefs.stopCompostAt() - FarmingPreferences.COMPOST_STEP, prefs.makeCompostBelow(),
+                    "Make compost again when your stock drops below this many uses"));
+            picks.add(compostSteps("Stop at", FarmingKeys.STOP_COMPOST_AT, prefs.makeCompostBelow() + FarmingPreferences.COMPOST_STEP,
+                    FarmingPreferences.COMPOST_MOST, prefs.stopCompostAt(), "Stop making compost once you have this many uses"));
+        }
+        return seeds(id, seeds, sites).choicesCaption("Herbs to plant").extras(extras).patchPicks(patchPicks)
+                .switches(switches).picks(picks).paused(composting ? compost.pausedLine(prefs.makeCompostBelow()) : null)
+                .stocked(stocked).stockedTip(stocked == null ? null : String.format(Locale.ENGLISH,
+                        "Stop making compost until your stock drops below %,d", prefs.makeCompostBelow())).build();
+    }
+
+    /** A threshold dropdown offering each step from {@code least} to {@code most}. */
+    private static FarmingSettingPick compostSteps(String label, String key, int least, int most, int selected,
+            String hint) {
+        List<FarmingSettingPick.Option> steps = new ArrayList<>();
+        for (int step = least; step <= most; step += FarmingPreferences.COMPOST_STEP) {
+            steps.add(new FarmingSettingPick.Option(String.valueOf(step), String.format(Locale.ENGLISH, "%,d", step), null));
+        }
+        return new FarmingSettingPick(key, label, FarmingSettingPick.Shape.DROPDOWN, steps, String.valueOf(selected), hint);
+    }
+
+    /**
+     * Each allotment and flower patch, in the stops table's order, which groups them by farm.
+     * Each offers Off, then every crop of its patch in level order. A quiet preset pick shows
+     * as picked: it plants once the account can. A farm whose herb patch is switched off or
+     * shut to the account, as Harmony is before the elite Morytania diary, shows none: its
+     * patches are worked only beside the herb patch.
+     */
+    private static List<FarmingPatchPick> patchPicks(FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites,
+            Set<String> quiet) {
+        List<FarmingPatchPick> picks = new ArrayList<>();
+        for (Map.Entry<PatchRef, PatchPick> patch : FarmingCatalogue.picksByPatch().entrySet()) {
+            PatchPick pick = patch.getValue();
+            String herb = FarmingCatalogue.siteKey(patch.getKey());
+            if (sites.stream().anyMatch(site -> site.getKey().equals(herb) && (!site.isOn() || site.isLocked()))) {
+                continue;
+            }
+            Crop picked = prefs.picks().get(pick.getSite());
+            List<FarmingSettingChoice> options = new ArrayList<>();
+            options.add(new FarmingSettingChoice(FarmingKeys.OFF, "Off", 0, "OFF", 0, picked == null, false, false));
+            for (Crop crop : byLevel(CropData.plantableIn(patch.getKey().type()))) {
+                CropData data = CropData.forCrop(crop);
+                options.add(new FarmingSettingChoice(crop.name(), crop.getDisplayName(), crop.getItemId(), data.getStoredTag(),
+                        data.getFarmingLevel(), crop == picked, false, data.getFarmingLevel() > level));
+            }
+            picks.add(new FarmingPatchPick(pick.getFarm(), pick.getTitle(), pick.getKey(), pick.getCompostKey(),
+                    prefs.plantsForCompost(pick.getSite()), CompostBins.composts(pick.getSite(), prefs, quiet), options));
+        }
+        return picks;
     }
 
     /**
@@ -244,7 +308,7 @@ public final class RunSettings {
         Set<Crop> crops = new LinkedHashSet<>();
         for (FarmingRun run : variants) {
             for (RunStop stop : FarmingCatalogue.stopsInRegistryOrder(run)) {
-                if (!stop.isPlanting()) {
+                if (!stop.isPlanting() || stop.isPicked()) {
                     continue;
                 }
                 for (Crop crop : byLevel(FarmingCatalogue.cropChoices(stop))) {
@@ -313,6 +377,31 @@ public final class RunSettings {
 
     private static FarmingSettingChoice checkbox(String key, String label, boolean on) {
         return new FarmingSettingChoice(key, label, 0, null, 0, on, false, false);
+    }
+
+    /**
+     * The picked patches whose crop is the preset's and the account can't plant: above its
+     * Farming level, or certainly out of the seed with none of the crop in the patch to
+     * pick. They say nothing until the account can plant them. A crop the player picked
+     * keeps its reasons.
+     */
+    static Set<String> quietPicks(FarmingPreferences prefs, PlayerState state, PatchSight sight) {
+        int level = farmingLevel(state);
+        Set<String> quiet = new HashSet<>();
+        for (Map.Entry<PatchRef, PatchPick> picked : FarmingCatalogue.picksByPatch().entrySet()) {
+            String site = picked.getValue().getSite();
+            Crop crop = prefs.picks().get(site);
+            CropData data = crop == null ? null : CropData.forCrop(crop);
+            if (data == null || prefs.picksChosen().contains(site)) {
+                continue;
+            }
+            PatchPrediction seen = sight.at(picked.getKey());
+            boolean standing = seen != null && seen.getCrop() == crop;
+            if (data.getFarmingLevel() > level || !standing && SeedSelector.definitelyOutOf(crop, state, data.getSeedsPerPatch())) {
+                quiet.add(site);
+            }
+        }
+        return quiet;
     }
 
     /**
@@ -385,7 +474,7 @@ public final class RunSettings {
             case HOUSE_FAIRY_RING:
                 return HOUSE_TABLET;
             default:
-                return TravelIcons.forCapability(method.getCapabilities().get(0));
+                return CarryItems.iconFor(method.getCapabilities().get(0));
         }
     }
 

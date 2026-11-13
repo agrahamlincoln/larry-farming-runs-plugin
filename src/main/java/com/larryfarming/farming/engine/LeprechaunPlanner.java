@@ -49,7 +49,7 @@ final class LeprechaunPlanner {
                 continue;
             }
             // The leprechaun holds one bucket, so a second is not taken.
-            if (BottomlessBucket.ITEM_IDS.contains(line.getItemId()) && storesABucket(state)) {
+            if (BottomlessBucket.ITEM_IDS.contains(line.getItemId()) && BottomlessBucket.isStored(state)) {
                 continue;
             }
             int last = lastUse(made, plans, cropFor, PLANTING_ONLY.contains(line.getItemId()));
@@ -87,11 +87,12 @@ final class LeprechaunPlanner {
 
     /** Whether a tool leprechaun stands at this arrival. */
     static boolean hasLeprechaun(List<Integer> arrival, List<StopPlan> plans) {
-        return !NO_LEPRECHAUN.contains(plans.get(arrival.get(0)).getStop().getArrival());
+        return hasLeprechaun(plans.get(arrival.get(0)).getStop().getArrival());
     }
 
-    private static boolean storesABucket(PlayerState state) {
-        return state != null && BottomlessBucket.isStored(state);
+    /** Whether a tool leprechaun stands at this arrival. */
+    static boolean hasLeprechaun(Arrival arrival) {
+        return !NO_LEPRECHAUN.contains(arrival);
     }
 
     /** "Leave your spade and seed dibber with the leprechaun." */

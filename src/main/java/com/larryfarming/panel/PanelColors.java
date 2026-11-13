@@ -13,6 +13,10 @@ final class PanelColors
 {
 	/** Muted text for section headings and labels. */
 	static final Color HEADER = ColorScheme.LIGHT_GRAY_COLOR;
+	/** Light route text: a stop's travel line, an offered bank, a due run's status. */
+	static final Color ROUTE = ColorScheme.LIGHT_GRAY_COLOR;
+	/** Grey means "not possible": a skipped stop, or a run not unlocked or with no route. */
+	static final Color SKIPPED = ColorScheme.MEDIUM_GRAY_COLOR;
 	/** Muted list content, such as the unresolved-items line. */
 	static final Color META = new Color(130, 130, 130);
 	/** Divider line between items in a container. */

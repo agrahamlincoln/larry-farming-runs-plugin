@@ -17,9 +17,11 @@ magicAtFaladorWithEliteDiary	yes
 # Yew and up among regular trees, papaya and up among fruit trees. Mahogany, which gives
 # more experience per day and per minute, with teak for when the mahogany seeds run out.
 treesOn	MAGIC YEW DRAGONFRUIT PALM PAPAYA MAHOGANY TEAK
-# Off: mushrooms and belladonna, which earn little per trip, and watermelon, poison ivy and
-# cactus, the alternatives to snape grass, whiteberries and potato cactus. Attas alone of
-# the anima plants: it makes the most of a limited seed supply.
+# Off: mushrooms and belladonna, which earn little per trip, and poison ivy and cactus, the
+# alternatives to whiteberries and potato cactus. Attas alone of the anima plants: it makes
+# the most of a limited seed supply. A patch with no saved pick plants the preset's pick
+# below, unless the player has changed one of its crop switches; then it plants the first
+# switch that is on.
 switchedOn	SNAPE_GRASS WHITE_LILY LIMPWURT POTATO_CACTUS WHITEBERRIES CALQUAT SEAWEED HESPORI ATTAS
 picksFruitInPassing	-
 # Every travel method on: the route ranks them itself.
@@ -51,3 +53,14 @@ replantsGrownTrees	yes
 herbRunsWaitForLevel	-
 # Off: the spell needs the Ash covered tome, which the game does not show.
 compostsWithFertileSoil	-
+# Make more below 300 and stop at 800. Six bins make 90 buckets a herb run, so 800 leaves
+# more than one run's output of room under the leprechaun's 1,000.
+makeCompostBelow	300
+stopCompostAt	800
+# The herb farms' allotments and flower patches, each a SITE:CROP pair; a patch missing here
+# plants nothing. One snape grass patch and a white lily guarding Catherby's allotments, one
+# limpwurt patch, and watermelons for compost in every other allotment beside a bin.
+# Harmony's allotment has no bin beside it.
+patchPicks	CATHERBY_NORTH_ALLOTMENT:SNAPE_GRASS CATHERBY_SOUTH_ALLOTMENT:WATERMELON CATHERBY_FLOWER:WHITE_LILY HOSIDIUS_NORTH_EAST_ALLOTMENT:WATERMELON HOSIDIUS_SOUTH_WEST_ALLOTMENT:WATERMELON HOSIDIUS_FLOWER:LIMPWURT ARDOUGNE_NORTH_ALLOTMENT:WATERMELON ARDOUGNE_SOUTH_ALLOTMENT:WATERMELON FALADOR_NORTH_WEST_ALLOTMENT:WATERMELON FALADOR_SOUTH_EAST_ALLOTMENT:WATERMELON MORYTANIA_NORTH_WEST_ALLOTMENT:WATERMELON MORYTANIA_SOUTH_EAST_ALLOTMENT:WATERMELON ORTUS_NORTH_ALLOTMENT:WATERMELON ORTUS_SOUTH_ALLOTMENT:WATERMELON
+# The watermelon allotments, which feed the bins beside them.
+forCompost	CATHERBY_SOUTH_ALLOTMENT HOSIDIUS_NORTH_EAST_ALLOTMENT HOSIDIUS_SOUTH_WEST_ALLOTMENT ARDOUGNE_NORTH_ALLOTMENT ARDOUGNE_SOUTH_ALLOTMENT FALADOR_NORTH_WEST_ALLOTMENT FALADOR_SOUTH_EAST_ALLOTMENT MORYTANIA_NORTH_WEST_ALLOTMENT MORYTANIA_SOUTH_EAST_ALLOTMENT ORTUS_NORTH_ALLOTMENT ORTUS_SOUTH_ALLOTMENT

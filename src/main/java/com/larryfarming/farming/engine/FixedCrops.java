@@ -3,8 +3,7 @@ package com.larryfarming.farming.engine;
 import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.farming.catalogue.CropData;
 import com.larryfarming.farming.catalogue.FarmingCatalogue;
-import com.larryfarming.farming.model.FarmingPreferences;
-import com.larryfarming.farming.model.RunStop;
+import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,9 +21,15 @@ final class FixedCrops {
     }
 
     /**
-     * The stop's crops the player has ticked, best first. Empty silences the stop.
+     * The stop's crops the player has ticked, best first, or a picked stop's pick. Empty
+     * silences the stop.
      */
     static List<Crop> ticked(RunStop stop, FarmingPreferences prefs) {
+        PatchPick pick = FarmingCatalogue.pickOf(stop);
+        if (pick != null) {
+            Crop crop = prefs.pickAt(pick.getSite());
+            return crop == null ? List.of() : List.of(crop);
+        }
         List<Crop> ticked = new ArrayList<>();
         for (Crop crop : FarmingCatalogue.cropChoices(stop)) {
             if (prefs.allows(crop)) {
@@ -71,6 +76,15 @@ final class FixedCrops {
      */
     static boolean grows(RunStop stop, Crop crop) {
         return crop != null && FarmingCatalogue.cropChoices(stop).contains(crop);
+    }
+
+    /**
+     * Whether this crop stands in the stop's patch once grown, wanting nothing while it
+     * lives: the stop's own standing crop, or a white lily picked for its patch, which guards
+     * the allotments beside it. A lily left from an earlier pick is harvested for the new one.
+     */
+    static boolean stands(RunStop stop, Crop crop, FarmingPreferences prefs) {
+        return stop.isPicked() ? crop == Crop.WHITE_LILY && ticked(stop, prefs).contains(crop) : stop.isStandingCrop();
     }
 
     /**

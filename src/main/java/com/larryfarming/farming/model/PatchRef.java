@@ -37,9 +37,7 @@ public class PatchRef {
         if (def == null) {
             throw new IllegalArgumentException("the registry has no patch " + key);
         }
-        String label = def.getPatchName().isEmpty() ? def.getLocation() + " " + def.getType()
-                : def.getLocation() + " (" + def.getPatchName() + ") " + def.getType();
-        return new PatchRef(def.getRegionId(), def.getVarbitId(), label);
+        return new PatchRef(def.getRegionId(), def.getVarbitId(), def.displayName() + " " + def.getType());
     }
 
     /** The registry key, in the same {@code region.varbit} form used for persistence. */

@@ -12,7 +12,7 @@ import net.runelite.client.ui.ColorScheme;
  * ({@link FarmingUpgrade.Kind#EQUIP}), or the gear worth earning between runs
  * ({@link FarmingUpgrade.Kind#GOAL}). Hides itself when it has no rows.
  */
-class GearList extends JPanel
+class GearList extends StretchPanel
 {
 	private static final int ROW_ICON = 20;
 	/** Owned and worth putting on now. */
@@ -58,10 +58,8 @@ class GearList extends JPanel
 	{
 		boolean equip = upgrade.getKind() == FarmingUpgrade.Kind.EQUIP;
 
-		JPanel row = new JPanel(new GridBagLayout());
-		row.setOpaque(false);
+		JPanel row = PanelText.panel(new GridBagLayout());
 		row.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 4));
-		row.setAlignmentX(LEFT_ALIGNMENT);
 
 		// Colour if owned, grey if not.
 		ImageIcon sprite = icons != null && upgrade.getItemId() > 0
@@ -70,11 +68,5 @@ class GearList extends JPanel
 		PanelText.addIconAndFill(row, GridBagConstraints.CENTER, sprite, 5,
 			PanelText.small(upgrade.getDetail(), equip ? COLOR_EQUIP : PanelColors.HEADER));
 		return FarmingPanel.sized(row, width);
-	}
-
-	@Override
-	public Dimension getMaximumSize()
-	{
-		return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
 	}
 }

@@ -57,18 +57,6 @@ public class FarmingAdvice {
     List<FarmingCarryItem> carryNow = List.of();
 
     /**
-     * What the run plants, in one line: "2 toadflax, 5 irit". Empty when nothing can be
-     * planted, in which case {@link #getSeedWarning()} says why.
-     */
-    String seedSummary;
-
-    /**
-     * What is missing or unknown about the seeds, or empty when the answer is solid.
-     * Kept apart from the summary so the panel can show it as a warning.
-     */
-    String seedWarning;
-
-    /**
      * The stores Larry has never looked in, asked for in one line, such as "Check your bank
      * and seed vault." Empty once he has seen every store the player can reach.
      */
@@ -152,4 +140,12 @@ public class FarmingAdvice {
      * staff, since no switch helps then.
      */
     boolean fairyRingBlocked;
+
+    /**
+     * The volcanic ash this trip's Fertile Soil casts take. The planner reads it to leave the
+     * compost bins only what the casts don't use, and the panel never reads it. It is
+     * transient, so it stays out of equality: two pieces of advice that differ only here
+     * compare equal.
+     */
+    transient int fertileAsh;
 }

@@ -71,8 +71,18 @@ public class Requirement {
     /** Immutable; empty unless {@link #kind} is {@link Kind#ALL} or {@link Kind#ANY}. */
     List<Requirement> parts;
 
-    private static Requirement leaf(Kind kind, Capability capability, Destination destination, PatchRef patch, Zone zone) {
-        return new Requirement(kind, capability, destination, patch, zone, false, List.of());
+    /**
+     * A leaf holding exactly one value, the one its kind names.
+     *
+     * @throws IllegalArgumentException when that value is null, so a null leaf never reaches
+     *     the capability set
+     */
+    private static Requirement leaf(Kind kind, Capability capability, Destination destination, PatchRef patch, Zone zone,
+            boolean bySwap) {
+        if (capability == null && destination == null && patch == null && zone == null) {
+            throw new IllegalArgumentException("a " + kind + " requirement needs a value");
+        }
+        return new Requirement(kind, capability, destination, patch, zone, bySwap, List.of());
     }
 
     private static Requirement of(Kind kind, List<Requirement> parts) {
@@ -80,18 +90,12 @@ public class Requirement {
     }
 
     public static Requirement cap(Capability capability) {
-        if (capability == null) {
-            throw new IllegalArgumentException("a capability requirement needs a capability");
-        }
-        return leaf(Kind.CAPABILITY, capability, null, null, null);
+        return leaf(Kind.CAPABILITY, capability, null, null, null, false);
     }
 
     /** Being able to get to a place, however this player gets there. */
     public static Requirement reach(Destination destination) {
-        if (destination == null) {
-            throw new IllegalArgumentException("a destination requirement needs a destination");
-        }
-        return leaf(Kind.DESTINATION, null, destination, null, null);
+        return leaf(Kind.DESTINATION, null, destination, null, null, false);
     }
 
     /**
@@ -100,17 +104,11 @@ public class Requirement {
      * those.
      */
     public static Requirement reachBySwap(Destination destination) {
-        if (destination == null) {
-            throw new IllegalArgumentException("a destination requirement needs a destination");
-        }
-        return new Requirement(Kind.DESTINATION, null, destination, null, null, true, List.of());
+        return leaf(Kind.DESTINATION, null, destination, null, null, true);
     }
 
     public static Requirement reachedPatch(PatchRef patch) {
-        if (patch == null) {
-            throw new IllegalArgumentException("a reached-patch requirement needs a patch");
-        }
-        return leaf(Kind.REACHED_PATCH, null, null, patch, null);
+        return leaf(Kind.REACHED_PATCH, null, null, patch, null, false);
     }
 
     /**
@@ -121,10 +119,7 @@ public class Requirement {
      * for being free: a whistle still beats a short walk to a tree.
      */
     public static Requirement standingIn(Zone zone) {
-        if (zone == null) {
-            throw new IllegalArgumentException("a standing-in requirement needs a zone");
-        }
-        return leaf(Kind.STANDING_IN, null, null, null, zone);
+        return leaf(Kind.STANDING_IN, null, null, null, zone, false);
     }
 
     public static Requirement all(Requirement... parts) {
@@ -132,15 +127,6 @@ public class Requirement {
     }
 
     public static Requirement any(Requirement... parts) {
-        return of(Kind.ANY, List.of(parts));
-    }
-
-    /** The common shape: any one of several interchangeable items will do. */
-    public static Requirement any(Capability... capabilities) {
-        Requirement[] parts = new Requirement[capabilities.length];
-        for (int i = 0; i < capabilities.length; i++) {
-            parts[i] = cap(capabilities[i]);
-        }
         return of(Kind.ANY, List.of(parts));
     }
 

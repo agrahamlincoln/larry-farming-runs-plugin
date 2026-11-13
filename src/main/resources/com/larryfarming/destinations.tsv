@@ -1,0 +1,22 @@
+# Every destination's attributes, one row per Destination constant: its name for a player,
+# written to sit mid-sentence with its article, and the Zone it lands in. The zone is - for a
+# landing in no zone the planner uses.
+#
+# destination	name	zone
+CATHERBY	Catherby	-
+CAMELOT	Camelot	-
+VARROCK	Varrock	-
+GRAND_EXCHANGE	the Grand Exchange	-
+LUMBRIDGE	Lumbridge	-
+FALADOR	Falador	-
+ARDOUGNE	Ardougne	-
+# Never zoned: the house teleport lands inside the house, not in any town's zone.
+HOUSE	your house	-
+FISHING_GUILD	the Fishing Guild	-
+FENKENSTRAINS_CASTLE	Fenkenstrain's Castle	-
+SALVE_GRAVEYARD	the Salve graveyard	-
+DRAYNOR_MANOR	Draynor Manor	-
+ARCEUUS_LIBRARY	the Arceuus Library	-
+HARMONY_ISLAND	Harmony Island	-
+KOUREND_CASTLE	Kourend Castle	-
+CIVITAS_ILLA_FORTIS	Civitas illa Fortis	CIVITAS_ILLA_FORTIS

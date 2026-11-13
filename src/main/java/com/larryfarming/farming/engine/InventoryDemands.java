@@ -3,13 +3,13 @@ package com.larryfarming.farming.engine;
 import com.larryfarming.engine.*;
 import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.catalogue.CropData;
-import com.larryfarming.farming.detection.BottomlessBucket;
 import com.larryfarming.farming.detection.CapabilityResolver;
 import com.larryfarming.farming.detection.CapabilityState;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingCarryItem;
 import java.util.*;
+import net.runelite.api.gameval.ItemID;
 
 /**
  * Reads a planned trip and a player, and says what each arrival wants out of the bag.
@@ -51,17 +51,14 @@ final class InventoryDemands {
             List<List<Crop>> cropFor, FarmingInputs inputs, PlayerState state, CapabilityResolver resolver) {
         List<InventorySim.Demand> demands = new ArrayList<>(visits.size());
         boolean pouched = ItemCounts.ownsAny(state, RunePouch.POUCH_ITEM_IDS);
+        // The packing list's noted empty buckets, which come out at the first bank.
+        boolean bringsBuckets = CarryPlanner.bringsBuckets(CompostBins.over(plans, inputs, state), state);
         for (List<Integer> visit : visits) {
-            List<StopPlan> here = new ArrayList<>(visit.size());
-            List<List<Crop>> plantedHere = new ArrayList<>(visit.size());
-            for (int index : visit) {
-                here.add(plans.get(index));
-                plantedHere.add(cropFor.get(index));
-            }
+            List<StopPlan> here = StopPlan.pick(plans, visit);
             // The packing list's own lines, so the bag charges what it is told to carry.
             // Kept to the end like any tool, coins included: the stack may outlast the fee,
             // and charging a slot too many costs at most a spare bank stop.
-            Set<Integer> tools = CarryPlanner.treeToolsFor(here, plantedHere, state, inputs);
+            Set<Integer> tools = CarryPlanner.treeToolsFor(here, StopPlan.pick(cropFor, visit), state, inputs);
             Set<Integer> travel = new HashSet<>();
             Set<Integer> spent = new HashSet<>();
             // With no player read there is nothing to price a route's items against.
@@ -74,6 +71,13 @@ final class InventoryDemands {
                 if (CarryPlanner.spentOnTheWay(line)) {
                     spent.add(line.getItemId());
                 }
+            }
+            // The noted buckets ride like a tablet: in the bag on the way to the first bin that
+            // wants them, and stored there with the leprechaun, whom every later bin draws on.
+            if (bringsBuckets && CompostBins.wantsBucketsAt(visit, plans, inputs, state)) {
+                travel.add(ItemID.Cert.BUCKET_EMPTY);
+                spent.add(ItemID.Cert.BUCKET_EMPTY);
+                bringsBuckets = false;
             }
             Arrival at = null;
             Set<Crop> seeds = EnumSet.noneOf(Crop.class);
@@ -150,7 +154,7 @@ final class InventoryDemands {
     private static void collectProduce(RunStop stop, FarmingInputs inputs, Set<Crop> produce) {
         for (PatchRef ref : stop.getPatches()) {
             PatchPrediction seen = inputs.patchAt(ref);
-            PatchWork.Act act = PatchWork.at(seen, stop, inputs.getNowEpochSec());
+            PatchWork.Act act = PatchWork.at(seen, stop, inputs.getPreferences(), inputs.getNowEpochSec());
             // A check where the stop also picks fills the plant at once: a bush, cactus or
             // fruit tree bears its full load the moment it is checked.
             boolean picked = act == PatchWork.Act.HARVEST || (act == PatchWork.Act.CHECK
@@ -220,9 +224,10 @@ final class InventoryDemands {
         if (basketInTheBag) {
             carried.add(InventorySim.Fixture.LOG_BASKET);
         }
-        // CarryPlanner.packsCompost decides the bucket for the packing list too.
-        boolean fertile = FertileSoil.inUse((inputs != null ? inputs : FarmingInputs.none()).getPreferences(), state, resolver.getBook());
-        if (ItemCounts.ownsAny(state, BottomlessBucket.ITEM_IDS) && CarryPlanner.packsCompost(plans, fertile)) {
+        // CarryPlanner.packsBucket decides the bucket for the packing list too.
+        boolean fertile = FertileSoil.inUse(inputs.getPreferences(), state, resolver.getBook());
+        CompostBins.Needs bins = CompostBins.over(plans, inputs, state);
+        if (CarryPlanner.packsBucket(plans, fertile, bins, state)) {
             carried.add(InventorySim.Fixture.BOTTOMLESS_BUCKET);
         }
         if (ItemCounts.ownsAny(state, RunePouch.POUCH_ITEM_IDS)) {
@@ -231,10 +236,14 @@ final class InventoryDemands {
         if (ItemCounts.ownsAny(state, SeedBox.BOX_ITEM_IDS)) {
             carried.add(InventorySim.Fixture.SEED_BOX);
         }
-        // The ash is an errand, not an owned saving. It is charged on the same condition
-        // CarryPlanner uses to list it.
-        if (fertile && FertileSoil.treatsAny(plans)) {
+        // The ash and the potion are errands, not owned savings. Each is charged on the same
+        // condition CarryPlanner uses to list it, and one ash stack serves the bins and
+        // Fertile Soil alike.
+        if (bins.getAsh() > 0 || fertile && FertileSoil.treatsAny(plans)) {
             carried.add(InventorySim.Fixture.VOLCANIC_ASH);
+        }
+        if (bins.getDoses() > 0) {
+            carried.add(InventorySim.Fixture.COMPOST_POTION);
         }
         // No underwater breathing gear on purpose: it only works worn, so it costs
         // equipment slots, not inventory. See CarryPlanner.addDivingGear.

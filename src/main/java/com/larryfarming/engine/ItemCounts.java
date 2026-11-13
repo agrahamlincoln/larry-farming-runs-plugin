@@ -4,7 +4,6 @@ import com.larryfarming.data.Tables;
 import com.larryfarming.model.*;
 import lombok.Value;
 import net.runelite.api.gameval.ItemID;
-import net.runelite.api.gameval.VarbitID;
 
 import java.util.*;
 
@@ -48,15 +47,6 @@ public final class ItemCounts {
         }
         return countIn(state.getInventory(), itemId, itemName) + countItemInStorage(state.getEquipment().values(), itemId, itemName)
                 + sideContainerCounts(state, itemId, itemName).carried;
-    }
-
-    /**
-     * How many of an item the tool leprechaun is holding. Already part of {@link #countOwned},
-     * but a packing list must tell it apart from the bank: a spade at the leprechaun is
-     * already waiting at the patch.
-     */
-    public static int countInLeprechaunStorage(PlayerState state, int itemId) {
-        return state == null ? 0 : leprechaunStorageQuantity(state, itemId);
     }
 
     /**
@@ -173,7 +163,7 @@ public final class ItemCounts {
             }
         }
 
-        stored += countItemInStorage(state.getSeedVault(), itemId, itemName) + leprechaunStorageQuantity(state, itemId);
+        stored += countItemInStorage(state.getSeedVault(), itemId, itemName) + countInLeprechaunStorage(state, itemId);
 
         return SideContainerCounts.of(carried, banked, stored);
     }
@@ -290,25 +280,6 @@ public final class ItemCounts {
     private static final int SECATEURS_TYPE_VARBIT = 1848;
 
     /**
-     * Which watering can the leprechaun is holding, or 0 for none.
-     *
-     * <p>Not a count: only one can is stored, and the slot records <em>which</em> can. The
-     * value is the water level plus one: 1 for an empty {@code Watering can}, 2 through 9 for
-     * {@code Watering can(1)} through {@code Watering can(8)}.
-     */
-    private static final int WATERING_CAN_STORAGE_VARBIT = VarbitID.FARMING_TOOLS_WATERINGCAN;
-
-    /**
-     * Watering can item IDs indexed by water level, empty first. Spelled out because the id
-     * run has a gap at 5332.
-     */
-    private static final int[] WATERING_CAN_ITEM_IDS = {
-            ItemID.WATERING_CAN_0, ItemID.WATERING_CAN_1, ItemID.WATERING_CAN_2,
-            ItemID.WATERING_CAN_3, ItemID.WATERING_CAN_4, ItemID.WATERING_CAN_5,
-            ItemID.WATERING_CAN_6, ItemID.WATERING_CAN_7, ItemID.WATERING_CAN_8,
-    };
-
-    /**
      * Varbit IDs backing tool-leprechaun storage, read at login so stored items count before
      * the next deposit changes a varbit.
      *
@@ -328,34 +299,25 @@ public final class ItemCounts {
             ids.add(slice.getVarbitId());
         }
         ids.add(SECATEURS_TYPE_VARBIT);
-        ids.add(WATERING_CAN_STORAGE_VARBIT);
         return Set.copyOf(ids);
     }
 
-    private static int wateringCanStorageValue(int itemId) {
-        for (int level = 0; level < WATERING_CAN_ITEM_IDS.length; level++) {
-            if (WATERING_CAN_ITEM_IDS[level] == itemId) {
-                return level + 1;
-            }
-        }
-        return 0;
-    }
-
     /**
-     * Quantity of a farming item the tool leprechaun is holding, or 0 for items it does not
-     * store. Storage is per account: every leprechaun opens the same store.
+     * How many of an item the tool leprechaun is holding: 0 for items it does not store, or
+     * for no state. Already part of {@link #countOwned}, but a packing list must tell it apart
+     * from the bank: a spade at the leprechaun is already waiting at the patch. Storage is per
+     * account: every leprechaun opens the same store.
      */
-    private static int leprechaunStorageQuantity(PlayerState state, int itemId) {
+    public static int countInLeprechaunStorage(PlayerState state, int itemId) {
+        if (state == null) {
+            return 0;
+        }
         if (itemId == ItemID.SECATEURS || itemId == ItemID.FAIRY_ENCHANTED_SECATEURS) {
             boolean magicStored = varbitValue(state, SECATEURS_TYPE_VARBIT) == 1;
             if (magicStored != (itemId == ItemID.FAIRY_ENCHANTED_SECATEURS)) {
                 return 0;
             }
             return assemble(state, SECATEURS_STORAGE_VARBITS);
-        }
-        int canValue = wateringCanStorageValue(itemId);
-        if (canValue != 0) {
-            return varbitValue(state, WATERING_CAN_STORAGE_VARBIT) == canValue ? 1 : 0;
         }
         List<StoredSlice> slices = LEPRECHAUN_STORAGE_VARBITS.get(itemId);
         return slices == null ? 0 : assemble(state, slices);

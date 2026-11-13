@@ -189,6 +189,8 @@ public enum Capability {
      */
     HARMONY_ISLAND_ACCESS,
     FOSSIL_ISLAND_ZIPLINE,
+    /** The Hole under the hill from the Museum Camp to the hardwood patches. */
+    FOSSIL_ISLAND_HOLE,
     /** The climbing rocks on Taverley's east wall, crossed east to west only. */
     TAVERLEY_CLIMBING_ROCKS,
 
@@ -319,7 +321,6 @@ public enum Capability {
 
     // --- Farming supplies ----------------------------------------------------
     // Inventory-space downgrades, ranked the same way as travel ones.
-    BOTTOMLESS_COMPOST_BUCKET,
     ULTRACOMPOST,
     MAGIC_SECATEURS,
     SEED_DIBBER,

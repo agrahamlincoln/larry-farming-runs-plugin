@@ -20,12 +20,8 @@ import java.util.function.BiConsumer;
  */
 class HouseFold extends Fold
 {
-	static final String NOT_SEEN = ": not seen yet";
-	static final String NEXUS_NOT_SEEN = ": Nexus not opened yet";
-
 	private final RebuildGuard guard = new RebuildGuard();
 	private final BiConsumer<String, String> send;
-	private FarmingHouse.Sight sight;
 
 	/** @param send receives each ticked row as its config key and new value */
 	HouseFold(BiConsumer<String, String> send)
@@ -45,11 +41,7 @@ class HouseFold extends Fold
 			return;
 		}
 		// The header is set in place: a one-line label cannot flicker.
-		if (sight != house.getSight())
-		{
-			sight = house.getSight();
-			setHeader(suffix(sight), PanelColors.HEADER);
-		}
+		setHeader(suffix(house.getSight()), PanelColors.HEADER);
 		if (!guard.shouldRebuild(house.getGroups()))
 		{
 			return;
@@ -65,9 +57,9 @@ class HouseFold extends Fold
 		switch (sight)
 		{
 			case NOT_SEEN:
-				return NOT_SEEN;
+				return ": not seen yet";
 			case NEXUS_NOT_SEEN:
-				return NEXUS_NOT_SEEN;
+				return ": Nexus not opened yet";
 			default:
 				return "";
 		}

@@ -14,7 +14,7 @@ import net.runelite.client.ui.ColorScheme;
  * <p>Sprites in a four-wide grid, with names on hover, so the player can check the bag at a
  * glance.
  */
-class CarryView extends JPanel
+class CarryView extends StretchPanel
 {
 	/** The game inventory's width. */
 	static final int COLUMNS = 4;
@@ -102,11 +102,5 @@ class CarryView extends JPanel
 				break;
 		}
 		return cell;
-	}
-
-	@Override
-	public Dimension getMaximumSize()
-	{
-		return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
 	}
 }

@@ -4,6 +4,7 @@ import com.larryfarming.engine.ItemCounts;
 import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.engine.farming.PatchType;
 import com.larryfarming.farming.catalogue.CropData;
+import com.larryfarming.farming.catalogue.FarmingCatalogue;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.model.Skill;
@@ -52,8 +53,8 @@ public final class SeedSelector {
      * <p>Package-private with its overload of {@code select}: the shared stock belongs to one
      * trip's planning.
      */
-    static Stock rotationStock(SeedPolicy policy, FarmingPreferences prefs, PlayerState state) {
-        return stockOf(state, herbWindow(policy, prefs));
+    static Stock rotationStock(FarmingPreferences prefs, PlayerState state) {
+        return stockOf(state, herbWindow(prefs));
     }
 
     /**
@@ -78,13 +79,13 @@ public final class SeedSelector {
      * the bag.
      *
      * @param stock <b>mutated</b> as seeds are taken so several runs share one seed vault.
-     *     Must come from {@link #rotationStock} on the same policy and preferences; a stock
+     *     Must come from {@link #rotationStock} on the same preferences; a stock
      *     built from another pair reads as empty
      */
-    static SeedPlan select(SeedPolicy policy, FarmingPreferences prefs, PlayerState state, int goodPatches, int badPatches, Stock stock) {
-        List<Crop> window = herbWindow(policy, prefs);
-        boolean confident = seedsSeen(state);
-        List<Map<Crop, Integer>> sources = stock.carriedCovers(goodPatches + badPatches) ? stock.carriedOnly() : stock.carriedFirst();
+    static SeedPlan select(FarmingPreferences prefs, PlayerState state, int goodPatches, int badPatches, Stock stock) {
+        List<Crop> window = herbWindow(prefs);
+        // A bag that covers the run draws on the carried half alone.
+        List<Map<Crop, Integer>> sources = stock.carriedCovers(goodPatches + badPatches) ? List.of(stock.carried) : stock.carriedFirst();
 
         // The good end draws first, so the best seeds go where the yield bonus applies. It
         // walks crop by crop over every source, so a carried seed never outranks a better
@@ -112,8 +113,8 @@ public final class SeedSelector {
         good.sort(byRank);
         bad.sort(byRank);
 
-        return new SeedPlan(new SeedAllocation(List.copyOf(good), goodPatches, confident),
-                new SeedAllocation(List.copyOf(bad), badPatches, confident));
+        return new SeedPlan(new SeedAllocation(List.copyOf(good), goodPatches),
+                new SeedAllocation(List.copyOf(bad), badPatches));
     }
 
     /**
@@ -124,9 +125,9 @@ public final class SeedSelector {
      * missing tick. Nor is a herb the preset keeps for contracts (torstol): carried, it is
      * most likely bound for one, and the note would push against the preset's own advice.
      */
-    public static List<Crop> carriedButUnticked(SeedPolicy policy, FarmingPreferences prefs, PlayerState state) {
+    public static List<Crop> carriedButUnticked(FarmingPreferences prefs, PlayerState state) {
         List<Crop> unticked = new ArrayList<>();
-        for (Crop crop : policy.getHerbTierList()) {
+        for (Crop crop : FarmingCatalogue.seedPolicy().getHerbTierList()) {
             if (!FarmingPreferences.HERB_CHOICES.contains(crop) || prefs.allows(crop)
                     || Preset.DEFAULT.getHerbsKeptForContracts().contains(crop)) {
                 continue;
@@ -165,8 +166,7 @@ public final class SeedSelector {
             stock.put(crop, plantableCount(state, crop));
             take(crop, stock, chosen, patches);
         }
-        boolean seen = seedsSeen(state);
-        return new SeedPlan(new SeedAllocation(List.of(), 0, seen), new SeedAllocation(List.copyOf(chosen), patches, seen));
+        return new SeedPlan(new SeedAllocation(List.of(), 0), new SeedAllocation(List.copyOf(chosen), patches));
     }
 
     /**
@@ -195,12 +195,12 @@ public final class SeedSelector {
      * {@link CropData#plantableIn}: the rotation ranks by experience and {@code plantableIn}
      * by level.
      */
-    public static List<Crop> plantableFrom(SeedPolicy policy, FarmingPreferences prefs, PatchType seedPatchType, PatchType type) {
+    public static List<Crop> plantableFrom(FarmingPreferences prefs, PatchType seedPatchType, PatchType type) {
         if (seedPatchType != null) {
             return plantingLadder(prefs, seedPatchType);
         }
         if (type == PatchType.HERB) {
-            return herbWindow(policy, prefs);
+            return herbWindow(prefs);
         }
         // Everything else the rotation touches — allotments, flowers — takes no tick, so
         // the patch itself decides what could go in it.
@@ -215,8 +215,8 @@ public final class SeedSelector {
      * <p>{@link #rotationStock}, {@link #select} and {@link #plantableFrom} must all read
      * this same list, or the allocation draws seeds the stock never counted.
      */
-    private static List<Crop> herbWindow(SeedPolicy policy, FarmingPreferences prefs) {
-        return prefs.ticked(prefs.favouriteFirst(policy.getHerbTierList()));
+    private static List<Crop> herbWindow(FarmingPreferences prefs) {
+        return prefs.ticked(prefs.favouriteFirst(FarmingCatalogue.seedPolicy().getHerbTierList()));
     }
 
     /**
@@ -355,11 +355,6 @@ public final class SeedSelector {
         /** The two halves in the order the rotation draws from them. */
         private List<Map<Crop, Integer>> carriedFirst() {
             return List.of(carried, elsewhere);
-        }
-
-        /** The carried half alone, for a bag that covers the run. */
-        private List<Map<Crop, Integer>> carriedOnly() {
-            return List.of(carried);
         }
 
         /**

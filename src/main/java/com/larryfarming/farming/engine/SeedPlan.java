@@ -19,18 +19,13 @@ public class SeedPlan {
     /** The filler, for every patch the good end does not reach. */
     SeedAllocation bad;
 
-    public boolean isConfident() {
-        return good.isConfident() && bad.isConfident();
-    }
-
     /**
      * What to carry out of the bank for a trip: every crop across both ends of every run
      * with its patch count, in the order the trip first meets each, good seeds first.
      *
      * <p>Each run allocates against its own rotation, so a trip has one plan per run. The
      * crops merge because late in the rotation both ends can land on one crop, and
-     * "2 avantoe, 5 avantoe" describes one handful of seeds. Both the bag and the sentence
-     * above it read this one answer.
+     * "2 avantoe, 5 avantoe" describes one handful of seeds.
      */
     public static List<SeedAllocation.Tally> shoppingList(List<SeedPlan> plans) {
         Map<Crop, Integer> perCrop = new LinkedHashMap<>();
@@ -80,20 +75,5 @@ public class SeedPlan {
             tallies.add(new SeedAllocation.Tally(wanted.getKey(), wanted.getValue()));
         }
         return tallies;
-    }
-
-    /** How many patches the trip is trying to fill, across both ends of every run. */
-    public static int wanted(List<SeedPlan> plans) {
-        return plans.stream().mapToInt(plan -> plan.good.getWanted() + plan.bad.getWanted()).sum();
-    }
-
-    /** How many of them the stock actually covers. */
-    public static int planted(List<SeedPlan> plans) {
-        return plans.stream().mapToInt(plan -> plan.good.getPerPatch().size() + plan.bad.getPerPatch().size()).sum();
-    }
-
-    /** False as soon as one run's answer rests on a container we have not been shown. */
-    public static boolean confident(List<SeedPlan> plans) {
-        return plans.stream().allMatch(SeedPlan::isConfident);
     }
 }

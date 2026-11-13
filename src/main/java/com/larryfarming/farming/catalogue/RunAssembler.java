@@ -18,25 +18,25 @@ final class RunAssembler {
     /** Every run, in the order {@link Families#ALL} lists the families. */
     static List<FarmingRun> assemble() {
         List<FarmingRun> runs = new ArrayList<>(Families.ALL.size());
-        for (Families.Family family : Families.ALL) {
+        for (FarmingRun family : Families.ALL) {
             runs.add(assemble(family));
         }
         return List.copyOf(runs);
     }
 
-    private static FarmingRun assemble(Families.Family family) {
+    /** The family's run with its stops added; the family itself holds none. */
+    private static FarmingRun assemble(FarmingRun family) {
         List<Site> sites = new ArrayList<>();
         for (Site site : Site.values()) {
-            if (site.family() == family.getId() && site.books().contains(family.getBook())) {
+            if (site.family() == family.getId() && site.books().contains(family.getSpellbook())) {
                 sites.add(site);
             }
         }
         // Stable, so sites at one arrival keep their declared order.
         sites.sort(Comparator.comparingInt(site -> Arrivals.seat(site.arrival())));
-        FarmingRun.FarmingRunBuilder run = FarmingRun.builder().id(family.getId()).spellbook(family.getBook()).unlock(family.getUnlock())
-                .respawnTown(family.getRespawnTown()).seedPatchType(family.getSeedPatchType());
+        FarmingRun.FarmingRunBuilder run = family.toBuilder();
         for (Site site : sites) {
-            run.stop(site.stop(family.getBook()));
+            run.stop(site.stop(family.getSpellbook()));
         }
         return run.build();
     }

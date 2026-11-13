@@ -1,5 +1,6 @@
 package com.larryfarming.farming.detection;
 
+import com.larryfarming.data.Tables;
 import com.larryfarming.model.PlayerState;
 import java.util.*;
 
@@ -14,7 +15,8 @@ import java.util.*;
  * {@link CapabilityState#UNKNOWN}. {@link CapabilitySources#LOGIN_SCAN_VARBIT_IDS} includes
  * {@link #allVarbits()}, so most diary unknowns resolve at login.
  *
- * <p>Ids transcribed from RuneLite's {@code Varbits} (DIARY_&lt;AREA&gt;_&lt;TIER&gt;,
+ * <p>The ids live in the diary-tiers table, transcribed from RuneLite's {@code Varbits}
+ * (DIARY_&lt;AREA&gt;_&lt;TIER&gt;,
  * {@code runelite-api/src/main/java/net/runelite/api/Varbits.java}; Copyright (c) 2017, Adam;
  * BSD 2-Clause License).
  */
@@ -28,62 +30,37 @@ public final class DiaryTiers {
     public static final String HARD = "Hard";
     public static final String ELITE = "Elite";
 
+    /** The tiers in the order the table's id columns hold them. */
+    private static final String[] TIERS = {EASY, MEDIUM, HARD, ELITE};
+
     /**
      * Long-form area names folded onto the short key the table is written with.
      *
-     * <p>The table uses the one-word name; the wiki uses the full title. Without the alias,
-     * a catalogue entry naming "Lumbridge &amp; Draynor" would read as unknown forever. Both
-     * "&amp;" and "and" are accepted.
-     *
-     * <p>Declared above {@link #BY_AREA_AND_TIER} because building that table runs every
-     * area name through {@link #key}, which reads this one.
+     * <p>The table keys each area by its one-word name; the wiki uses the full title.
+     * Without the alias, a catalogue entry naming "Lumbridge &amp; Draynor" would read as
+     * unknown forever. Both "&amp;" and "and" are accepted.
      */
-    private static final Map<String, String> AREA_ALIASES = areaAliases();
-
-    private static Map<String, String> areaAliases() {
-        Map<String, String> aliases = new HashMap<>();
-        alias(aliases, "Lumbridge & Draynor", "Lumbridge");
-        alias(aliases, "Kourend & Kebos", "Kourend");
-        alias(aliases, "Western Provinces", "Western");
-        return Collections.unmodifiableMap(aliases);
-    }
-
-    private static void alias(Map<String, String> aliases, String longName, String shortName) {
-        String canonical = shortName.toLowerCase(Locale.ROOT);
-        String folded = longName.toLowerCase(Locale.ROOT);
-        aliases.put(folded, canonical);
-        aliases.put(folded.replace(" & ", " and "), canonical);
-    }
+    private static final Map<String, String> AREA_ALIASES = new HashMap<>();
 
     /**
      * Completion varbit per area and tier, keyed case-insensitively because the callers
      * are hand-written catalogue entries.
      */
-    private static final Map<String, Integer> BY_AREA_AND_TIER = table();
+    private static final Map<String, Integer> BY_AREA_AND_TIER = new HashMap<>();
 
-    private static Map<String, Integer> table() {
-        Map<String, Integer> ids = new HashMap<>();
-        put(ids, "Ardougne", 4458, 4459, 4460, 4461);
-        put(ids, "Desert", 4483, 4484, 4485, 4486);
-        put(ids, "Falador", 4462, 4463, 4464, 4465);
-        put(ids, "Fremennik", 4491, 4492, 4493, 4494);
-        put(ids, "Kandarin", 4475, 4476, 4477, 4478);
-        // Karamja's four ids are not consecutive.
-        put(ids, "Karamja", 3578, 3599, 3611, 4566);
-        put(ids, "Kourend", 7925, 7926, 7927, 7928);
-        put(ids, "Lumbridge", 4495, 4496, 4497, 4498);
-        put(ids, "Morytania", 4487, 4488, 4489, 4490);
-        put(ids, "Varrock", 4479, 4480, 4481, 4482);
-        put(ids, "Western", 4471, 4472, 4473, 4474);
-        put(ids, "Wilderness", 4466, 4467, 4468, 4469);
-        return Collections.unmodifiableMap(ids);
-    }
-
-    private static void put(Map<String, Integer> ids, String area, int easy, int medium, int hard, int elite) {
-        ids.put(key(area, EASY), easy);
-        ids.put(key(area, MEDIUM), medium);
-        ids.put(key(area, HARD), hard);
-        ids.put(key(area, ELITE), elite);
+    static {
+        for (Tables.Row row : Tables.read("/com/larryfarming/diary-tiers.tsv", 10)) {
+            String area = row.text(0).toLowerCase(Locale.ROOT);
+            String fullTitle = row.optionalText(9);
+            if (fullTitle != null) {
+                String folded = fullTitle.toLowerCase(Locale.ROOT);
+                AREA_ALIASES.put(folded, area);
+                AREA_ALIASES.put(folded.replace(" & ", " and "), area);
+            }
+            for (int tier = 0; tier < TIERS.length; tier++) {
+                BY_AREA_AND_TIER.put(key(area, TIERS[tier]), row.integer(1 + 2 * tier));
+            }
+        }
     }
 
     private static String key(String area, String tier) {

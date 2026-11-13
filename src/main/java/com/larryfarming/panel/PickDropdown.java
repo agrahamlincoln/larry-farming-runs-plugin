@@ -5,13 +5,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.JComboBox;
+import net.runelite.client.ui.FontManager;
 
 /**
  * A setting that takes one of many values, as a dropdown of the options' labels in their
  * fixed order. Picking one sends its value; a selection made in code never does, so a
  * refresh cannot write a setting back.
+ *
+ * <p>The side panel's one dropdown: a RuneLite combo box in the small font that never takes
+ * the focus.
  */
-class PickDropdown extends SmallDropdown<String>
+class PickDropdown extends JComboBox<String>
 {
 	private final DefaultComboBoxModel<String> model;
 	private final BiConsumer<String, String> send;
@@ -24,14 +29,12 @@ class PickDropdown extends SmallDropdown<String>
 	/** @param send receives the setting's key and the picked value */
 	PickDropdown(BiConsumer<String, String> send)
 	{
-		this(new DefaultComboBoxModel<>(), send);
-	}
-
-	private PickDropdown(DefaultComboBoxModel<String> model, BiConsumer<String, String> send)
-	{
-		super(model);
-		this.model = model;
+		super(new DefaultComboBoxModel<>());
+		// The model handed to super just above, kept typed for refilling.
+		this.model = (DefaultComboBoxModel<String>) getModel();
 		this.send = send;
+		setFont(FontManager.getRunescapeSmallFont());
+		setFocusable(false);
 		addActionListener(e -> picked());
 	}
 
@@ -76,7 +79,7 @@ class PickDropdown extends SmallDropdown<String>
 	private void picked()
 	{
 		String value = selectedValue();
-		if (updating || value == null || send == null || key == null)
+		if (updating || value == null || key == null)
 		{
 			return;
 		}

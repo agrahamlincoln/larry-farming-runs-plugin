@@ -68,8 +68,9 @@ NECKLACE_OF_PASSAGE	Necklace of passage	21146 21149 21151 21153 21155	NECKLACE_O
 # One-off transport items.
 ROYAL_SEED_POD	Royal seed pod	19564	MM2_ROYAL_SEED_POD
 CHRONICLE	Chronicle	13660	CHRONICLE
-# The full one only: the empty one (4252) cannot teleport.
-ECTOPHIAL	Ectophial	4251	ECTOPHIAL
+# The empty one counts too. It empties as it teleports and refills itself at the Ectofuntus
+# on arrival (wiki "Ectophial"), so it is empty only for the few ticks of the teleport.
+ECTOPHIAL	Ectophial	4251 4252	ECTOPHIAL ECTOPHIAL_EMPTY
 TELEPORT_CRYSTAL	Teleport crystal	13102 6099 6100 6101 6102 23946	MOURNING_TELEPORT_CRYSTAL_5 MOURNING_TELEPORT_CRYSTAL_4 MOURNING_TELEPORT_CRYSTAL_3 MOURNING_TELEPORT_CRYSTAL_2 MOURNING_TELEPORT_CRYSTAL_1 PRIF_TELEPORT_CRYSTAL
 MOKHAIOTL_WAYSTONE	Mokhaiotl waystone	31099	DOM_TELEPORT_ITEM
 # One id, because a scroll of redirection produces a tablet for exactly one town.

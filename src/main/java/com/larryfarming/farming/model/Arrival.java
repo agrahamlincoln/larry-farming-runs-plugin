@@ -1,7 +1,7 @@
 package com.larryfarming.farming.model;
 
+import com.larryfarming.data.Tables;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 /**
  * One place on the trip: somewhere the player travels to, and every patch they work
@@ -20,76 +20,78 @@ import lombok.RequiredArgsConstructor;
  * and one arrival: no teleport lands nearer the fruit tree than Catherby town. Ardougne's
  * farm and Monastery bushes share one cloak but sit 150 tiles apart, so they are two
  * arrivals.
+ *
+ * <p>Each arrival's name and bank grade come from the arrivals table.
  */
 @Getter
-@RequiredArgsConstructor
 public enum Arrival {
 
     // --- Kourend --------------------------------------------------------------
     /** Contract, hespori and every guild patch: one walled garden. */
-    FARMING_GUILD("the Farming Guild", BankProximity.AT_ARRIVAL),
-    HOSIDIUS("Hosidius", BankProximity.FAR),
+    FARMING_GUILD,
+    HOSIDIUS,
 
     // --- Varlamore ------------------------------------------------------------
     /**
      * The patches are a run north of the Hunter Guild. The Civitas illa Fortis teleport
      * banks on the way, fifteen tiles of detour; the Hunter cape detours thirty-six tiles
-     * to the guild's chest, and a quetzal to the guild eighty-seven.
+     * to the guild's chest, and a quetzal to the guild eighty-seven. Graded SHORT_WALK, on
+     * the teleport's fifteen.
      */
-    ORTUS_FARM("Ortus Farm", BankProximity.SHORT_WALK),
-    LOCUS_OASIS("the Locus Oasis", BankProximity.NONE),
-    KASTORI("Kastori", BankProximity.NONE),
-    NEMUS_RETREAT("Nemus Retreat", BankProximity.NONE),
-    /** The belladonna patch at the east end of town. The town's bank is unmeasured. */
-    AUBURNVALE("Auburnvale", BankProximity.NONE),
+    ORTUS_FARM,
+    LOCUS_OASIS,
+    KASTORI,
+    NEMUS_RETREAT,
+    /** The belladonna patch at the east end of town. Graded NONE. */
+    AUBURNVALE,
 
     // --- Tirannwn -------------------------------------------------------------
     /**
      * The bank is five tiles from the patch in a straight line and thirty-one walked, because
      * a building stands between them. It is not on the walk in either: the crystal lands
-     * seventeen tiles from the patch and twenty-seven from the bank.
+     * seventeen tiles from the patch and twenty-seven from the bank. Graded FAR.
      */
-    LLETYA("Lletya", BankProximity.FAR),
+    LLETYA,
 
     // --- Kandarin and the gnome lands ----------------------------------------
     /** Tree and fruit tree both: every arrival here falls between the two patches. */
-    GNOME_STRONGHOLD("the Tree Gnome Stronghold", BankProximity.SHORT_WALK),
-    TREE_GNOME_VILLAGE("Tree Gnome Village", BankProximity.NONE),
+    GNOME_STRONGHOLD,
+    TREE_GNOME_VILLAGE,
     /**
      * Seventy tiles to the nearest bank: ninety-eight tiles of detour by fairy ring, a
-     * hundred and forty-two by the cloak. Graded on the better of the two, as
-     * {@link BankProximity} asks.
+     * hundred and forty-two by the cloak.
      */
-    ARDOUGNE_MONASTERY("Ardougne Monastery", BankProximity.FAR),
-    ARDOUGNE_FARM("Ardougne", BankProximity.FAR),
-    /** Herb cluster, an allotment, flowers, and the fruit tree east of them. */
-    CATHERBY("Catherby", BankProximity.SHORT_WALK),
+    ARDOUGNE_MONASTERY,
+    ARDOUGNE_FARM,
+    /** Herb cluster, two allotments, flowers, and the fruit tree east of them. */
+    CATHERBY,
 
     // --- Karamja --------------------------------------------------------------
-    BRIMHAVEN("Brimhaven", BankProximity.NONE),
-    TAI_BWO_WANNAI("Tai Bwo Wannai", BankProximity.NONE),
+    BRIMHAVEN,
+    TAI_BWO_WANNAI,
 
     // --- Asgarnia -------------------------------------------------------------
-    TAVERLEY("Taverley", BankProximity.NONE),
+    TAVERLEY,
     /**
      * Thirty-seven tiles to Falador east bank walked, not the sixteen of the straight line:
      * the park is fenced and the bank sits behind the south-east wall. The rungs differ
      * widely: a skills necklace passes the bank on the way out of the Mining Guild, while
      * the ring of wealth makes it a fifty-tile round trip.
      */
-    FALADOR_PARK("Falador Park", BankProximity.SHORT_WALK),
+    FALADOR_PARK,
     /** Eighty-five tiles from the park through the city, and never the same stop. */
-    FALADOR_FARM("Falador", BankProximity.FAR),
+    FALADOR_FARM,
 
     // --- Misthalin ------------------------------------------------------------
     /**
      * The belladonna patch inside the manor's fence. The nearest bank, Draynor Village's, is
-     * about 110 tiles from the teleport landing.
+     * about 110 tiles from the teleport landing, past the ninety that still grades, so it is
+     * graded NONE.
      */
-    DRAYNOR_MANOR("Draynor Manor", BankProximity.NONE),
-    LUMBRIDGE("Lumbridge", BankProximity.SHORT_WALK),
-    VARROCK_PARK("Varrock", BankProximity.FAR),
-    AL_KHARID("Al Kharid", BankProximity.FAR),
+    DRAYNOR_MANOR,
+    LUMBRIDGE,
+    VARROCK_PARK,
+    AL_KHARID,
 
     // --- Morytania ------------------------------------------------------------
     /**
@@ -97,29 +99,33 @@ public enum Arrival {
      * switch on. Five tiles from fairy ring CKS and about twenty-five from the Salve
      * graveyard teleport landing, so it is passed on the way into the region.
      *
-     * <p>Graded from the Canifis bank without a measured rung, so the leg claims nothing
-     * about the route.
+     * <p>Graded FAR from the Canifis bank, so the leg claims nothing about the route.
      */
-    MORT_MYRE("the Mort Myre mushrooms", BankProximity.FAR),
-    CANIFIS("Canifis", BankProximity.FAR),
-    HARMONY_ISLAND("Harmony Island", BankProximity.NONE),
+    MORT_MYRE,
+    CANIFIS,
+    HARMONY_ISLAND,
 
     // --- Fossil Island --------------------------------------------------------
     /**
      * Three hardwood patches inside an eighteen-by-nine box: one journey, one stop. The
-     * Museum Camp bank chest is ten tiles off the route in from the barge. The chest is a
-     * one-off Construction 21 repair and no varbit reports it, so it is assumed built.
+     * Museum Camp bank chest is ten tiles off the route in from the barge, which grades
+     * SHORT_WALK. The chest is a one-off Construction 21 repair and no varbit reports it, so it
+     * is assumed built.
      */
-    FOSSIL_ISLAND_HARDWOOD("Fossil Island", BankProximity.SHORT_WALK),
+    FOSSIL_ISLAND_HARDWOOD,
     /** Underwater, and reached from the surface separately. Never the hardwood stop. */
-    FOSSIL_ISLAND_SEAWEED("the Fossil Island seaweed", BankProximity.FAR),
+    FOSSIL_ISLAND_SEAWEED,
 
     // --- The far north --------------------------------------------------------
-    WEISS("Weiss", BankProximity.NONE),
-    TROLL_STRONGHOLD("the Troll Stronghold", BankProximity.NONE),
+    WEISS,
+    TROLL_STRONGHOLD,
 
     // --- The Great Conch ------------------------------------------------------
-    GREAT_CONCH("the Great Conch", BankProximity.NONE);
+    GREAT_CONCH;
+
+    static {
+        Rows.TABLE.requireAll(values());
+    }
 
     /**
      * How much a bank costs once the player is standing here.
@@ -202,4 +208,18 @@ public enum Arrival {
      */
     private final String displayName;
     private final BankProximity bank;
+
+    Arrival() {
+        Tables.Row row = Rows.TABLE.of(name());
+        this.displayName = row.text(1);
+        this.bank = row.constant(BankProximity.class, 2);
+    }
+
+    /**
+     * The arrivals table, held apart so the constructors can read it; see
+     * {@link Tables#byName}.
+     */
+    private static final class Rows {
+        static final Tables.Named TABLE = Tables.byName("/com/larryfarming/arrivals.tsv", 3);
+    }
 }

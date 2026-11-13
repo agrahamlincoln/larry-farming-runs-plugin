@@ -2,7 +2,9 @@ package com.larryfarming.farming.model;
 
 import com.larryfarming.data.Tables;
 import com.larryfarming.engine.farming.Crop;
+import com.larryfarming.farming.catalogue.CropData;
 import java.util.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 
 /**
@@ -74,50 +76,19 @@ public final class Preset {
     /** The crops switched on outright: the extras a run plants in passing, and whole runs. */
     private final Set<Crop> switchedOn;
 
-    /** Whether a fruit tree is worth stopping at only to pick it. */
-    private final boolean picksFruitInPassing;
-
-    /** The travel methods left unused. */
-    private final Set<TravelMethod> travelOff;
-
-    /** The sites left off the runs, by {@link FarmingKeys#SITES} key. */
-    private final Set<String> sitesOff;
-
-    /** The house items declared built, as their capabilities. */
-    private final Set<Capability> houseDeclared;
-
     /** Every run, most valuable first, for ordering runs that are due together. */
     private final List<RunId> runPriority;
 
-    /** The herb planted before every other, or null to follow {@link #herbRanking}. */
-    private final Crop favouriteHerb;
-
     /**
-     * Whether every herb patch takes the best seeds, rather than only the
-     * {@link #goodSeedsPerRun} patches with the best yield bonus.
+     * The player's settings as this preset sets them, filled once while the preset is read.
+     * Each value is documented on its {@link FarmingPreferences} field.
+     *
+     * <p>Private and never handed out: a setter called on it would change the defaults
+     * every later {@link #preferences()} builds. Holding the builder does not initialise
+     * {@link FarmingPreferences}, whose {@code HERB_CHOICES} reads {@link #DEFAULT}.
      */
-    private final boolean goodSeedsInEveryPatch;
-
-    /** Whether the herb run goes ahead of {@link #runPriority}'s first run. */
-    private final boolean herbRunFirst;
-
-    /**
-     * Whether a run waits until every patch on it needs a visit, rather than falling due
-     * when any one does.
-     */
-    private final boolean waitsForEveryPatch;
-
-    /** Whether the fruit tree run waits for a sapling for every patch. */
-    private final boolean fruitTreesWaitForSaplings;
-
-    /** Whether a grown fruit tree is felled for a sapling no worse than itself. */
-    private final boolean replantsGrownTrees;
-
-    /** Whether the herb run waits for {@link #HERB_RUN_LEVEL} Farming. */
-    private final boolean herbRunsWaitForLevel;
-
-    /** Whether patches are treated with Fertile Soil and ash instead of ultracompost. */
-    private final boolean compostsWithFertileSoil;
+    @Getter(AccessLevel.NONE)
+    private final FarmingPreferences.FarmingPreferencesBuilder settings;
 
     /** Read from the preset table, one row per field, keyed by the field's name. */
     private Preset(Tables.Named row) {
@@ -129,11 +100,6 @@ public final class Preset {
         magicAtFaladorWithEliteDiary = row.of("magicAtFaladorWithEliteDiary").flag(1, YES);
         treesOn = setOf(row.of("treesOn"), Crop.class);
         switchedOn = setOf(row.of("switchedOn"), Crop.class);
-        picksFruitInPassing = row.of("picksFruitInPassing").flag(1, YES);
-        travelOff = setOf(row.of("travelOff"), TravelMethod.class);
-        String sites = row.of("sitesOff").text(1);
-        sitesOff = sites.isEmpty() ? Set.of() : Set.of(sites.split(" "));
-        houseDeclared = setOf(row.of("houseDeclared"), Capability.class);
         runPriority = row.of("runPriority").constants(RunId.class, 1);
         if (runPriority.size() != RunId.values().length || !EnumSet.copyOf(runPriority).equals(EnumSet.allOf(RunId.class))) {
             throw row.of("runPriority").error("run priority must name every run once");
@@ -141,15 +107,71 @@ public final class Preset {
         if (!herbRanking.contains(herbCutoff)) {
             throw row.of("herbCutoff").error("herb cutoff " + herbCutoff + " is unranked");
         }
-        favouriteHerb = row.of("favouriteHerb").optionalConstant(Crop.class, 1);
-        goodSeedsInEveryPatch = row.of("goodSeedsInEveryPatch").flag(1, YES);
-        herbRunFirst = row.of("herbRunFirst").flag(1, YES);
-        waitsForEveryPatch = row.of("waitsForEveryPatch").flag(1, YES);
-        fruitTreesWaitForSaplings = row.of("fruitTreesWaitForSaplings").flag(1, YES);
-        replantsGrownTrees = row.of("replantsGrownTrees").flag(1, YES);
-        herbRunsWaitForLevel = row.of("herbRunsWaitForLevel").flag(1, YES);
-        compostsWithFertileSoil = row.of("compostsWithFertileSoil").flag(1, YES);
+        EnumSet<Crop> on = EnumSet.copyOf(herbsOn());
+        on.addAll(treesOn);
+        on.addAll(switchedOn);
+        String sites = row.of("sitesOff").text(1);
+        settings = new FarmingPreferences.FarmingPreferencesBuilder().enabled(on)
+                .picksFruitInPassing(row.of("picksFruitInPassing").flag(1, YES))
+                .travelOff(setOf(row.of("travelOff"), TravelMethod.class))
+                .sitesOff(sites.isEmpty() ? Set.of() : Set.of(sites.split(" ")))
+                .houseDeclared(setOf(row.of("houseDeclared"), Capability.class))
+                .favouriteHerb(row.of("favouriteHerb").optionalConstant(Crop.class, 1))
+                .plantsBestSeedsEverywhere(row.of("goodSeedsInEveryPatch").flag(1, YES))
+                .herbRunFirst(row.of("herbRunFirst").flag(1, YES))
+                .waitsForEveryPatch(row.of("waitsForEveryPatch").flag(1, YES))
+                .fruitTreesWaitForSaplings(row.of("fruitTreesWaitForSaplings").flag(1, YES))
+                .replantsGrownTrees(row.of("replantsGrownTrees").flag(1, YES))
+                .herbRunsWaitForLevel(row.of("herbRunsWaitForLevel").flag(1, YES))
+                .compostsWithFertileSoil(row.of("compostsWithFertileSoil").flag(1, YES))
+                .makeCompostBelow(row.of("makeCompostBelow").integer(1))
+                .stopCompostAt(row.of("stopCompostAt").integer(1))
+                .picks(picks(row.of("patchPicks")))
+                .forCompost(forCompost(row.of("forCompost")));
         row.requireAllRead();
+    }
+
+    /** SITE:CROP pairs separated by single spaces, each a crop the site's patch grows. */
+    static Map<String, Crop> picks(Tables.Row row) {
+        Map<String, Crop> picks = new HashMap<>();
+        for (String pair : row.text(1).split(" ")) {
+            String[] parts = pair.split(":");
+            Crop crop;
+            try {
+                crop = Crop.valueOf(parts[1]);
+            } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
+                throw row.error("a pick is SITE:CROP, not " + pair);
+            }
+            PatchPick pick = pickAt(row, parts[0]);
+            if (!CropData.plantableIn(pick.getPatchType()).contains(crop)) {
+                throw row.error(parts[0] + " can't grow " + crop);
+            }
+            picks.put(parts[0], crop);
+        }
+        return Collections.unmodifiableMap(picks);
+    }
+
+    /** Sites separated by single spaces, each an allotment with a pick. */
+    static Set<String> forCompost(Tables.Row row) {
+        String sites = row.text(1);
+        if (sites.isEmpty()) {
+            return Set.of();
+        }
+        for (String site : sites.split(" ")) {
+            if (pickAt(row, site).getCompostKey() == null) {
+                throw row.error(site + " has no compost bin beside it");
+            }
+        }
+        return Set.of(sites.split(" "));
+    }
+
+    /** The pick at this site, or an error naming the row when the site has none. */
+    private static PatchPick pickAt(Tables.Row row, String site) {
+        PatchPick pick = FarmingKeys.PICKS.get(site);
+        if (pick == null) {
+            throw row.error("no patch at " + site + " has a pick");
+        }
+        return pick;
     }
 
     /** A switch's value in the preset table; the other is {@link Tables#EMPTY}. */
@@ -190,13 +212,6 @@ public final class Preset {
 
     /** The settings this preset sets, as the planner reads them. */
     public FarmingPreferences preferences() {
-        EnumSet<Crop> on = EnumSet.copyOf(herbsOn());
-        on.addAll(treesOn);
-        on.addAll(switchedOn);
-        return new FarmingPreferences.FarmingPreferencesBuilder().enabled(on).picksFruitInPassing(picksFruitInPassing).travelOff(travelOff)
-                .sitesOff(sitesOff).houseDeclared(houseDeclared).favouriteHerb(favouriteHerb)
-                .plantsBestSeedsEverywhere(goodSeedsInEveryPatch).herbRunFirst(herbRunFirst).waitsForEveryPatch(waitsForEveryPatch)
-                .fruitTreesWaitForSaplings(fruitTreesWaitForSaplings).replantsGrownTrees(replantsGrownTrees)
-                .herbRunsWaitForLevel(herbRunsWaitForLevel).compostsWithFertileSoil(compostsWithFertileSoil).build();
+        return settings.build();
     }
 }

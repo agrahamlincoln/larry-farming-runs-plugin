@@ -62,6 +62,20 @@ public final class CarryItems {
     }
 
     /**
+     * The item to draw beside a route taken on this capability rather than cast, or 0 when
+     * there is nothing honest to draw: the item packed for it, worn items such as an
+     * Ardougne cloak or a Farming cape included, so a route and its bag line draw the same
+     * sprite.
+     *
+     * <p>A capability with no entry draws nothing. Networks such as fairy rings, spirit trees
+     * and minecarts have no honest sprite, and a wrong one is worse than none.
+     */
+    public static int iconFor(Capability capability) {
+        Carry carry = ITEMS.get(capability);
+        return carry != null ? carry.getItemId() : 0;
+    }
+
+    /**
      * Every id of the travel item this id is a form of, every charge tier included, or null
      * when no route packs it.
      */

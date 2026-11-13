@@ -13,8 +13,10 @@ import java.util.function.UnaryOperator;
  * <p>Every key comes from {@link FarmingKeys}. An unsaved key reads as the default, so the
  * defaults live in {@link com.larryfarming.farming.model.Preset#DEFAULT} alone.
  *
- * <p>Values are config strings: "true" or "false" for every key but one. The favourite
- * herb holds a herb's {@link Crop} name or {@link FarmingKeys#NO_FAVOURITE}.
+ * <p>Values are config strings. A patch pick holds a {@link Crop} name or
+ * {@link FarmingKeys#OFF}, the favourite herb a herb's {@link Crop} name or
+ * {@link FarmingKeys#NO_FAVOURITE}, the two compost thresholds a whole number, and every
+ * other key "true" or "false".
  */
 final class ConfiguredCrops
 {
@@ -77,30 +79,67 @@ final class ConfiguredCrops
 				declared.add(item.getCapability());
 			}
 		}
+		Map<String, Crop> picks = new HashMap<>();
+		Set<String> forCompost = new HashSet<>();
+		Set<String> chosen = new HashSet<>();
+		for (PatchPick pick : FarmingKeys.PICKS.values())
+		{
+			String site = pick.getSite();
+			String value = saved.apply(pick.getKey());
+			// While the patch's own key is unsaved, its crop switches set it once any of them
+			// is saved away from the default: it plants the first switch on, saved or default.
+			// A settings profile saves every key at its default, which is no choice of the
+			// player's.
+			boolean switched = false;
+			Crop switchedOn = null;
+			for (Crop option : pick.getSwitches())
+			{
+				boolean on = read(saved, FarmingKeys.CROPS.get(option), defaults.allows(option));
+				switched |= value == null && on != defaults.allows(option);
+				switchedOn = switchedOn == null && on ? option : switchedOn;
+			}
+			// OFF, or a name no crop has, plants nothing. Only a pick away from the preset's is the
+			// player's choice: resetting to the preset saves every pick at its default.
+			Crop crop = switched ? switchedOn : value != null ? Crop.named(value) : defaults.pickAt(site);
+			picks.put(site, crop);
+			if (crop != defaults.pickAt(site))
+			{
+				chosen.add(site);
+			}
+			// A crop a switch chooses is planted every run, so it is not for compost.
+			if (pick.getCompostKey() != null && read(saved, pick.getCompostKey(), defaults.plantsForCompost(site) && !switched))
+			{
+				forCompost.add(site);
+			}
+		}
 		String favourite = saved.apply(FarmingKeys.FAVOURITE_HERB);
-		return defaults.toBuilder().enabled(enabled).picksFruitInPassing(read(saved, FarmingKeys.PICK_FRUIT_IN_PASSING,
+		return defaults.toBuilder().picks(picks).forCompost(forCompost).picksChosen(chosen).enabled(enabled).picksFruitInPassing(read(saved, FarmingKeys.PICK_FRUIT_IN_PASSING,
 				defaults.picksFruitInPassing())).travelOff(off).sitesOff(sitesOff).houseDeclared(declared)
-			.favouriteHerb(favourite == null ? defaults.favouriteHerb() : herbNamed(favourite))
+			// The preferences drop a name that is no herb choice.
+			.favouriteHerb(favourite == null ? defaults.favouriteHerb() : Crop.named(favourite))
 			.plantsBestSeedsEverywhere(read(saved, FarmingKeys.BEST_SEEDS_EVERYWHERE, defaults.plantsBestSeedsEverywhere()))
 			.herbRunFirst(read(saved, FarmingKeys.HERB_RUN_FIRST, defaults.herbRunFirst()))
 			.waitsForEveryPatch(read(saved, FarmingKeys.WAIT_FOR_EVERY_PATCH, defaults.waitsForEveryPatch()))
 			.fruitTreesWaitForSaplings(read(saved, FarmingKeys.FRUIT_TREES_WAIT_FOR_SAPLINGS, defaults.fruitTreesWaitForSaplings()))
 			.replantsGrownTrees(read(saved, FarmingKeys.REPLANT_GROWN_TREES, defaults.replantsGrownTrees()))
 			.herbRunsWaitForLevel(read(saved, FarmingKeys.HERB_RUNS_WAIT_FOR_LEVEL, defaults.herbRunsWaitForLevel()))
-			.compostsWithFertileSoil(read(saved, FarmingKeys.COMPOST_WITH_FERTILE_SOIL, defaults.compostsWithFertileSoil())).build();
+			.compostsWithFertileSoil(read(saved, FarmingKeys.COMPOST_WITH_FERTILE_SOIL, defaults.compostsWithFertileSoil()))
+			.makeCompostBelow(readNumber(saved, FarmingKeys.MAKE_COMPOST_BELOW, defaults.makeCompostBelow()))
+			.stopCompostAt(readNumber(saved, FarmingKeys.STOP_COMPOST_AT, defaults.stopCompostAt())).build();
 	}
 
-	/** The herb tick named this, or null for none, an unknown name, or a crop with no tick. */
-	private static Crop herbNamed(String name)
+	/** A saved whole number, or the default when it is unsaved or not a number. */
+	private static int readNumber(UnaryOperator<String> saved, String key, int unsaved)
 	{
-		for (Crop herb : FarmingPreferences.HERB_CHOICES)
+		try
 		{
-			if (herb.name().equals(name))
-			{
-				return herb;
-			}
+			// An unsaved key reads null, which parseInt rejects like any other non-number.
+			return Integer.parseInt(saved.apply(key));
 		}
-		return null;
+		catch (NumberFormatException ex)
+		{
+			return unsaved;
+		}
 	}
 
 	/**
@@ -148,6 +187,15 @@ final class ConfiguredCrops
 		{
 			values.put(item.getKey(), String.valueOf(prefs.declares(item)));
 		}
+		for (PatchPick pick : FarmingKeys.PICKS.values())
+		{
+			Crop crop = prefs.picks().get(pick.getSite());
+			values.put(pick.getKey(), crop == null ? FarmingKeys.OFF : crop.name());
+			if (pick.getCompostKey() != null)
+			{
+				values.put(pick.getCompostKey(), String.valueOf(prefs.plantsForCompost(pick.getSite())));
+			}
+		}
 		values.put(FarmingKeys.PICK_FRUIT_IN_PASSING, String.valueOf(prefs.picksFruitInPassing()));
 		Crop favourite = prefs.favouriteHerb();
 		values.put(FarmingKeys.FAVOURITE_HERB, favourite == null ? FarmingKeys.NO_FAVOURITE : favourite.name());
@@ -158,6 +206,8 @@ final class ConfiguredCrops
 		values.put(FarmingKeys.REPLANT_GROWN_TREES, String.valueOf(prefs.replantsGrownTrees()));
 		values.put(FarmingKeys.HERB_RUNS_WAIT_FOR_LEVEL, String.valueOf(prefs.herbRunsWaitForLevel()));
 		values.put(FarmingKeys.COMPOST_WITH_FERTILE_SOIL, String.valueOf(prefs.compostsWithFertileSoil()));
+		values.put(FarmingKeys.MAKE_COMPOST_BELOW, String.valueOf(prefs.makeCompostBelow()));
+		values.put(FarmingKeys.STOP_COMPOST_AT, String.valueOf(prefs.stopCompostAt()));
 		return values;
 	}
 
@@ -190,8 +240,9 @@ final class ConfiguredCrops
 		FarmingPreferences prefs = from(store);
 		if (FarmingKeys.FAVOURITE_HERB.equals(key))
 		{
-			Crop herb = herbNamed(value);
-			if (herb != null && !prefs.allows(herb))
+			// An immutable list throws on a null lookup.
+			Crop herb = Crop.named(value);
+			if (herb != null && FarmingPreferences.HERB_CHOICES.contains(herb) && !prefs.allows(herb))
 			{
 				writes.put(FarmingKeys.CROPS.get(herb), "true");
 			}

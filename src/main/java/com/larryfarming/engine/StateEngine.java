@@ -6,6 +6,7 @@ import com.larryfarming.persistence.StatePersistence;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -62,8 +63,7 @@ public class StateEngine {
         playerState = persistence.loadPlayerState();
 
         int[] farmTickOffset = persistence.loadFarmingTickOffset();
-        farmingTracker.loadPersisted(persistence.loadFarmingPatches(), farmTickOffset != null ? farmTickOffset[0] : -1,
-                farmTickOffset != null ? farmTickOffset[1] : -1, farmTickOffset != null ? farmTickOffset[2] : 1);
+        farmingTracker.loadPersisted(persistence.loadFarmingPatches(), farmTickOffset[0], farmTickOffset[1], farmTickOffset[2]);
 
         announce();
     }
@@ -103,15 +103,25 @@ public class StateEngine {
     }
 
     public void onInventoryChanged(List<ItemStack> items) {
-        change(() -> EventApplier.applyInventoryChanged(playerState, items));
+        change(() -> playerState.setInventory(items));
     }
 
     public void onBankChanged(List<ItemStack> items) {
-        change(() -> EventApplier.applyBankChanged(playerState, items));
+        change(() -> {
+            playerState.setBank(items);
+            playerState.setBankLastSeen(Instant.now());
+        });
     }
 
+    /**
+     * Replaces the tracked seed vault contents. Reported only when the player opens the
+     * vault, so like the bank it is a snapshot of the last look, not a live figure.
+     */
     public void onSeedVaultChanged(List<ItemStack> items) {
-        change(() -> EventApplier.applySeedVaultChanged(playerState, items));
+        change(() -> {
+            playerState.setSeedVault(items);
+            playerState.setSeedVaultLastSeen(Instant.now());
+        });
     }
 
     public void onSeedBoxChanged(List<ItemStack> items) {

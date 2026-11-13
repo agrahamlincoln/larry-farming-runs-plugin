@@ -9,7 +9,9 @@ import com.larryfarming.model.ItemStack;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingCarryItem;
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.*;
+import net.runelite.api.gameval.ItemID;
 
 /**
  * What to take out of the bank at each stop, for the stretch to the next one and no further.
@@ -42,7 +44,7 @@ public final class WithdrawalPlanner {
      *
      * <p>Three lookups because the rows are placed by three rules, each with its own key: the
      * starting row has none, a prescribed bank knows which leg it opens, and an offered bank
-     * knows which arrival it sits under.
+     * knows which arrival it sits at.
      */
     @AllArgsConstructor(access = AccessLevel.PACKAGE)
     public static final class Withdrawals {
@@ -53,7 +55,7 @@ public final class WithdrawalPlanner {
         @Getter
         private final List<FarmingCarryItem> beforeSettingOff;
         private final Map<Integer, List<FarmingCarryItem>> atLeg;
-        private final Map<Integer, List<FarmingCarryItem>> afterArrival;
+        private final Map<Integer, List<FarmingCarryItem>> offeredAt;
 
         /**
          * Everything the first stretch wants in the bag, carried or not, as packing-list
@@ -86,9 +88,9 @@ public final class WithdrawalPlanner {
             return atLeg.getOrDefault(leg, List.of());
         }
 
-        /** What to take out at the bank offered under this arrival. */
-        public List<FarmingCarryItem> afterArrival(int arrival) {
-            return afterArrival.getOrDefault(arrival, List.of());
+        /** What to take out at the bank offered at this arrival. */
+        public List<FarmingCarryItem> offeredAt(int arrival) {
+            return offeredAt.getOrDefault(arrival, List.of());
         }
 
     }
@@ -122,24 +124,31 @@ public final class WithdrawalPlanner {
         // Boxed seeds are recorded in bagHolds before the walk, so no stretch asks for them.
         List<FarmingCarryItem> boxedLines = new ArrayList<>();
         List<FarmingCarryItem> boxed = seedsForTheWholeTripUpFront(trip, bagHolds, boxedLines);
+        // The empty buckets are one noted stack in one slot, decided on every bin the trip
+        // reaches, so they come out whole at the first bank and no stretch asks for its own.
+        List<FarmingCarryItem> buckets = CarryPlanner.emptyBuckets(CompostBins.over(plans, inputs, state), state);
         List<FarmingCarryItem> start = List.of();
         List<FarmingCarryItem> firstStretch = List.of();
         Map<Integer, List<FarmingCarryItem>> atLeg = new LinkedHashMap<>();
-        Map<Integer, List<FarmingCarryItem>> afterArrival = new LinkedHashMap<>();
+        Map<Integer, List<FarmingCarryItem>> offeredAt = new LinkedHashMap<>();
         for (int index = 0; index < chances.size(); index++) {
             Chance chance = chances.get(index);
             // Up to the next chance to fetch, which is not always the next leg: a leg with no
             // bank adds no chance, so its arrivals are packed for at the last bank before it.
             Chance next = index + 1 < chances.size() ? chances.get(index + 1) : null;
             int lastArrival = next != null ? next.firstArrival - 1 : made.size() - 1;
-            // A prescribed bank stands at the arrival that opens its leg, so the player
-            // reaches it carrying the way there from this stretch.
-            List<FarmingCarryItem> needs = trip.needsOf(chance.firstArrival, lastArrival, chance.leg >= 0);
-            if (next != null && next.leg >= 0) {
-                needs = withTravelOn(needs, CarryPlanner.travelFor(trip.stopsAt(next.firstArrival), state, resolver));
+            // A bank met on the way in stands at the arrival it packs for first, so the
+            // player reaches it carrying the way there from the stretch before.
+            boolean starting = chance.leg < 0 && chance.arrival < 0;
+            List<FarmingCarryItem> needs = new ArrayList<>(trip.needsOf(chance.firstArrival, lastArrival, chance.onTheWayIn));
+            needs.removeIf(line -> CarryPlanner.formsOf(ItemID.BUCKET_EMPTY).contains(line.getItemId()));
+            if (starting) {
+                needs.addAll(buckets);
+            }
+            if (next != null && next.onTheWayIn) {
+                needs = withTravelOn(needs, CarryPlanner.travelFor(StopPlan.pick(trip.plans, trip.made.get(next.firstArrival)), state, resolver));
             }
             List<FarmingCarryItem> take = shortfallOn(needs, bagHolds);
-            boolean starting = chance.leg < 0 && chance.arrival < 0;
             // Underway the starting chance stands for the next bank, not the first stretch.
             if (starting && !underway) {
                 firstStretch = withBoxedSeeds(boxedLines, needs);
@@ -158,7 +167,7 @@ public final class WithdrawalPlanner {
             } else if (chance.leg >= 0) {
                 atLeg.put(chance.leg, take);
             } else {
-                afterArrival.put(chance.arrival, take);
+                offeredAt.put(chance.arrival, take);
             }
         }
         List<FarmingCarryItem> deposits = List.of();
@@ -169,7 +178,7 @@ public final class WithdrawalPlanner {
             deposits = DepositPlanner.atNextBank(state, inputs.getPackedThisTrip(), trip.wholeTrip(), chances.size() < 2);
             urgent = !deposits.isEmpty() && DepositPlanner.bagWouldFill(state, start);
         }
-        return new Withdrawals(start, atLeg, afterArrival, firstStretch, deposits, urgent);
+        return new Withdrawals(start, atLeg, offeredAt, firstStretch, deposits, urgent);
     }
 
     /**
@@ -177,16 +186,9 @@ public final class WithdrawalPlanner {
      * the stretch's own line for it.
      */
     private static List<FarmingCarryItem> withBoxedSeeds(List<FarmingCarryItem> boxedLines, List<FarmingCarryItem> needs) {
-        Set<Integer> boxedIds = new HashSet<>();
-        for (FarmingCarryItem line : boxedLines) {
-            boxedIds.add(line.getItemId());
-        }
+        Set<Integer> boxedIds = boxedLines.stream().map(FarmingCarryItem::getItemId).collect(Collectors.toSet());
         List<FarmingCarryItem> lines = new ArrayList<>(boxedLines);
-        for (FarmingCarryItem line : needs) {
-            if (!boxedIds.contains(line.getItemId())) {
-                lines.add(line);
-            }
-        }
+        needs.stream().filter(line -> !boxedIds.contains(line.getItemId())).forEach(lines::add);
         return lines;
     }
 
@@ -198,11 +200,11 @@ public final class WithdrawalPlanner {
      * bank visit per stop. Saplings do not go in the box; {@link CropData#boxesAsAseed} draws
      * that line, so tree runs keep the per-stretch schedule.
      *
-     * <p>The box holds six kinds, counted over what the trip plants plus the types already
-     * in it. Past that, {@link #kindsToBox} picks which kinds ride in the box, and the rest
-     * keep the per-stretch schedule. Box contents count only when
-     * {@link SeedBox#contentsCarried} says the tally was read; being wrong costs one
-     * inventory slot, not a lost seed.
+     * <p>The box holds six kinds, counted over what the trip plants. A kind already in it
+     * that the trip does not plant is emptied out at the bank, so it takes no room. Past that,
+     * {@link #kindsToBox} picks which kinds ride in the box, and the rest keep the per-stretch
+     * schedule. Box contents count only when {@link SeedBox#contentsCarried} says the tally
+     * was read; being wrong costs one inventory slot, not a lost seed.
      *
      * <p>Availability stays as {@code CarryPlanner} judged it, including
      * {@code IN_SEED_BOX}, for the reason {@link #shortfallOn} gives.
@@ -234,10 +236,12 @@ public final class WithdrawalPlanner {
         if (boxable.isEmpty()) {
             return List.of();
         }
+        // Only the kinds the trip plants hold their room: the rest are emptied out at the
+        // bank, which the seed box's line asks for.
         Set<Integer> held = new LinkedHashSet<>();
         if (SeedBox.contentsCarried(state)) {
             for (ItemStack stack : state.getSeedBox()) {
-                if (CropData.boxesAsAseed(stack.getItemId())) {
+                if (types.contains(stack.getItemId())) {
                     held.add(stack.getItemId());
                 }
             }
@@ -274,8 +278,7 @@ public final class WithdrawalPlanner {
      * between their last patches cost the same, and the earlier still loses.
      *
      * @param types the trip's boxable kinds, in the order the packing list names them
-     * @param held  the boxable kinds the box was read to hold; each takes room whether or
-     *     not the trip plants it
+     * @param held  the trip's kinds the box was read to hold already
      */
     private static Set<Integer> kindsToBox(Set<Integer> types, Set<Integer> held, Trip trip) {
         Set<Integer> boxed = new LinkedHashSet<>();
@@ -319,14 +322,20 @@ public final class WithdrawalPlanner {
         private final int firstArrival;
         private final int leg;
         private final int arrival;
+        /**
+         * Whether the player opens this bank between the first arrival's landing and its
+         * patches, so its own travel is already spent.
+         */
+        private final boolean onTheWayIn;
     }
 
     /**
      * Every bank row the walkthrough draws that is worth fetching at, in the order it draws
      * them: the prescribed banks, and the offered ones unless a long detour.
      *
-     * <p>A prescribed bank is spliced <em>before</em> the arrival whose leg it opens, and an
-     * offered one <em>after</em> the arrival it sits at. So an offer at arrival five and a
+     * <p>A prescribed bank, and an offered bank on the way in, are spliced <em>before</em>
+     * their arrival and pack for it. An offered bank graded only by its arrival is spliced
+     * <em>after</em> it and packs from the next. So that offer at arrival five and a
      * prescribed stop opening at arrival six both begin packing at six, offer first. The offer
      * then covers an empty stretch and says nothing, and the prescribed bank carries the list.
      *
@@ -340,9 +349,9 @@ public final class WithdrawalPlanner {
             InventorySim.Leg leg = bag.getLegs().get(index);
             if (index == 0) {
                 // The trip starts at a bank whatever else it does — the player packs there.
-                chances.add(new Chance(0, -1, -1));
+                chances.add(new Chance(0, -1, -1, false));
             } else if (leg.getBankAt() != null) {
-                chances.add(new Chance(leg.getFrom(), index, -1));
+                chances.add(new Chance(leg.getFrom(), index, -1, true));
             }
             if (!offered) {
                 continue;
@@ -354,13 +363,15 @@ public final class WithdrawalPlanner {
                 if (passed.getCost() == Arrival.BankProximity.FAR) {
                     continue;
                 }
-                chances.add(new Chance(passed.getIndex() + 1, -1, passed.getIndex()));
+                chances.add(passed.isOnTheWayIn() ? new Chance(passed.getIndex(), -1, passed.getIndex(), true)
+                        : new Chance(passed.getIndex() + 1, -1, passed.getIndex(), false));
             }
         }
-        // By where each starts packing, offers ahead of prescribed stops on a tie. The sort
-        // is stable, so everything else keeps the sim's walk order.
+        // By where each starts packing. On a tie the bank after the arrival before goes
+        // ahead of the bank on the way in, as the rows are drawn. The sort is stable, so
+        // everything else keeps the sim's walk order.
         Collections.sort(chances, (a, b) -> a.firstArrival != b.firstArrival ? Integer.compare(a.firstArrival, b.firstArrival)
-                : Integer.compare(b.arrival, a.arrival));
+                : Boolean.compare(a.onTheWayIn, b.onTheWayIn));
         return chances;
     }
 
@@ -408,15 +419,6 @@ public final class WithdrawalPlanner {
         /** The whole trip's packing list. */
         List<FarmingCarryItem> wholeTrip() {
             return needsOf(0, made.size() - 1, false);
-        }
-
-        /** Every stop at one arrival. */
-        List<StopPlan> stopsAt(int arrival) {
-            List<StopPlan> here = new ArrayList<>();
-            for (int index : made.get(arrival)) {
-                here.add(plans.get(index));
-            }
-            return here;
         }
     }
 

@@ -11,6 +11,10 @@ import java.util.*;
  * the banks the trip passes on offer, the bag to set off with, and a row where the bag
  * overflows with no bank in reach.
  *
+ * <p>A bank row stands where the player meets the bank. A prescribed bank, and an offered
+ * bank on the route from the landing to the patch, come before the arrival's row: the
+ * player banks on the way in.
+ *
  * <p>Works on rows {@link FarmingAdviceBuilder} has already drawn, and on the bag
  * {@link InventorySim} simulated over them.
  */
@@ -48,47 +52,41 @@ final class BankStopSplicer {
         if (nothingToSplice(bag) && !underway) {
             return stops;
         }
-        // Keyed by the row they follow: a prescribed bank goes *before* the arrival opening
-        // a leg, an offered one *after* the arrival it passes. Threading both insertion
-        // points through one cursor misplaces rows.
-        Map<Integer, FarmingStopAdvice> offered = new LinkedHashMap<>();
-        // The bank each offer is at, so a prescribed row can tell it is the same bank. By
-        // identity: two offers can be equal rows at different banks.
-        Map<FarmingStopAdvice, Bank> offeredBank = new IdentityHashMap<>();
+        // Keyed by the row of the arrival they sit at. A prescribed bank and an offered bank
+        // on the way in go *before* their arrival's row; an offered bank graded only by its
+        // arrival goes *after* it. A prescribed bank is spliced at its leg's break, so it
+        // keeps its own cursor.
+        Map<Integer, FarmingStopAdvice> offeredBefore = new HashMap<>();
+        Map<Integer, FarmingStopAdvice> offeredAfter = new HashMap<>();
         for (InventorySim.Leg leg : bag.getLegs()) {
             for (InventorySim.Opportunity passed : leg.getPassableBanks()) {
                 // put is safe: rowOf is strictly increasing, legs partition the demand
                 // indices contiguously, and passableBanksIn excludes each leg's first
                 // arrival, so no two offers share a row. Break either and an offer
                 // silently disappears.
-                FarmingStopAdvice row = optionalBankStop(passed, withdrawals.afterArrival(passed.getIndex()));
-                offered.put(rowOf.get(passed.getIndex()), row);
-                if (passed.getBankPlace() != null) {
-                    offeredBank.put(row, passed.getBankPlace());
-                }
+                (passed.isOnTheWayIn() ? offeredBefore : offeredAfter).put(rowOf.get(passed.getIndex()),
+                        optionalBankStop(passed, withdrawals.offeredAt(passed.getIndex())));
             }
         }
 
-        List<FarmingStopAdvice> withBanks = new ArrayList<>(stops.size() + bag.getLegs().size() + offered.size() + 1);
+        List<FarmingStopAdvice> withBanks = new ArrayList<>(stops.size() + bag.getLegs().size()
+                + offeredBefore.size() + offeredAfter.size() + 1);
         addStartingBag(withBanks, withdrawals, underway);
         int next = 0;
         for (int index = 0; index < bag.getLegs().size(); index++) {
             InventorySim.Leg leg = bag.getLegs().get(index);
             int breaksAt = rowOf.get(leg.getFrom());
             while (next < breaksAt) {
-                withBanks.add(stops.get(next));
-                addIfOffered(withBanks, offered, next++);
+                addWithItsOffers(withBanks, stops, offeredBefore, offeredAfter, next++);
             }
             if (leg.getBankAt() != null) {
-                withBanks.add(inPlaceOfTheSameBankOffered(withBanks, offeredBank,
-                        leg.getBankPlace(), bankStop(leg, withdrawals.atLeg(index))));
+                withBanks.add(bankStop(leg, withdrawals.atLeg(index)));
             } else if (leg.getOverflow() != null) {
                 withBanks.add(overflowStop(leg));
             }
         }
         while (next < stops.size()) {
-            withBanks.add(stops.get(next));
-            addIfOffered(withBanks, offered, next++);
+            addWithItsOffers(withBanks, stops, offeredBefore, offeredAfter, next++);
         }
         return withBanks;
     }
@@ -134,52 +132,21 @@ final class BankStopSplicer {
     }
 
     /**
-     * A prescribed bank, taking the place of the same bank offered on the row just before
-     * it, with that row's withdrawals added to its own.
+     * One row of the walkthrough, between the bank offered on the way in to it and the bank
+     * offered once its patches are worked.
      *
-     * <p>The bank a trip passes after one arrival can be the bank the next leg opens at:
-     * Falador east, between the park tree and the farm. Two rows would send the player into
-     * one bank twice.
+     * <p>A bank before the patches cannot take their harvest. No offered row relies on it:
+     * an offered row only withdraws. The bag simulation sheds a harvest only at a prescribed
+     * bank, which stands after it, before the next leg's first arrival.
      */
-    private static FarmingStopAdvice inPlaceOfTheSameBankOffered(List<FarmingStopAdvice> rows,
-            Map<FarmingStopAdvice, Bank> offeredBank, Bank bank, FarmingStopAdvice prescribed) {
-        if (rows.isEmpty() || bank == null) {
-            return prescribed;
+    private static void addWithItsOffers(List<FarmingStopAdvice> into, List<FarmingStopAdvice> stops,
+            Map<Integer, FarmingStopAdvice> offeredBefore, Map<Integer, FarmingStopAdvice> offeredAfter, int row) {
+        if (offeredBefore.containsKey(row)) {
+            into.add(offeredBefore.get(row));
         }
-        FarmingStopAdvice before = rows.get(rows.size() - 1);
-        // By the bank, not the heading: an unmeasured bank is headed a bare "Bank".
-        if (before.getKind() != FarmingStopAdvice.Kind.BANK_OPTIONAL || offeredBank.get(before) != bank) {
-            return prescribed;
-        }
-        rows.remove(rows.size() - 1);
-        // Each list is a shortfall for its own stretch, so a line on both adds up.
-        List<FarmingCarryItem> withdraw = new ArrayList<>(before.getWithdraw());
-        for (FarmingCarryItem item : prescribed.getWithdraw()) {
-            int both = indexOfLine(withdraw, item);
-            if (both < 0) {
-                withdraw.add(item);
-                continue;
-            }
-            FarmingCarryItem offered = withdraw.get(both);
-            withdraw.set(both, item.withQuantity(offered.getQuantity() + item.getQuantity()));
-        }
-        return prescribed.toBuilder().withdraw(withdraw).build();
-    }
-
-    private static int indexOfLine(List<FarmingCarryItem> lines, FarmingCarryItem item) {
-        for (int i = 0; i < lines.size(); i++) {
-            if (lines.get(i).getItemId() == item.getItemId() && lines.get(i).getName().equals(item.getName())) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    /** The offered-bank row that follows this one, if any. */
-    private static void addIfOffered(List<FarmingStopAdvice> into, Map<Integer, FarmingStopAdvice> offered, int row) {
-        FarmingStopAdvice passed = offered.get(row);
-        if (passed != null) {
-            into.add(passed);
+        into.add(stops.get(row));
+        if (offeredAfter.containsKey(row)) {
+            into.add(offeredAfter.get(row));
         }
     }
 

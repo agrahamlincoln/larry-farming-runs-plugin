@@ -39,19 +39,20 @@ public final class SeedBoxChat
 			Pattern.CASE_INSENSITIVE);
 
 	/**
-	 * The box answering Check with nothing in it.
+	 * The box saying it holds nothing: answering Check empty, or emptied into the bank.
 	 *
 	 * <p>The four patterns above are movements, and a sum of movements cannot correct an
 	 * over-count. This line is the box describing itself, so it replaces the tally rather
 	 * than adjusting it.
 	 *
 	 * <p>Checking a box prints its contents to chat. This is one of that listing's two shapes; {@link #SEED_BOX_CONTENTS_HEADER} is
-	 * the other.
+	 * the other. Emptying the box in the bank names no seed, only "Your seed box is now empty.",
+	 * so this line is the only sign the seeds left.
 	 *
 	 * <p>The pattern accepts both "the" and "your"; nothing else in the game says "seed box
 	 * is empty".
 	 */
-	private static final Pattern SEED_BOX_EMPTY = Pattern.compile("^(?:the|your) seed box is empty\\.?$", Pattern.CASE_INSENSITIVE);
+	private static final Pattern SEED_BOX_EMPTY = Pattern.compile("^(?:the|your) seed box is (?:now |already )?empty\\.?$", Pattern.CASE_INSENSITIVE);
 
 	/**
 	 * The box answering Check with something in it: a header, then one line per seed.

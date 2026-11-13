@@ -6,7 +6,7 @@ import lombok.*;
 
 /** One repeatable farming activity: an ordered set of stops, and what unlocks it. */
 @Value
-@Builder
+@Builder(toBuilder = true)
 public class FarmingRun {
 
     @NonNull

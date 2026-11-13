@@ -44,9 +44,7 @@ class SpellbookPicker extends JPanel
 	SpellbookPicker()
 	{
 		PanelText.stack(this);
-		books = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
-		books.setOpaque(false);
-		books.setAlignmentX(LEFT_ALIGNMENT);
+		books = PanelText.panel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
 
 		add(books);
 	}

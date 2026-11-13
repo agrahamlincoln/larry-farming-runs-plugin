@@ -227,4 +227,16 @@ public enum Crop {
 
     private static final Set<Crop> NEVER_PICKED = EnumSet.of(WEEDS, ANYHERB, SCARECROW, SPIRIT_TREE, ATTAS, IASOR, KRONOS,
             EMPTY_COMPOST_BIN, EMPTY_BIG_COMPOST_BIN);
+
+    /** The crop a saved setting names, or null when it is unset or no crop carries the name. */
+    public static Crop named(String name) {
+        if (name == null) {
+            return null;
+        }
+        try {
+            return valueOf(name);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
 }

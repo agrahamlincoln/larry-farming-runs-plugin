@@ -2,6 +2,7 @@ package com.larryfarming.farming.detection;
 
 import com.larryfarming.farming.model.Capability;
 import java.util.*;
+import net.runelite.api.gameval.VarbitID;
 
 /**
  * How to tell, from game flags alone, which tier of a diary reward item a player has
@@ -25,14 +26,16 @@ public final class DiaryRewards {
     private static final Map<Capability, Integer> GRANTED_BY = grantedBy();
 
     /**
-     * Varbits counting uses spent today, upward from zero.
+     * Each varbit counting a capability's uses spent today, upward from zero, and the
+     * capability it counts. The login scan reads each, so a part-spent day is seen.
      *
      * <p>Only the Explorer's ring has one: 4552 counts its cabbage-patch teleports (4553
      * counts energy restores, 4554 free alchs). Varbit 6069 ({@code ARDOUGNE_CLOAK_LOWBITS})
      * is a single bit and cannot hold the cloak's three or five daily farm teleports, so the
      * cloak's uses are counted as they happen (see {@link ArdougneFarmTeleportWatch}).
      */
-    private static final Map<Capability, Integer> USES_SPENT_VARBIT = usesSpentVarbits();
+    static final Map<Integer, Capability> USES_SPENT_BY_VARBIT = Map.of(
+            VarbitID.LUMBRIDGE_CABBAGE_TELEPORT, Capability.EXPLORERS_RING_2);
 
     private static Map<Capability, Integer> grantedBy() {
         Map<Capability, Integer> granted = new EnumMap<>(Capability.class);
@@ -47,12 +50,6 @@ public final class DiaryRewards {
         granted.put(Capability.ARDOUGNE_CLOAK_3, DiaryTiers.varbitFor("Ardougne", DiaryTiers.HARD));
         granted.put(Capability.ARDOUGNE_CLOAK_4, DiaryTiers.varbitFor("Ardougne", DiaryTiers.ELITE));
         return Collections.unmodifiableMap(granted);
-    }
-
-    private static Map<Capability, Integer> usesSpentVarbits() {
-        Map<Capability, Integer> varbits = new EnumMap<>(Capability.class);
-        varbits.put(Capability.EXPLORERS_RING_2, 4552);
-        return Collections.unmodifiableMap(varbits);
     }
 
     /** The best tier of this family the player has earned, or null if none. */
@@ -75,27 +72,5 @@ public final class DiaryRewards {
             }
         }
         return best;
-    }
-
-    /**
-     * The varbit counting today's spent uses upward from zero, or 0 if the game does not
-     * report it and the uses must be counted instead.
-     */
-    public static int usesSpentVarbit(Capability capability) {
-        return USES_SPENT_VARBIT.getOrDefault(capability, 0);
-    }
-
-    public static boolean reportsUsesSpent(Capability capability) {
-        return usesSpentVarbit(capability) != 0;
-    }
-
-    /** Every uses-spent counter, for the login scan that reads a part-spent day. */
-    public static int[] usesSpentVarbitIds() {
-        int[] ids = new int[USES_SPENT_VARBIT.size()];
-        int i = 0;
-        for (Integer id : USES_SPENT_VARBIT.values()) {
-            ids[i++] = id;
-        }
-        return ids;
     }
 }

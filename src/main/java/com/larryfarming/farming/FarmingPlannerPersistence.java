@@ -2,12 +2,13 @@ package com.larryfarming.farming;
 
 import com.larryfarming.LarryConfig;
 import com.larryfarming.engine.farming.Crop;
-import com.larryfarming.farming.detection.HouseFeature;
-import com.larryfarming.farming.detection.HouseSight;
+import com.larryfarming.farming.detection.*;
 import com.larryfarming.farming.model.Capability;
 import com.larryfarming.persistence.ConfigStore;
 
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * What the farm-run planner saves: per RS profile, the farming contract, the day's spent
@@ -26,13 +27,22 @@ public class FarmingPlannerPersistence {
     private static final String KEY_DAILY_TELEPORT_DAY = "farming.dailyTeleportDay";
     private static final String KEY_HOUSE = "farming.house";
     private static final String KEY_HOUSE_NEXUS = "farming.houseNexus";
+    private static final String KEY_COMPOST_UPKEEP = "farming.compostUpkeep";
+    private static final String KEY_COMPOST_STEP = "farming.compostStep";
+    private static final String KEY_BOTTOMLESS_BUCKET = "farming.bottomlessBucket";
 
-    // Regular (non-RS-profile) config keys, readable before login.
-    private static final String KEY_FARMING_SHOW_SKIPPED = "farmingShowSkipped";
-    private static final String KEY_FARMING_SHOW_BANKS = "farmingShowBanks";
-    private static final String KEY_FARMING_TRAVEL_OPEN = "farmingTravelOpen";
-    private static final String KEY_FARMING_SETTINGS_OPEN = "farmingSettingsOpen";
-    private static final String KEY_FARMING_HOUSE_OPEN = "farmingHouseOpen";
+    // The side panel's remembered flags, read through flag(). Regular (non-RS-profile)
+    // config keys, readable before login.
+    /** Whether the side panel shows the stops the trip is not making. Off when unset. */
+    public static final String SHOW_SKIPPED = "farmingShowSkipped";
+    /** Whether the side panel draws the banks the route passes. The one flag on when unset. */
+    public static final String SHOW_BANKS = "farmingShowBanks";
+    /** Whether the side panel's travel fold is open. Shut when unset. */
+    public static final String TRAVEL_OPEN = "farmingTravelOpen";
+    /** Whether the side panel's settings fold is open. Shut when unset. */
+    public static final String SETTINGS_OPEN = "farmingSettingsOpen";
+    /** Whether the side panel's house fold is open. Shut when unset. */
+    public static final String HOUSE_OPEN = "farmingHouseOpen";
 
     private final ConfigStore store;
 
@@ -75,16 +85,8 @@ public class FarmingPlannerPersistence {
 
     /** Load the persisted contract crop for the current RS profile, or null if unknown. */
     public Crop loadFarmingContract() {
-        String stored = get(KEY_FARMING_CONTRACT);
-        if (stored == null || stored.isEmpty()) {
-            return null;
-        }
-        try {
-            return Crop.valueOf(stored);
-        } catch (IllegalArgumentException ex) {
-            // A name no crop carries reads as unknown until the contract varbit is read again.
-            return null;
-        }
+        // A name no crop carries reads as unknown until the contract varbit is read again.
+        return Crop.named(get(KEY_FARMING_CONTRACT));
     }
 
     /**
@@ -198,6 +200,49 @@ public class FarmingPlannerPersistence {
         return HouseSight.of(built, scannedAt, attuned, readAt);
     }
 
+    /**
+     * Persist whether compost upkeep was last on, so the gap between the two thresholds keeps
+     * its state across a logout. Null clears the key.
+     */
+    public void saveCompostUpkeep(Boolean on) {
+        put(KEY_COMPOST_UPKEEP, on);
+    }
+
+    /** Whether compost upkeep was last on, or null when it has never been decided. */
+    public Boolean loadCompostUpkeep() {
+        String stored = get(KEY_COMPOST_UPKEEP);
+        return stored == null ? null : Boolean.valueOf(stored);
+    }
+
+    /** Persist the best compost step the account has reached. Null clears the key. */
+    public void saveCompostStep(Crop step) {
+        put(KEY_COMPOST_STEP, step);
+    }
+
+    /** The best compost step saved, or null when unset or not a compost kind. */
+    public Crop loadCompostStep() {
+        return compostKind(get(KEY_COMPOST_STEP));
+    }
+
+    /** The compost kind a saved name holds, or null when it names no compost kind. */
+    private static Crop compostKind(String stored) {
+        Crop kind = Crop.named(stored);
+        return kind != null && BottomlessBucket.KINDS.contains(kind) ? kind : null;
+    }
+
+    /** Persist the bottomless bucket's last reading as "KIND USES". Null clears the key. */
+    public void saveBottomlessBucket(BottomlessBucket.Reading reading) {
+        put(KEY_BOTTOMLESS_BUCKET, reading != null ? reading.getKind().name() + " " + reading.getUses() : null);
+    }
+
+    /** The bucket's last reading, or null when unset or malformed. */
+    public BottomlessBucket.Reading loadBottomlessBucket() {
+        String[] parts = String.valueOf(get(KEY_BOTTOMLESS_BUCKET)).split(" ");
+        Integer uses = parts.length == 2 ? parseInt(parts[1]) : null;
+        Crop kind = compostKind(parts[0]);
+        return uses != null && uses >= 0 && kind != null ? new BottomlessBucket.Reading(kind, uses) : null;
+    }
+
     /** A saved "stamp:list" split in two, or null when unset or malformed. */
     private static String[] stampAndList(String stored) {
         if (stored == null || stored.isEmpty()) {
@@ -232,67 +277,37 @@ public class FarmingPlannerPersistence {
     // also first drawn in startUp(), before any RS profile exists. None is a @ConfigItem: the
     // controls live on the side panel itself.
 
-    private void saveFlag(String key, boolean on) {
+    /**
+     * Remembers one of the side panel's flags.
+     *
+     * @param key one of the flag keys above, such as {@link #SHOW_SKIPPED}
+     */
+    public void saveFlag(String key, boolean on) {
         store.setConfiguration(CONFIG_GROUP, key, Boolean.toString(on));
     }
 
-    /** A saved toggle, false when unset. */
-    private boolean flag(String key) {
-        return Boolean.parseBoolean(store.getConfiguration(CONFIG_GROUP, key));
-    }
-
-    /** Remember whether the side panel is showing the stops the trip is not making. */
-    public void saveFarmingShowSkipped(boolean show) {
-        saveFlag(KEY_FARMING_SHOW_SKIPPED, show);
-    }
-
-    /** Whether to show skipped stops. Defaults to false when unset. */
-    public boolean loadFarmingShowSkipped() {
-        return flag(KEY_FARMING_SHOW_SKIPPED);
-    }
-
-    public void saveFarmingShowBanks(boolean show) {
-        saveFlag(KEY_FARMING_SHOW_BANKS, show);
+    /**
+     * One of the side panel's remembered flags, off when unset, except {@link #SHOW_BANKS},
+     * which is on until the player turns it off.
+     *
+     * <p>For the banks, an unset key must read as true, so it checks for the literal "false"
+     * instead of using {@code Boolean.parseBoolean}, which reads an unset key as false.
+     *
+     * @param key one of the flag keys above, such as {@link #SHOW_SKIPPED}
+     */
+    public boolean flag(String key) {
+        String saved = store.getConfiguration(CONFIG_GROUP, key);
+        return SHOW_BANKS.equals(key) ? !"false".equalsIgnoreCase(saved) : Boolean.parseBoolean(saved);
     }
 
     /**
-     * Whether to draw the banks the route passes, defaulting to <em>yes</em>.
+     * Hands a panel control its flag's remembered value, and a callback that remembers each
+     * change the player makes to it.
      *
-     * <p>An unset key must read as true, so this checks for the literal "false" instead of
-     * using {@code Boolean.parseBoolean}, which reads an unset key as false.
+     * @param key     one of the flag keys above, such as {@link #SHOW_SKIPPED}
+     * @param restore receives the saved value and the saving callback
      */
-    public boolean loadFarmingShowBanks() {
-        String saved = store.getConfiguration(CONFIG_GROUP, KEY_FARMING_SHOW_BANKS);
-        return !"false".equalsIgnoreCase(saved);
-    }
-
-    /** Remember whether the side panel's travel fold is open. */
-    public void saveFarmingTravelOpen(boolean open) {
-        saveFlag(KEY_FARMING_TRAVEL_OPEN, open);
-    }
-
-    /** Whether the travel fold is open. Shut when unset. */
-    public boolean loadFarmingTravelOpen() {
-        return flag(KEY_FARMING_TRAVEL_OPEN);
-    }
-
-    /** Remember whether the side panel's house fold is open. */
-    public void saveFarmingHouseOpen(boolean open) {
-        saveFlag(KEY_FARMING_HOUSE_OPEN, open);
-    }
-
-    /** Whether the house fold is open. Shut when unset. */
-    public boolean loadFarmingHouseOpen() {
-        return flag(KEY_FARMING_HOUSE_OPEN);
-    }
-
-    /** Remember whether the side panel's settings fold is open. */
-    public void saveFarmingSettingsOpen(boolean open) {
-        saveFlag(KEY_FARMING_SETTINGS_OPEN, open);
-    }
-
-    /** Whether the settings fold is open. Shut when unset. */
-    public boolean loadFarmingSettingsOpen() {
-        return flag(KEY_FARMING_SETTINGS_OPEN);
+    public void bindFlag(String key, BiConsumer<Boolean, Consumer<Boolean>> restore) {
+        restore.accept(flag(key), on -> saveFlag(key, on));
     }
 }

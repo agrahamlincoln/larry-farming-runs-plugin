@@ -6,6 +6,7 @@ import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import java.util.*;
 import lombok.Value;
+import lombok.With;
 
 /**
  * Which version of a run to show a player, and which spellbook to plan it on.
@@ -28,6 +29,7 @@ public final class RunVariants {
     @Value
     public static class Choice {
         FarmingRun run;
+        @With
         Spellbook planFor;
         /**
          * Patches on stops we can see a route to, which is the strongest evidence.

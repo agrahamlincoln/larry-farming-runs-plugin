@@ -35,11 +35,26 @@ public final class FarmingAdviceBuilder {
         // The caller's clock overrides the inputs' clock, so one second is in play. Inputs
         // built without a clock would otherwise never say what any stop was for.
         FarmingInputs given = (inputs != null ? inputs : FarmingInputs.none()).withNowEpochSec(nowEpochSec).seeing(state);
+        FarmingAdvice advice = advise(state, given, nowEpochSec);
+        // The bins are first judged on all the ash, before the trip's Fertile Soil casts are
+        // counted. When the two together want more than the player owns, the casts keep their
+        // ash and the trip is planned again with the bins sharing the rest. Each build decides
+        // this from scratch, so the plan never swings between the two answers.
+        int fertileAsh = advice != null ? advice.getFertileAsh() : 0;
+        if (CompostBins.outrunTheAsh(given, state, fertileAsh)) {
+            return advise(state, given.withFertileAsh(fertileAsh).seeing(state), nowEpochSec);
+        }
+        return advice;
+    }
+
+    /** The advice for these inputs, already seen for this player. */
+    private static FarmingAdvice advise(PlayerState state, FarmingInputs given, long nowEpochSec) {
         Spellbook openBook = openBookOf(state);
         List<FarmingRunStatus> runs = RunScheduler.schedule(state, given, openBook, nowEpochSec);
         // Both paths below read the contract's row from the runs list's verdict, so the trip
         // and the quiet-day run cannot disagree about the contract.
-        given = given.withContractRun(statusOf(runs, RunId.CONTRACT));
+        // Seen again, so the copy judges its bins once rather than at every reader.
+        given = given.withContractRun(statusOf(runs, RunId.CONTRACT)).seeing(state);
 
         FarmingAdvice trip = adviseOnTrip(runs, state, given);
         if (trip != null) {
@@ -79,7 +94,8 @@ public final class FarmingAdviceBuilder {
         FarmingPreferences prefs = inputs.getPreferences();
         FarmingHouse house = RunSettings.house(prefs, state, inputs.getHouse());
         return advice.toBuilder().lookOnce(LookOnce.sentence(state, house)).runs(runs).runOrder(RUN_ORDER)
-                .switchedOff(RunSettings.switchedOff(prefs)).runSettings(RunSettings.forRuns(prefs, state, inputs::patchAt))
+                .switchedOff(RunSettings.switchedOff(prefs)).runSettings(RunSettings.forRuns(prefs, state, inputs::patchAt, inputs.getCompost(),
+                        inputs.quietPicks(state)))
                 .runFirst(RunSettings.runFirst(prefs)).waitForEveryPatch(RunSettings.waitForEveryPatch(prefs))
                 .travelGroups(RunSettings.travelGroups(prefs, state, inputs.getHouse())).house(house)
                 .fairyRingBlocked(fairyRingBlocked(advice, state, inputs)).build();
@@ -162,50 +178,16 @@ public final class FarmingAdviceBuilder {
         // were unspent.
         CapabilityResolver resolver = inputs.resolverOn(planFor);
         // Planned in the catalogue's order, not as part of the merged circuit.
-        SeedSelector.Stock rotationStock = SeedSelector.rotationStock(FarmingCatalogue.seedPolicy(), inputs.getPreferences(), state);
+        SeedSelector.Stock rotationStock = SeedSelector.rotationStock(inputs.getPreferences(), state);
         RunPlanning.RunPlan planned = RunPlanning.planRun(run, state, inputs, resolver, rotationStock, null, false);
         RunPlanner planner = new RunPlanner(resolver);
         // Routed again against the best-homes-first order, as the circuit is. planRun
         // settled its routes in the catalogue's order, so a rung leaning on another stop or
         // on where the player stands was decided for a position the stop no longer holds.
         Itinerary.Trip trip = RunPlanning.replanAcrossTheCircuit(Itinerary.alone(planned.forTrip(), state), planner, state);
-        // A one-element seed list so the bag, the summary and the warning take the same
-        // calls as on a trip.
+        // A one-element seed list so the bag takes the same calls as on a trip.
         return drawTrip(trip, false, run.getId().getDisplayName(), run, planned.plantedIn,
                 List.of(planned.seeds), state, planner, inputs, planFor);
-    }
-
-    /**
-     * The advice for a walkthrough whose rows are drawn: the bag simulated over the arrivals
-     * made, the bank stops spliced in, and everything the panel shows around the rows.
-     *
-     * @param made the arrivals the player is making, as groups of indices into {@code plans}
-     * @param rowOf where each arrival in {@code made} sits in {@code stops}
-     * @param respawnFor the run whose respawn point the suggestion follows
-     */
-    private static FarmingAdvice walkthrough(String runName, List<String> tripRuns,
-            FarmingRun respawnFor, List<FarmingStopAdvice> stops, List<List<Integer>> made,
-            List<Integer> rowOf, List<StopPlan> plans, List<List<Crop>> cropFor, List<SeedPlan> seeds, boolean underway, PlayerState state,
-            CapabilityResolver resolver, FarmingInputs inputs, Spellbook planFor) {
-        Spellbook openBook = openBookOf(state);
-        // One answer for the loadout and the bag simulation. The packing list names the
-        // basket either way.
-        CarryPlanner.BasketPlace basket = CarryPlanner.basketPlace(plans, cropFor, state, inputs);
-        InventorySim.Plan bag = InventorySim.plan(InventoryDemands.forTrip(made, plans, cropFor, inputs, state, resolver),
-                InventoryDemands.fixturesFor(state, resolver, plans, inputs, basket == CarryPlanner.BasketPlace.BAG));
-        List<SlotAdvice> loadout = LoadoutPlanner.plan(state, CarryPlanner.staffWielded(plans, state, resolver),
-                teleportsByExplorersRing(plans), basket == CarryPlanner.BasketPlace.BACK);
-        WithdrawalPlanner.Withdrawals withdrawals = WithdrawalPlanner.forBankStops(bag, made,
-                plans, cropFor, seeds, state, resolver, inputs, underway);
-        List<FarmingCarryItem> carry = CarryPlanner.plan(plans, seeds, cropFor, state, resolver, inputs);
-        return FarmingAdvice.builder().runName(runName).tripRuns(tripRuns)
-                // A leg's ends index {@code made}, whose entries index {@code plans}.
-                .stops(BankStopSplicer.withBankStops(withCardNotes(stops, bag, made, rowOf,
-                        plans, cropFor, carry, underway, state, resolver, inputs), bag, rowOf, withdrawals, underway))
-                .carryNow(underway ? List.of() : nowHalf(withdrawals.getFirstStretch(), carry)).underway(underway)
-                .upgrades(LoadoutPlanner.upgrades(loadout)).carry(carry).seedSummary(seedSummary(plans, cropFor))
-                .seedWarning(seedWarning(seeds)).herbNote(untickedHerbNote(state, inputs, plans))
-                .respawnAction(respawnAction(respawnFor, state, resolver)).carryFor(planFor.name()).spellbookOpen(openBook.name()).build();
     }
 
     // --- Planning a trip -----------------------------------------------------
@@ -268,7 +250,7 @@ public final class FarmingAdviceBuilder {
         Map<PatchRef, Crop> plantedIn = new HashMap<>();
         // Counted once and drawn down as the families take from it, so two families
         // drawing the rotation cannot each claim the same stack in full.
-        SeedSelector.Stock rotationStock = SeedSelector.rotationStock(FarmingCatalogue.seedPolicy(), inputs.getPreferences(), state);
+        SeedSelector.Stock rotationStock = SeedSelector.rotationStock(inputs.getPreferences(), state);
         // The contract's named seed leaves the stock before anything draws, so no herb patch
         // is offered it. Then the families that draw only filler (the contract's reserved
         // guild patch) draw last: filler takes carried seeds first, and must not take the
@@ -335,11 +317,19 @@ public final class FarmingAdviceBuilder {
         boolean mayStandHere = true;
         // What the last journey leaves the next, as replanLeaningRungs tracks it.
         RunPlanner.Start start = null;
+        // The trip's plans, less the way to the first arrival when the player already stands there.
+        List<StopPlan> tripPlans = new ArrayList<>(trip.getPlans());
         for (List<Integer> visit : trip.getVisits()) {
-            StopPlan route = merged ? StopRowWriter.routeForVisit(visit, trip.getPlans(),
-                    StopRowWriter.leadOf(visit, trip.getPlans()), planner, state, reached, mayStandHere, start) : null;
-            FarmingStopAdvice row = StopRowWriter.adviseOnGroup(visit, trip.getPlans(), trip.getCropFor(), plantedIn, inputs, route, state);
-            start = CloakToTheRings.after(start, visit, trip.getPlans(), resolver, state);
+            // Standing in the first arrival made, its visits need no route to read and no
+            // teleport to pack, so the row leads with its work.
+            boolean here = mayStandHere && StopRowWriter.isJourney(visit, tripPlans) && standsIn(visit, tripPlans, state);
+            if (here) {
+                visit.forEach(index -> tripPlans.set(index, standingAt(tripPlans.get(index))));
+            }
+            StopPlan route = merged && !here ? StopRowWriter.routeForVisit(visit, tripPlans,
+                    StopRowWriter.leadOf(visit, tripPlans), planner, state, reached, mayStandHere, start) : null;
+            FarmingStopAdvice row = StopRowWriter.adviseOnGroup(visit, tripPlans, trip.getCropFor(), plantedIn, inputs, route, state);
+            start = CloakToTheRings.after(start, visit, tripPlans, resolver, state);
             stops.add(row);
             // Only VISIT rows feed the bag and the reached patches. The sim banks at any
             // arrival on a leg that has a bank, so a skipped visit would let it break the
@@ -348,7 +338,11 @@ public final class FarmingAdviceBuilder {
             if (row.getOutcome() == FarmingStopAdvice.Outcome.VISIT) {
                 made.add(visit);
                 rowOf.add(stops.size() - 1);
-                addPatchesWorked(visit, trip.getPlans(), reached);
+                // The patches the visit works, each as sure as its own stop's plan (not the
+                // arrival plan routeForVisit may have found).
+                for (int index : visit) {
+                    RunPlanner.stood(reached, tripPlans.get(index));
+                }
                 mayStandHere = false;
             }
             for (int index : visit) {
@@ -365,8 +359,50 @@ public final class FarmingAdviceBuilder {
         // A single run is itself the trip, so the panel has one rule for "which families am
         // I looking at?".
         List<String> tripRuns = merged ? namesOf(covered) : List.of(respawnFor.getId().name());
-        return walkthrough(runName, tripRuns, respawnFor, stops, made, rowOf, trip.getPlans(),
-                trip.getCropFor(), seeds, underway, state, resolver, inputs, planFor);
+
+        // The bag is simulated over the arrivals made, the bank stops spliced in, and
+        // everything the panel shows around the rows added.
+        List<StopPlan> plans = onTheJourneys(tripPlans, made);
+        List<List<Crop>> cropFor = trip.getCropFor();
+        // One answer for the loadout and the bag simulation. The packing list names the
+        // basket either way.
+        CarryPlanner.BasketPlace basket = CarryPlanner.basketPlace(plans, cropFor, state, inputs);
+        InventorySim.Plan bag = InventorySim.plan(InventoryDemands.forTrip(made, plans, cropFor, inputs, state, resolver),
+                InventoryDemands.fixturesFor(state, resolver, plans, inputs, basket == CarryPlanner.BasketPlace.BAG));
+        List<SlotAdvice> loadout = LoadoutPlanner.plan(state, CarryPlanner.staffWielded(plans, state, resolver),
+                teleportsByExplorersRing(plans), basket == CarryPlanner.BasketPlace.BACK);
+        WithdrawalPlanner.Withdrawals withdrawals = WithdrawalPlanner.forBankStops(bag, made,
+                plans, cropFor, seeds, state, resolver, inputs, underway);
+        List<FarmingCarryItem> carry = CarryPlanner.plan(plans, seeds, cropFor, state, resolver, inputs);
+        int fertileAsh = FertileSoil.inUse(inputs.getPreferences(), state, resolver.getBook())
+                ? FertileSoil.castsFor(plans, cropFor) * FertileSoil.ASH_PER_CAST : 0;
+        return FarmingAdvice.builder().runName(runName).tripRuns(tripRuns).fertileAsh(fertileAsh)
+                // A leg's ends index {@code made}, whose entries index {@code plans}.
+                .stops(BankStopSplicer.withBankStops(withCardNotes(stops, bag, made, rowOf,
+                        plans, cropFor, carry, underway, state, resolver, inputs), bag, rowOf, withdrawals, underway))
+                .carryNow(underway ? List.of() : nowHalf(withdrawals.getFirstStretch(), carry)).underway(underway)
+                .upgrades(LoadoutPlanner.upgrades(loadout)).carry(carry).herbNote(untickedHerbNote(state, inputs, plans))
+                .respawnAction(respawnAction(respawnFor, state, resolver)).carryFor(planFor.name())
+                .spellbookOpen(openBookOf(state).name()).build();
+    }
+
+    /**
+     * The plans with every visit off the arrivals made turned into a skip. A visit under a
+     * skipped lead, such as an allotment beside a herb patch with no seed, sends nobody to
+     * its farm ({@link StopRowWriter#isJourney}), so the bag packs no teleport, seed or
+     * compost for it.
+     */
+    private static List<StopPlan> onTheJourneys(List<StopPlan> plans, List<List<Integer>> made) {
+        List<StopPlan> going = new ArrayList<>(plans.size());
+        for (StopPlan plan : plans) {
+            going.add(plan.isVisit() ? StopPlan.skip(plan.getStop(), "", FarmingSkipReason.NOT_WORTH_TRIP, plan.getReadyAtEpochSec()) : plan);
+        }
+        for (List<Integer> visit : made) {
+            for (int index : visit) {
+                going.set(index, plans.get(index));
+            }
+        }
+        return going;
     }
 
     /**
@@ -415,6 +451,19 @@ public final class FarmingAdviceBuilder {
     /** Run ids as the snapshot speaks them, immutable, in the given (circuit) order. */
     private static List<String> namesOf(Collection<RunId> runs) {
         return runs.stream().map(RunId::name).collect(Collectors.toUnmodifiableList());
+    }
+
+    /** Whether the player stands in the map region of a patch this arrival visits. */
+    private static boolean standsIn(List<Integer> visit, List<StopPlan> plans, PlayerState state) {
+        Integer region = state == null ? null : state.getRegionId();
+        return region != null && StopRowWriter.visitsIn(visit, plans).stream()
+                .anyMatch(plan -> plan.getStop().getPatches().stream().anyMatch(ref -> ref.getRegionId() == region));
+    }
+
+    /** A visit made from where the player stands: no route, no teleport, nothing it leans on. */
+    private static StopPlan standingAt(StopPlan plan) {
+        return plan.isVisit() ? new StopPlan(plan.getStop(), StopPlan.Outcome.VISIT, null, CapabilityState.HAVE, "", null,
+                plan.getReadyAtEpochSec(), Set.of(), null) : plan;
     }
 
     /**
@@ -475,8 +524,7 @@ public final class FarmingAdviceBuilder {
         }
         for (PatchRef ref : plan.getStop().getPatches()) {
             PatchPrediction seen = inputs.patchAt(ref);
-            if (seen != null && seen.getCrop() != null && !seen.isIdle() && StopSkipRules.isStillGrowing(seen)
-                    && RunScheduler.seenThisTrip(seen.getObservedAtEpochSec(), inputs.getNowEpochSec())) {
+            if (StopSkipRules.isStillGrowing(seen) && RunScheduler.seenThisTrip(seen.getObservedAtEpochSec(), inputs.getNowEpochSec())) {
                 return true;
             }
         }
@@ -505,67 +553,7 @@ public final class FarmingAdviceBuilder {
         return openBook;
     }
 
-    /**
-     * The patches a visit works, added once the visit has been routed, each as sure as its
-     * own stop's plan (not the arrival plan {@link StopRowWriter#routeForVisit} may have
-     * found).
-     */
-    private static void addPatchesWorked(List<Integer> visit, List<StopPlan> plans, Map<PatchRef, CapabilityState> reached) {
-        for (int index : visit) {
-            RunPlanner.stood(reached, plans.get(index));
-        }
-    }
-
     // --- Seeds ---------------------------------------------------------------
-
-    /**
-     * What to carry out of the bank: "2 × Toadflax, 5 × Irit".
-     *
-     * <p>Tallied by {@link SeedPlan#goingInTheGround}, the same call the bag makes, so the
-     * sentence and the list agree. It counts what lands, not what was dealt.
-     */
-    private static String seedSummary(List<StopPlan> plans, List<List<Crop>> cropFor) {
-        StringBuilder summary = new StringBuilder();
-        for (SeedAllocation.Tally tally : SeedPlan.goingInTheGround(plans, cropFor)) {
-            if (summary.length() > 0) {
-                summary.append(", ");
-            }
-            summary.append(tally.getCount()).append(" × ").append(CropNames.displayNameOf(tally.getCrop()));
-        }
-        return summary.toString();
-    }
-
-    /**
-     * The one thing to say about the seeds that is not the plan itself.
-     *
-     * <p>Ordered by importance: an unread seed vault first, then nothing to plant, then a
-     * short stack.
-     *
-     * <p><b>One ladder over the trip's totals.</b> The sentence sits above every family, so
-     * the worst family's own verdict would say "no seed you can plant" over a walkthrough
-     * that plants three.
-     */
-    static String seedWarning(List<SeedPlan> seeds) {
-        if (!SeedPlan.confident(seeds)) {
-            return "open your seed vault to count your seeds";
-        }
-        // Counted over both ends and every run. Per-end counts go wrong once the rotation
-        // closes onto one crop: one stack of five can cover either end, but not both.
-        int wanted = SeedPlan.wanted(seeds);
-        int planted = SeedPlan.planted(seeds);
-        // Nothing wanted means every patch is still growing, not that the vault is empty.
-        // The skipped stops already say so.
-        if (wanted == 0) {
-            return "";
-        }
-        if (planted == 0) {
-            return "no seed you can plant";
-        }
-        if (planted >= wanted) {
-            return "";
-        }
-        return "you have seeds for " + planted + " of the " + wanted + " patches";
-    }
 
     /**
      * A note for the player carrying herb seeds the rotation will not plant because they
@@ -579,7 +567,7 @@ public final class FarmingAdviceBuilder {
         if (!plantsTheHerbRotation(plans)) {
             return "";
         }
-        List<Crop> unticked = SeedSelector.carriedButUnticked(FarmingCatalogue.seedPolicy(), inputs.getPreferences(), state);
+        List<Crop> unticked = SeedSelector.carriedButUnticked(inputs.getPreferences(), state);
         if (unticked.isEmpty()) {
             return "";
         }
@@ -630,8 +618,7 @@ public final class FarmingAdviceBuilder {
             }
             // A book this run has no version of (Standard, for the herb run). The best
             // variant is still planned on the named book.
-            RunVariants.Choice best = RunVariants.best(variants, state, preview, inputs, resolvers);
-            return new RunVariants.Choice(best.getRun(), preview, best.getCertainPatches(), best.getReachablePatches(), best.getPlans());
+            return RunVariants.best(variants, state, preview, inputs, resolvers).withPlanFor(preview);
         }
         return RunVariants.best(variants, state, openBookOf(state), inputs, resolvers);
     }

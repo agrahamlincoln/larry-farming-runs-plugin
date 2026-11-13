@@ -1,0 +1,16 @@
+# Every house item a player may declare built, one row per HouseItem constant, in the order
+# the settings draw them: the caption group it sits under, its label (short enough for two
+# columns at sidebar width), the config key that holds the declaration, and the capability
+# it is. Players' saved settings sit under these keys.
+#
+# item	group	label	config key	capability
+WEISS_PORTAL	PORTALS	Weiss	declareWeissPortal	POH_PORTAL_WEISS
+TROLL_STRONGHOLD_PORTAL	PORTALS	Troll Stronghold	declareTrollStrongholdPortal	POH_PORTAL_TROLL_STRONGHOLD
+KOUREND_PORTAL	PORTALS	Kourend	declareKourendPortal	POH_PORTAL_KOUREND
+FENKENSTRAIN_PORTAL	PORTALS	Fenkenstrain's	declareFenkenstrainPortal	POH_PORTAL_FENKENSTRAIN
+HARMONY_PORTAL	PORTALS	Harmony	declareHarmonyPortal	POH_PORTAL_HARMONY
+WEISS_IN_NEXUS	NEXUS	Weiss	declareWeissInNexus	POH_NEXUS_WEISS
+TROLL_STRONGHOLD_IN_NEXUS	NEXUS	Troll Stronghold	declareTrollStrongholdInNexus	POH_NEXUS_TROLL_STRONGHOLD
+HARMONY_IN_NEXUS	NEXUS	Harmony	declareHarmonyInNexus	POH_NEXUS_HARMONY
+SPIRIT_TREE	GARDEN	Spirit tree	declareHouseSpiritTree	POH_SPIRIT_TREE
+FAIRY_RING	GARDEN	Fairy ring	declareHouseFairyRing	POH_FAIRY_RING

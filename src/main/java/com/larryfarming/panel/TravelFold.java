@@ -22,12 +22,12 @@ class TravelFold extends Fold
 {
 	/**
 	 * Appended while nothing the player uses reaches a ring, so a shut fold still says so.
-	 * It names the rings: the fold holds every travel method, and most still work.
+	 * It names the rings: the fold holds every travel method, and most still work. The
+	 * settings header repeats it, so it reads with both folds shut.
 	 */
-	private static final String BLOCKED = ": no way to a fairy ring";
+	static final String BLOCKED = ": no way to a fairy ring";
 
 	private final BiConsumer<String, String> send;
-	private boolean blocked;
 
 	/** Keyed on the groups and the icons, so a provider arriving later redraws the squares. */
 	private final RebuildGuard guard = new RebuildGuard();
@@ -50,11 +50,7 @@ class TravelFold extends Fold
 			return;
 		}
 		// The header's text and colour are set in place: a one-line label cannot flicker.
-		if (blocked != advice.isFairyRingBlocked())
-		{
-			blocked = advice.isFairyRingBlocked();
-			setHeader(blocked ? BLOCKED : "", blocked ? FarmingPanel.COLOR_DUE : PanelColors.HEADER);
-		}
+		warn(advice.isFairyRingBlocked(), BLOCKED);
 		if (!guard.shouldRebuild(Arrays.asList(groups, icons)))
 		{
 			return;

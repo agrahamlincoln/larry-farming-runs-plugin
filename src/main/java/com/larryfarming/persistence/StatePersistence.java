@@ -161,12 +161,8 @@ public class StatePersistence {
     public Collection<FarmingTracker.PersistedEntry> loadFarmingPatches() {
         List<FarmingTracker.PersistedEntry> out = new ArrayList<>();
         for (FarmingWorldMap.PatchDef patch : FarmingWorldMap.allPatches()) {
-            String stored = store.getRSProfileConfiguration(CONFIG_GROUP, KEY_FARMING_PREFIX + patch.configKey());
-            if (stored == null || stored.isEmpty()) {
-                continue;
-            }
-            String[] parts = stored.split(":");
-            if (parts.length != 2) {
+            String[] parts = fields(KEY_FARMING_PREFIX + patch.configKey(), 2);
+            if (parts == null) {
                 continue;
             }
             try {
@@ -193,21 +189,31 @@ public class StatePersistence {
 
     /**
      * Load the learned farming tick offset as {offsetSeconds, precisionMins,
-     * resolutionSeconds}, or null if none was ever observed or the value is malformed.
+     * resolutionSeconds}. When none was ever observed or the value is malformed, it is
+     * {-1, -1, 1}: no offset learned yet, at one-second resolution.
      */
     public int[] loadFarmingTickOffset() {
-        String stored = store.getRSProfileConfiguration(CONFIG_GROUP, KEY_FARMING_TICK_OFFSET);
+        String[] parts = fields(KEY_FARMING_TICK_OFFSET, 3);
+        if (parts != null) {
+            try {
+                return new int[]{Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), Integer.parseInt(parts[2])};
+            } catch (NumberFormatException ex) {
+                // Malformed: read as never observed.
+            }
+        }
+        return new int[]{-1, -1, 1};
+    }
+
+    /**
+     * This RS profile's colon-separated value for {@code key}, split, or null when unset or
+     * when it does not hold exactly {@code count} fields.
+     */
+    private String[] fields(String key, int count) {
+        String stored = store.getRSProfileConfiguration(CONFIG_GROUP, key);
         if (stored == null || stored.isEmpty()) {
             return null;
         }
         String[] parts = stored.split(":");
-        if (parts.length != 3) {
-            return null;
-        }
-        try {
-            return new int[]{Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), Integer.parseInt(parts[2])};
-        } catch (NumberFormatException ex) {
-            return null;
-        }
+        return parts.length == count ? parts : null;
     }
 }

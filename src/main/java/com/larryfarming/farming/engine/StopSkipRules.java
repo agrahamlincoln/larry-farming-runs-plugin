@@ -61,7 +61,8 @@ final class StopSkipRules {
             StopPlan skip = null;
             if (stop.isFixedCrop()) {
                 Crop crop = FixedCrops.cropFor(stop, inputs.getPreferences(), state);
-                if (stop.isStandingCrop()) {
+                boolean workWaiting = anythingToDoAt(stop, inputs);
+                if (seen != null && FixedCrops.stands(stop, seen.getCrop(), inputs.getPreferences())) {
                     skip = skipIfStanding(stop, seen);
                 } else if (FarmingCatalogue.everyNthRun(stop, crop) > 1) {
                     skip = skipIfStillGrowing(stop, seen);
@@ -76,7 +77,7 @@ final class StopSkipRules {
                 // A bush or cactus picked bare reads HARVESTABLE while it restocks, so the
                 // growth rules above miss it. With nothing to pick and no room for a seed,
                 // the visit would have nothing to do.
-                if (skip == null && stop.isPlanting() && !anythingToDoAt(stop, inputs)
+                if (skip == null && stop.isPlanting() && !workWaiting
                         && CropAssigner.openFixedPatches(stop, inputs, state) == 0) {
                     skip = skipWhileRestocking(stop, inputs);
                 }
@@ -84,14 +85,22 @@ final class StopSkipRules {
                 // empty stack does not. foldIn keeps the growth estimate. Not asked where
                 // work is waiting: a ready limpwurt is worth the harvest without a seed to
                 // follow, and the runs list counts it ready. A dead anima plant is not such
-                // work: it is cleared only to plant the next.
-                if (!anythingToDoAt(stop, inputs) || stop.patchType() == PatchType.ANIMA) {
-                    skip = foldIn(skip, skipIfNoSeed(stop, crop, state));
+                // work: it is cleared only to plant the next. A preset pick says nothing of its
+                // seed, so its growing crop keeps the growth skip.
+                StopPlan shortfall = skipIfNoSeed(stop, crop, state);
+                PatchPick pick = FarmingCatalogue.pickOf(stop);
+                boolean quietOnSeed = skip != null && shortfall != null && shortfall.getSkipReason() == FarmingSkipReason.NO_SEED
+                        && pick != null && !inputs.getPreferences().picksChosen().contains(pick.getSite());
+                if ((!workWaiting || stop.patchType() == PatchType.ANIMA) && !quietOnSeed) {
+                    skip = foldIn(skip, shortfall);
                 }
             } else if (stop.isPlanting()) {
                 skip = skipIfPatchesStillFull(stop, inputs);
                 skip = foldIn(skip, skipIfNoRotationSeed(run, stop, inputs, state));
-            } else if (nothingLeftHere(stop, inputs)) {
+            } else if (everyPatchLookedAt(stop, inputs) && !anythingToDoAt(stop, inputs)) {
+                // A stop that puts nothing in the ground, every patch looked at and none
+                // wanting anything, is dropped, not skipped: there is no decision to explain.
+                // Never on a guess: an unseen patch keeps it.
                 continue;
             }
             if (skip == null && stop.isPlanting()) {
@@ -111,21 +120,11 @@ final class StopSkipRules {
      */
     private static boolean anythingToDoAt(RunStop stop, FarmingInputs inputs) {
         for (PatchRef ref : stop.getPatches()) {
-            if (PatchWork.at(inputs.patchAt(ref), stop, inputs.getNowEpochSec()) != null) {
+            if (PatchWork.at(inputs.patchAt(ref), stop, inputs.getPreferences(), inputs.getNowEpochSec()) != null) {
                 return true;
             }
         }
         return false;
-    }
-
-    /**
-     * Whether every patch at this stop has been looked at and none of them wants anything.
-     *
-     * <p>Only asked of a stop that puts nothing in the ground. Such a stop is dropped, not
-     * skipped: there is no decision to explain. Never on a guess: an unseen patch keeps it.
-     */
-    private static boolean nothingLeftHere(RunStop stop, FarmingInputs inputs) {
-        return everyPatchLookedAt(stop, inputs) && !anythingToDoAt(stop, inputs);
     }
 
     /**
@@ -157,15 +156,15 @@ final class StopSkipRules {
         List<StopPlan> kept = new ArrayList<>(plans.size());
         for (int i = 0; i < plans.size(); i++) {
             StopPlan plan = plans.get(i);
-            if (seedRanOutAt(plan, cropFor.get(i), inputs)) {
-                // A tree the run declined to fell is not a seed that ran out; "no seed" would
-                // send the player to buy a sapling they hold.
-                kept.add(StopPlan.skip(plan.getStop(), "", anythingStandingAt(plan, inputs) ? FarmingSkipReason.STANDING_CROP
-                                : FarmingSkipReason.NO_SEED, 0L));
+            boolean ranOut = seedRanOutAt(plan, cropFor.get(i), inputs);
+            if (!ranOut && !leftStandingAt(plan, cropFor.get(i), inputs)) {
+                kept.add(plan);
                 continue;
             }
-            kept.add(leftStandingAt(plan, cropFor.get(i), inputs) ? StopPlan.skip(plan.getStop(), "", FarmingSkipReason.STANDING_CROP, 0L)
-                    : plan);
+            // A tree the run declined to fell is not a seed that ran out; "no seed" would
+            // send the player to buy a sapling they hold.
+            kept.add(StopPlan.skip(plan.getStop(), "", ranOut && !anythingStandingAt(plan, inputs) ? FarmingSkipReason.NO_SEED
+                    : FarmingSkipReason.STANDING_CROP, 0L));
         }
         return kept;
     }
@@ -213,10 +212,8 @@ final class StopSkipRules {
         if (owedItsCheckBeforeTheAxe(ref, seen)) {
             return seen.getCrop();
         }
-        if (!stop.isStandingCrop()) {
-            return null;
-        }
-        if (seen == null || seen.getCrop() == null || seen.getCrop() == Crop.WEEDS) {
+        if (seen == null || !FixedCrops.stands(stop, seen.getCrop(), inputs.getPreferences()) || seen.getCrop() == null
+                || seen.getCrop() == Crop.WEEDS) {
             return null;
         }
         // A dead crop is dug out, leaving bare ground. A diseased one is cured and stays.
@@ -229,10 +226,9 @@ final class StopSkipRules {
         if (seen.getCrop().getRegrowTickRateMinutes() > 0) {
             return seen.getState() == CropState.HARVESTABLE ? null : seen.getCrop();
         }
-        // A standing crop that does not regrow: the Catherby white lily (declared
-        // .standingCrop(), no regrow rate). A guard flower stands while it lives, so
-        // standsEmpty decides.
-        return PatchWork.standsEmpty(seen, stop, inputs.getNowEpochSec()) ? null : seen.getCrop();
+        // A standing crop that does not regrow: a white lily picked for a flower patch. A
+        // guard flower stands while it lives, so standsEmpty decides.
+        return PatchWork.standsEmpty(seen, stop, inputs.getPreferences(), inputs.getNowEpochSec()) ? null : seen.getCrop();
     }
 
     /**
@@ -241,8 +237,7 @@ final class StopSkipRules {
      * so it is ground on both sides of it.
      */
     private static boolean owedItsCheckBeforeTheAxe(PatchRef ref, PatchPrediction seen) {
-        if (seen == null || seen.getCrop() == null || seen.isIdle() || seen.getCrop() == Crop.WEEDS || seen.getState() != CropState.GROWING
-                || isStillGrowing(seen)) {
+        if (seen == null || seen.getCrop() == null || seen.isIdle() || seen.getState() != CropState.GROWING || isStillGrowing(seen)) {
             return false;
         }
         PatchType type = ref.type();
@@ -267,7 +262,7 @@ final class StopSkipRules {
         }
         boolean anythingToPick = false;
         for (PatchRef ref : plan.getStop().getPatches()) {
-            PatchWork.Act act = PatchWork.at(inputs.patchAt(ref), plan.getStop(), inputs.getNowEpochSec());
+            PatchWork.Act act = PatchWork.at(inputs.patchAt(ref), plan.getStop(), inputs.getPreferences(), inputs.getNowEpochSec());
             if (act == null) {
                 continue;
             }
@@ -295,7 +290,7 @@ final class StopSkipRules {
 
     private static boolean everyPatchStandsEmpty(RunStop stop, FarmingInputs inputs) {
         for (PatchRef ref : stop.getPatches()) {
-            if (!PatchWork.standsEmpty(inputs.patchAt(ref), stop, inputs.getNowEpochSec())) {
+            if (!PatchWork.standsEmpty(inputs.patchAt(ref), stop, inputs.getPreferences(), inputs.getNowEpochSec())) {
                 return false;
             }
         }
@@ -313,7 +308,7 @@ final class StopSkipRules {
      * @param crop what {@link FixedCrops#cropFor} would plant here: the best growable
      *     ticked crop, or the lowest ticked one when none is growable
      */
-    private static StopPlan skipIfNoSeed(RunStop stop, Crop crop, PlayerState state) {
+    static StopPlan skipIfNoSeed(RunStop stop, Crop crop, PlayerState state) {
         CropData data = crop == null ? null : CropData.forCrop(crop);
         if (data == null) {
             return null;
@@ -424,7 +419,7 @@ final class StopSkipRules {
 
     /** The paced skip: nothing to harvest yet at a patch still filling out. */
     private static StopPlan skipIfStillGrowing(RunStop stop, PatchPrediction seen) {
-        if (seen == null || !FixedCrops.grows(stop, seen.getCrop()) || !isStillGrowing(seen)) {
+        if (!isStillGrowing(seen) || !FixedCrops.grows(stop, seen.getCrop())) {
             return null;
         }
         return StopPlan.skip(stop, "your " + inSentence(seen.getCrop()) + " is still growing",
@@ -447,7 +442,7 @@ final class StopSkipRules {
         long readyAt = 0L;
         for (PatchRef ref : stop.getPatches()) {
             PatchPrediction seen = inputs.patchAt(ref);
-            if (seen == null || seen.getCrop() == null || seen.isIdle() || !isStillGrowing(seen)) {
+            if (!isStillGrowing(seen)) {
                 return null;
             }
             readyAt = Math.max(readyAt, seen.getDoneEstimateEpochSec());
@@ -497,9 +492,11 @@ final class StopSkipRules {
      * com.larryfarming.engine.farming.FarmingTracker#predict} advances {@code stage} to now, so a
      * stage short of the last is still growing. A prediction with no timing carries 0 of 0
      * stages, so the stage comparison is skipped when there is no count.
+     *
+     * <p>False for an unseen patch, one with no crop, and an idle one: weeds are not a crop.
      */
     static boolean isStillGrowing(PatchPrediction prediction) {
-        if (prediction.getState() != CropState.GROWING) {
+        if (prediction == null || prediction.getCrop() == null || prediction.isIdle() || prediction.getState() != CropState.GROWING) {
             return false;
         }
         return prediction.getStages() <= 0 || prediction.getStage() < prediction.getStages() - 1;

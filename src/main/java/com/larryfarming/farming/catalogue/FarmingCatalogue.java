@@ -32,13 +32,8 @@ public final class FarmingCatalogue {
         for (FarmingRun run : RUNS) {
             byId.computeIfAbsent(run.getId(), id -> new ArrayList<>()).add(run);
         }
-        return frozen(byId);
-    }
-
-    /** The same map, its lists copied, read-only. */
-    private static <K, V> Map<K, List<V>> frozen(Map<K, List<V>> grouped) {
-        grouped.replaceAll((key, values) -> List.copyOf(values));
-        return Collections.unmodifiableMap(grouped);
+        byId.replaceAll((id, runs) -> List.copyOf(runs));
+        return Collections.unmodifiableMap(byId);
     }
 
     /**
@@ -111,32 +106,70 @@ public final class FarmingCatalogue {
         return Collections.unmodifiableMap(keys);
     }
 
-    /** The key of the switchable site this stop works, or null when it has no switch. */
-    public static String siteKey(RunStop stop) {
-        return SITE_KEYS_BY_PATCH.get(stop.primaryPatch());
+    /**
+     * The key of the switchable site this patch belongs to, or null when it has none. A herb
+     * farm's picked patches belong to its herb site, so they go only where it goes.
+     */
+    public static String siteKey(PatchRef patch) {
+        return SITE_KEYS_BY_PATCH.get(patch);
     }
 
     private static final Map<PatchRef, String> SITE_KEYS_BY_PATCH = collectSiteKeysByPatch();
 
     private static Map<PatchRef, String> collectSiteKeysByPatch() {
         Map<PatchRef, String> keys = new HashMap<>();
+        // A farm's patches share its herb patch's map region, and the stops table lists each
+        // herb site before its farm's picks.
+        Map<Integer, String> farms = new HashMap<>();
         for (Site site : Site.values()) {
-            if (site.switchKey() != null) {
+            int region = site.patch().getRegionId();
+            String key = FarmingKeys.PICKS.containsKey(site.name()) ? farms.get(region) : site.switchKey();
+            if (key != null) {
                 for (PatchRef patch : site.patches()) {
-                    keys.put(patch, site.switchKey());
+                    keys.put(patch, key);
+                }
+                if (site.family() == RunId.HERB) {
+                    farms.put(region, key);
                 }
             }
         }
         return Collections.unmodifiableMap(keys);
     }
 
+    /** The pick that chooses this stop's crop, or null for a stop that isn't picked. */
+    public static PatchPick pickOf(RunStop stop) {
+        return PICKS_BY_PATCH.get(stop.primaryPatch());
+    }
+
+    /** Every picked patch and its pick, in the stops table's order. */
+    public static Map<PatchRef, PatchPick> picksByPatch() {
+        return PICKS_BY_PATCH;
+    }
+
+    private static final Map<PatchRef, PatchPick> PICKS_BY_PATCH = collectPicksByPatch();
+
+    private static Map<PatchRef, PatchPick> collectPicksByPatch() {
+        Map<PatchRef, PatchPick> picks = new LinkedHashMap<>();
+        for (Site site : Site.values()) {
+            PatchPick pick = FarmingKeys.PICKS.get(site.name());
+            if (pick != null) {
+                picks.put(site.patch(), pick);
+            }
+        }
+        return Collections.unmodifiableMap(picks);
+    }
+
     /**
      * The crops this stop may grow, best first: the default crop and any the player may
-     * tick in its place. Empty for a stop the run's seeds fill.
+     * tick in its place, or for a picked stop every crop of its patch. Empty for a stop the
+     * run's seeds fill.
      */
     public static List<Crop> cropChoices(RunStop stop) {
         if (!stop.isFixedCrop()) {
             return List.of();
+        }
+        if (stop.isPicked()) {
+            return CropData.plantableIn(stop.patchType());
         }
         List<Crop> family = CropChoices.forPatch(stop.patchType());
         return family.contains(stop.getFixedCrop()) ? family : List.of(stop.getFixedCrop());
@@ -206,7 +239,7 @@ public final class FarmingCatalogue {
      * resolver: it would report the place unreachable. Fall back to the lead stop's chain.
      */
     public static List<TravelOption> combinedRoute(Arrival arrival) {
-        return Arrivals.combinedChain(arrival);
+        return CatalogueLoader.loaded().combined.get(arrival);
     }
 
     /**

@@ -4,7 +4,8 @@
 #
 # approach NAME, then leg REQUIREMENT WALK COST: a way onto a network, cited as @NAME.
 # arrival ARRIVAL, then the rungs of its combined chain, if it has one.
-# site KEY FAMILY, with switch CONFIG_KEY LABEL, attributes IMMUNE DIARY TIER
+# site KEY FAMILY, with switch CONFIG_KEY LABEL, pick CONFIG_KEY COMPOST_KEY FARM
+#   TITLE CROP_SWITCHES for a patch whose crop the player picks, attributes IMMUNE DIARY TIER
 #   QUEST EASY RESERVED, yieldTier and xpTier DIARY TIER PERCENT, and claim DIARY
 #   TIER PATCH CROP. Then stop BOOKS PATCHES and one line for each change to the
 #   stop (at, accessGate, gate, plants, skipIfUnreachable, ...).
@@ -50,7 +51,7 @@ arrival	ORTUS_FARM
 arrival	KASTORI
 via	all(PENDANT_OF_ATES,ATES_STATUE_KASTORI)	Pendant of Ates to the statue north of Kastori, then run south-west
 walks	60	CHARGE
-via	all(QUETZAL_WHISTLE,QUETZAL_SITE_KASTORI)	Quetzal whistle to the Kastori landing site, then run north-east. If you have a pendant of Ates, activate the statue north of the patch.
+via	all(QUETZAL_WHISTLE,QUETZAL_SITE_KASTORI)	Quetzal whistle to the Kastori landing site, then run north-east
 walks	46	CHARGE
 to	CIVITAS_ILLA_FORTIS	all(RENU,QUETZAL_SITE_KASTORI)	then run east to the quetzal landing site and ride Renu to Kastori, then run north-east
 walks	61	CONSUMABLE
@@ -163,13 +164,13 @@ accessGate	MORYTANIA_ACCESS
 to	FENKENSTRAINS_CASTLE	-
 banks	157	CANIFIS
 walks	56	CONSUMABLE
-via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west to the patch
+via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
 banks	272	CANIFIS
 walks	60	FREE
-via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north to the patch
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
-to	SALVE_GRAVEYARD	then run east to the patch
+to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
 noAlternative
 stop	LUNAR	MORYTANIA_HERB
@@ -178,23 +179,23 @@ accessGate	MORYTANIA_ACCESS
 via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
 banks	157	CANIFIS
 walks	56	FREE
-via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north to the patch
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
 onlyFromAstart
 to	FENKENSTRAINS_CASTLE	-
 banks	157	CANIFIS
 walks	56	CONSUMABLE
-via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north to the patch
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
 swapTo	FENKENSTRAINS_CASTLE	-
 banks	157	CANIFIS
 walks	56	CONSUMABLE
-via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west to the patch
+via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
 banks	272	CANIFIS
 walks	60	FREE
-to	SALVE_GRAVEYARD	then run east to the patch
+to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
 noAlternative
 
@@ -210,11 +211,11 @@ via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
 walks	20	CHARGE
 via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
 walks	20	CHARGE
-via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Spirit tree to the Grand Tree, then on to Port Sarim
+via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
 walks	55	FREE
 via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
 walks	95	CHARGE
-to	FALADOR	then run south-east to the farm
+to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
 skipIfUnreachable
@@ -226,11 +227,11 @@ via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
 walks	20	CHARGE
 via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
 walks	20	CHARGE
-via	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Construction cape to your house spirit tree, then Port Sarim
+via	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Construction cape to your house, then its spirit tree to Port Sarim, then run north
 walks	55	FREE
 via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
 walks	95	CHARGE
-to	FALADOR	then run south-east to the farm
+to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
 skipIfUnreachable
@@ -258,13 +259,13 @@ site	ARDOUGNE_HERB	HERB
 switch	visitArdougneHerb	Ardougne
 stop	ARCEUUS LUNAR	ARDOUGNE_HERB
 at	ARDOUGNE_FARM
-via	ARDOUGNE_CLOAK_4	Ardougne cloak 4 to the farm patch
+via	ARDOUGNE_CLOAK_4	Ardougne cloak 4 to the farm
 banks	175	ARDOUGNE_NORTH
 walks	5	FREE
-via	ARDOUGNE_CLOAK_3	Ardougne cloak 3 to the farm patch
+via	ARDOUGNE_CLOAK_3	Ardougne cloak 3 to the farm
 banks	175	ARDOUGNE_NORTH
 walks	5	CHARGE
-via	ARDOUGNE_CLOAK_2	Ardougne cloak 2 to the farm patch
+via	ARDOUGNE_CLOAK_2	Ardougne cloak 2 to the farm
 banks	173	ARDOUGNE_NORTH
 walks	5	CHARGE
 via	SKILLS_NECKLACE	Skills necklace to the Fishing Guild, then run east
@@ -305,7 +306,7 @@ walks	74	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
-to	KOUREND_CASTLE	then run south-east to the farm
+to	KOUREND_CASTLE	then run south-east
 walks	185	CONSUMABLE
 skipIfUnreachable
 stop	LUNAR	HOSIDIUS_HERB
@@ -324,7 +325,7 @@ walks	74	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
-to	KOUREND_CASTLE	then run south-east to the farm
+to	KOUREND_CASTLE	then run south-east
 walks	185	CONSUMABLE
 skipIfUnreachable
 
@@ -345,7 +346,33 @@ walks	27	CONSUMABLE
 skipIfUnreachable
 gate	-	0	0	0	Morytania	Elite
 
-site	SNAPE_GRASS	HERB
+site	ORTUS_FARM	HERB
+switch	visitOrtusFarm	Ortus Farm
+stop	ARCEUUS LUNAR	ORTUS_HERB
+at	ORTUS_FARM
+via	QUETZAL_WHISTLE	Quetzal whistle to the Hunter Guild landing site, then run north
+banks	87	HUNTER_GUILD
+walks	47	CHARGE
+to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+banks	87	HUNTER_GUILD
+walks	62	CONSUMABLE
+via	HUNTER_CAPE	Hunter cape to the Hunter Guild, then run north
+banks	36	HUNTER_GUILD
+walks	74	FREE
+via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AJP to the Avium Savannah, then run north-west
+banks	106	CIVITAS_ILLA_FORTIS_WEST
+walks	91	FREE
+to	CIVITAS_ILLA_FORTIS	then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	114	CONSUMABLE
+to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Hunter Guild, then run north
+banks	87	HUNTER_GUILD
+walks	127	CONSUMABLE
+noFallbackGiven
+optional	No fixed place in the run; weave it in
+
+site	CATHERBY_NORTH_ALLOTMENT	HERB
+pick	pickCatherbyNorth	compostCatherbyNorth	Catherby	Catherby north	SNAPE_GRASS WATERMELON
 stop	ARCEUUS LUNAR	CATHERBY_NORTH_ALLOTMENT
 at	CATHERBY
 to	CATHERBY	-
@@ -358,10 +385,26 @@ to	CAMELOT	then run south-east
 banks	40	CATHERBY
 walks	49	CONSUMABLE
 noFallbackGiven
-plants	SNAPE_GRASS
-optional	Harvested over several runs alongside the Catherby herb patch
+optional	Worked while at the herb patch beside it
 
-site	WHITE_LILY	HERB
+site	CATHERBY_SOUTH_ALLOTMENT	HERB
+pick	pickCatherbySouth	compostCatherbySouth	Catherby	Catherby south	-
+stop	ARCEUUS LUNAR	CATHERBY_SOUTH_ALLOTMENT
+at	CATHERBY
+to	CATHERBY	-
+banks	40	CATHERBY
+walks	20	CONSUMABLE
+via	all(RESPAWN_TELEPORT,RESPAWN_AVAILABLE_CAMELOT)	Respawn Teleport to Camelot, then run south-east
+banks	40	CATHERBY
+walks	58	CONSUMABLE
+to	CAMELOT	then run south-east
+banks	40	CATHERBY
+walks	58	CONSUMABLE
+noFallbackGiven
+optional	Worked while at the herb patch beside it
+
+site	CATHERBY_FLOWER	HERB
+pick	pickCatherbyFlower	-	Catherby	Catherby flowers	WHITE_LILY
 stop	ARCEUUS LUNAR	CATHERBY_FLOWER
 at	CATHERBY
 to	CATHERBY	-
@@ -374,11 +417,92 @@ to	CAMELOT	then run south-east
 banks	40	CATHERBY
 walks	54	CONSUMABLE
 noFallbackGiven
-plants	WHITE_LILY
-optional	Protects the Catherby allotments from disease
-standingCrop
+optional	Worked while at the herb patch beside it
 
-site	LIMPWURT	HERB
+site	HOSIDIUS_NORTH_EAST_ALLOTMENT	HERB
+pick	pickHosidiusNorthEast	compostHosidiusNorthEast	Hosidius	Hosidius north-east	-
+stop	ARCEUUS	HOSIDIUS_NORTH_EAST_ALLOTMENT
+at	HOSIDIUS
+via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	23	CHARGE
+to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
+walks	33	CONSUMABLE
+onlyWhenCertain
+via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	74	CHARGE
+via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	74	CHARGE
+to	KOUREND_CASTLE	then run south-east
+walks	185	CONSUMABLE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+stop	LUNAR	HOSIDIUS_NORTH_EAST_ALLOTMENT
+at	HOSIDIUS
+via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	23	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KOUREND)	Construction cape to your house, then the Kourend portal
+walks	185	FREE
+to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
+walks	33	CONSUMABLE
+onlyWhenCertain
+via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	74	CHARGE
+via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	74	CHARGE
+to	KOUREND_CASTLE	then run south-east
+walks	185	CONSUMABLE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+
+site	HOSIDIUS_SOUTH_WEST_ALLOTMENT	HERB
+pick	pickHosidiusSouthWest	compostHosidiusSouthWest	Hosidius	Hosidius south-west	-
+stop	ARCEUUS	HOSIDIUS_SOUTH_WEST_ALLOTMENT
+at	HOSIDIUS
+via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	23	CHARGE
+to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
+walks	33	CONSUMABLE
+onlyWhenCertain
+via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	74	CHARGE
+via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	74	CHARGE
+to	KOUREND_CASTLE	then run south-east
+walks	185	CONSUMABLE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+stop	LUNAR	HOSIDIUS_SOUTH_WEST_ALLOTMENT
+at	HOSIDIUS
+via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	23	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KOUREND)	Construction cape to your house, then the Kourend portal
+walks	185	FREE
+to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
+walks	33	CONSUMABLE
+onlyWhenCertain
+via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	74	CHARGE
+via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	74	CHARGE
+to	KOUREND_CASTLE	then run south-east
+walks	185	CONSUMABLE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+
+site	HOSIDIUS_FLOWER	HERB
+pick	pickHosidiusFlower	-	Hosidius	Hosidius flowers	LIMPWURT
 stop	ARCEUUS	HOSIDIUS_FLOWER
 at	HOSIDIUS
 via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
@@ -393,12 +517,11 @@ walks	68	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	68	CHARGE
-to	KOUREND_CASTLE	then run south-east to the farm
+to	KOUREND_CASTLE	then run south-east
 walks	179	CONSUMABLE
 skipIfUnreachable
 actions	HARVEST PLANT
-plants	LIMPWURT
-optional	One seed a run, no compost needed
+optional	Worked while at the herb patch beside it
 stop	LUNAR	HOSIDIUS_FLOWER
 at	HOSIDIUS
 via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
@@ -415,12 +538,450 @@ walks	68	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	68	CHARGE
-to	KOUREND_CASTLE	then run south-east to the farm
+to	KOUREND_CASTLE	then run south-east
 walks	179	CONSUMABLE
 skipIfUnreachable
 actions	HARVEST PLANT
-plants	LIMPWURT
-optional	One seed a run, no compost needed
+optional	Worked while at the herb patch beside it
+
+site	ARDOUGNE_NORTH_ALLOTMENT	HERB
+pick	pickArdougneNorth	compostArdougneNorth	Ardougne	Ardougne north	-
+stop	ARCEUUS LUNAR	ARDOUGNE_NORTH_ALLOTMENT
+at	ARDOUGNE_FARM
+via	ARDOUGNE_CLOAK_4	Ardougne cloak 4 to the farm
+banks	175	ARDOUGNE_NORTH
+walks	5	FREE
+via	ARDOUGNE_CLOAK_3	Ardougne cloak 3 to the farm
+banks	175	ARDOUGNE_NORTH
+walks	5	CHARGE
+via	ARDOUGNE_CLOAK_2	Ardougne cloak 2 to the farm
+banks	173	ARDOUGNE_NORTH
+walks	5	CHARGE
+via	SKILLS_NECKLACE	Skills necklace to the Fishing Guild, then run east
+banks	63	ARDOUGNE_NORTH
+walks	61	CHARGE
+to	FISHING_GUILD	then run east
+banks	64	ARDOUGNE_NORTH
+walks	59	CONSUMABLE
+via	FISHING_CAPE	Fishing cape to the Fishing Guild, then run east
+banks	35	ARDOUGNE_NORTH
+walks	74	FREE
+via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run west
+banks	160	ARDOUGNE_NORTH
+walks	62	FREE
+to	ARDOUGNE	then run north
+banks	52	ARDOUGNE_NORTH
+walks	97	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run west
+banks	161	ARDOUGNE_NORTH
+walks	72	FREE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+
+site	ARDOUGNE_SOUTH_ALLOTMENT	HERB
+pick	pickArdougneSouth	compostArdougneSouth	Ardougne	Ardougne south	-
+stop	ARCEUUS LUNAR	ARDOUGNE_SOUTH_ALLOTMENT
+at	ARDOUGNE_FARM
+via	ARDOUGNE_CLOAK_4	Ardougne cloak 4 to the farm
+banks	175	ARDOUGNE_NORTH
+walks	5	FREE
+via	ARDOUGNE_CLOAK_3	Ardougne cloak 3 to the farm
+banks	175	ARDOUGNE_NORTH
+walks	5	CHARGE
+via	ARDOUGNE_CLOAK_2	Ardougne cloak 2 to the farm
+banks	173	ARDOUGNE_NORTH
+walks	5	CHARGE
+via	SKILLS_NECKLACE	Skills necklace to the Fishing Guild, then run east
+banks	63	ARDOUGNE_NORTH
+walks	61	CHARGE
+to	FISHING_GUILD	then run east
+banks	64	ARDOUGNE_NORTH
+walks	59	CONSUMABLE
+via	FISHING_CAPE	Fishing cape to the Fishing Guild, then run east
+banks	35	ARDOUGNE_NORTH
+walks	74	FREE
+via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run west
+banks	160	ARDOUGNE_NORTH
+walks	62	FREE
+to	ARDOUGNE	then run north
+banks	52	ARDOUGNE_NORTH
+walks	97	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run west
+banks	161	ARDOUGNE_NORTH
+walks	72	FREE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+
+site	ARDOUGNE_FLOWER	HERB
+pick	pickArdougneFlower	-	Ardougne	Ardougne flowers	-
+stop	ARCEUUS LUNAR	ARDOUGNE_FLOWER
+at	ARDOUGNE_FARM
+via	ARDOUGNE_CLOAK_4	Ardougne cloak 4 to the farm
+banks	175	ARDOUGNE_NORTH
+walks	5	FREE
+via	ARDOUGNE_CLOAK_3	Ardougne cloak 3 to the farm
+banks	175	ARDOUGNE_NORTH
+walks	5	CHARGE
+via	ARDOUGNE_CLOAK_2	Ardougne cloak 2 to the farm
+banks	173	ARDOUGNE_NORTH
+walks	5	CHARGE
+via	SKILLS_NECKLACE	Skills necklace to the Fishing Guild, then run east
+banks	63	ARDOUGNE_NORTH
+walks	61	CHARGE
+to	FISHING_GUILD	then run east
+banks	64	ARDOUGNE_NORTH
+walks	59	CONSUMABLE
+via	FISHING_CAPE	Fishing cape to the Fishing Guild, then run east
+banks	35	ARDOUGNE_NORTH
+walks	74	FREE
+via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run west
+banks	160	ARDOUGNE_NORTH
+walks	62	FREE
+to	ARDOUGNE	then run north
+banks	52	ARDOUGNE_NORTH
+walks	97	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run west
+banks	161	ARDOUGNE_NORTH
+walks	72	FREE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+
+site	FALADOR_NORTH_WEST_ALLOTMENT	HERB
+pick	pickFaladorNorthWest	compostFaladorNorthWest	Falador	Falador north-west	-
+stop	ARCEUUS	FALADOR_NORTH_WEST_ALLOTMENT
+at	FALADOR_FARM
+via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
+walks	20	CHARGE
+via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
+walks	55	FREE
+via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
+walks	95	CHARGE
+to	FALADOR	then run south-east
+banks	22	FALADOR_EAST
+walks	129	CONSUMABLE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+stop	LUNAR	FALADOR_NORTH_WEST_ALLOTMENT
+at	FALADOR_FARM
+via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
+walks	20	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Construction cape to your house, then its spirit tree to Port Sarim, then run north
+walks	55	FREE
+via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
+walks	95	CHARGE
+to	FALADOR	then run south-east
+banks	22	FALADOR_EAST
+walks	129	CONSUMABLE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+
+site	FALADOR_SOUTH_EAST_ALLOTMENT	HERB
+pick	pickFaladorSouthEast	compostFaladorSouthEast	Falador	Falador south-east	-
+stop	ARCEUUS	FALADOR_SOUTH_EAST_ALLOTMENT
+at	FALADOR_FARM
+via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
+walks	20	CHARGE
+via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
+walks	55	FREE
+via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
+walks	95	CHARGE
+to	FALADOR	then run south-east
+banks	22	FALADOR_EAST
+walks	129	CONSUMABLE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+stop	LUNAR	FALADOR_SOUTH_EAST_ALLOTMENT
+at	FALADOR_FARM
+via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
+walks	20	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Construction cape to your house, then its spirit tree to Port Sarim, then run north
+walks	55	FREE
+via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
+walks	95	CHARGE
+to	FALADOR	then run south-east
+banks	22	FALADOR_EAST
+walks	129	CONSUMABLE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+
+site	FALADOR_FLOWER	HERB
+pick	pickFaladorFlower	-	Falador	Falador flowers	-
+stop	ARCEUUS	FALADOR_FLOWER
+at	FALADOR_FARM
+via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
+walks	20	CHARGE
+via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
+walks	55	FREE
+via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
+walks	95	CHARGE
+to	FALADOR	then run south-east
+banks	22	FALADOR_EAST
+walks	129	CONSUMABLE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+stop	LUNAR	FALADOR_FLOWER
+at	FALADOR_FARM
+via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
+walks	20	CHARGE
+via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
+walks	20	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Construction cape to your house, then its spirit tree to Port Sarim, then run north
+walks	55	FREE
+via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
+walks	95	CHARGE
+to	FALADOR	then run south-east
+banks	22	FALADOR_EAST
+walks	129	CONSUMABLE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
+
+site	MORYTANIA_NORTH_WEST_ALLOTMENT	HERB
+pick	pickCanifisNorthWest	compostCanifisNorthWest	Canifis	Canifis north-west	-
+stop	ARCEUUS	MORYTANIA_NORTH_WEST_ALLOTMENT
+at	CANIFIS
+accessGate	MORYTANIA_ACCESS
+to	FENKENSTRAINS_CASTLE	-
+banks	157	CANIFIS
+walks	56	CONSUMABLE
+via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
+banks	272	CANIFIS
+walks	60	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
+banks	216	CANIFIS
+walks	40	FREE
+to	SALVE_GRAVEYARD	then run east
+walks	181	CONSUMABLE
+noAlternative
+optional	Worked while at the herb patch beside it
+stop	LUNAR	MORYTANIA_NORTH_WEST_ALLOTMENT
+at	CANIFIS
+accessGate	MORYTANIA_ACCESS
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	56	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
+banks	216	CANIFIS
+walks	40	FREE
+onlyFromAstart
+to	FENKENSTRAINS_CASTLE	-
+banks	157	CANIFIS
+walks	56	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
+banks	216	CANIFIS
+walks	40	FREE
+swapTo	FENKENSTRAINS_CASTLE	-
+banks	157	CANIFIS
+walks	56	CONSUMABLE
+via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
+banks	272	CANIFIS
+walks	60	FREE
+to	SALVE_GRAVEYARD	then run east
+walks	181	CONSUMABLE
+noAlternative
+optional	Worked while at the herb patch beside it
+
+site	MORYTANIA_SOUTH_EAST_ALLOTMENT	HERB
+pick	pickCanifisSouthEast	compostCanifisSouthEast	Canifis	Canifis south-east	-
+stop	ARCEUUS	MORYTANIA_SOUTH_EAST_ALLOTMENT
+at	CANIFIS
+accessGate	MORYTANIA_ACCESS
+to	FENKENSTRAINS_CASTLE	-
+banks	157	CANIFIS
+walks	56	CONSUMABLE
+via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
+banks	272	CANIFIS
+walks	60	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
+banks	216	CANIFIS
+walks	40	FREE
+to	SALVE_GRAVEYARD	then run east
+walks	181	CONSUMABLE
+noAlternative
+optional	Worked while at the herb patch beside it
+stop	LUNAR	MORYTANIA_SOUTH_EAST_ALLOTMENT
+at	CANIFIS
+accessGate	MORYTANIA_ACCESS
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	56	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
+banks	216	CANIFIS
+walks	40	FREE
+onlyFromAstart
+to	FENKENSTRAINS_CASTLE	-
+banks	157	CANIFIS
+walks	56	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
+banks	216	CANIFIS
+walks	40	FREE
+swapTo	FENKENSTRAINS_CASTLE	-
+banks	157	CANIFIS
+walks	56	CONSUMABLE
+via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
+banks	272	CANIFIS
+walks	60	FREE
+to	SALVE_GRAVEYARD	then run east
+walks	181	CONSUMABLE
+noAlternative
+optional	Worked while at the herb patch beside it
+
+site	MORYTANIA_FLOWER	HERB
+pick	pickCanifisFlower	-	Canifis	Canifis flowers	-
+stop	ARCEUUS	MORYTANIA_FLOWER
+at	CANIFIS
+accessGate	MORYTANIA_ACCESS
+to	FENKENSTRAINS_CASTLE	-
+banks	157	CANIFIS
+walks	56	CONSUMABLE
+via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
+banks	272	CANIFIS
+walks	60	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
+banks	216	CANIFIS
+walks	40	FREE
+to	SALVE_GRAVEYARD	then run east
+walks	181	CONSUMABLE
+noAlternative
+optional	Worked while at the herb patch beside it
+stop	LUNAR	MORYTANIA_FLOWER
+at	CANIFIS
+accessGate	MORYTANIA_ACCESS
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	56	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
+banks	216	CANIFIS
+walks	40	FREE
+onlyFromAstart
+to	FENKENSTRAINS_CASTLE	-
+banks	157	CANIFIS
+walks	56	CONSUMABLE
+via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
+banks	216	CANIFIS
+walks	40	FREE
+swapTo	FENKENSTRAINS_CASTLE	-
+banks	157	CANIFIS
+walks	56	CONSUMABLE
+via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
+banks	272	CANIFIS
+walks	60	FREE
+to	SALVE_GRAVEYARD	then run east
+walks	181	CONSUMABLE
+noAlternative
+optional	Worked while at the herb patch beside it
+
+site	ORTUS_NORTH_ALLOTMENT	HERB
+pick	pickOrtusNorth	compostOrtusNorth	Ortus	Ortus north	-
+stop	ARCEUUS LUNAR	ORTUS_NORTH_ALLOTMENT
+at	ORTUS_FARM
+via	QUETZAL_WHISTLE	Quetzal whistle to the Hunter Guild landing site, then run north
+banks	87	HUNTER_GUILD
+walks	47	CHARGE
+to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+banks	87	HUNTER_GUILD
+walks	62	CONSUMABLE
+via	HUNTER_CAPE	Hunter cape to the Hunter Guild, then run north
+banks	36	HUNTER_GUILD
+walks	74	FREE
+via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AJP to the Avium Savannah, then run north-west
+banks	106	CIVITAS_ILLA_FORTIS_WEST
+walks	91	FREE
+to	CIVITAS_ILLA_FORTIS	then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	114	CONSUMABLE
+to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Hunter Guild, then run north
+banks	87	HUNTER_GUILD
+walks	127	CONSUMABLE
+noFallbackGiven
+optional	Worked while at the herb patch beside it
+
+site	ORTUS_SOUTH_ALLOTMENT	HERB
+pick	pickOrtusSouth	compostOrtusSouth	Ortus	Ortus south	-
+stop	ARCEUUS LUNAR	ORTUS_SOUTH_ALLOTMENT
+at	ORTUS_FARM
+via	QUETZAL_WHISTLE	Quetzal whistle to the Hunter Guild landing site, then run north
+banks	87	HUNTER_GUILD
+walks	47	CHARGE
+to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+banks	87	HUNTER_GUILD
+walks	62	CONSUMABLE
+via	HUNTER_CAPE	Hunter cape to the Hunter Guild, then run north
+banks	36	HUNTER_GUILD
+walks	74	FREE
+via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AJP to the Avium Savannah, then run north-west
+banks	106	CIVITAS_ILLA_FORTIS_WEST
+walks	91	FREE
+to	CIVITAS_ILLA_FORTIS	then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	114	CONSUMABLE
+to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Hunter Guild, then run north
+banks	87	HUNTER_GUILD
+walks	127	CONSUMABLE
+noFallbackGiven
+optional	Worked while at the herb patch beside it
+
+site	ORTUS_FLOWER	HERB
+pick	pickOrtusFlower	-	Ortus	Ortus flowers	-
+stop	ARCEUUS LUNAR	ORTUS_FLOWER
+at	ORTUS_FARM
+via	QUETZAL_WHISTLE	Quetzal whistle to the Hunter Guild landing site, then run north
+banks	87	HUNTER_GUILD
+walks	47	CHARGE
+to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+banks	87	HUNTER_GUILD
+walks	62	CONSUMABLE
+via	HUNTER_CAPE	Hunter cape to the Hunter Guild, then run north
+banks	36	HUNTER_GUILD
+walks	74	FREE
+via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AJP to the Avium Savannah, then run north-west
+banks	106	CIVITAS_ILLA_FORTIS_WEST
+walks	91	FREE
+to	CIVITAS_ILLA_FORTIS	then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	114	CONSUMABLE
+to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Hunter Guild, then run north
+banks	87	HUNTER_GUILD
+walks	127	CONSUMABLE
+noFallbackGiven
+optional	Worked while at the herb patch beside it
+
+site	HARMONY_ALLOTMENT	HERB
+pick	pickHarmony	-	Harmony	Harmony allotment	-
+stop	LUNAR	HARMONY_ALLOTMENT
+at	HARMONY_ISLAND
+accessGate	HARMONY_ISLAND_ACCESS
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_HARMONY)	Construction cape to your house, then the Harmony Island portal
+walks	27	FREE
+via	all(CONSTRUCTION_CAPE,POH_NEXUS_HARMONY)	Construction cape to your house, then Harmony Island from the Portal Nexus
+walks	27	FREE
+to	HARMONY_ISLAND	-
+walks	28	CONSUMABLE
+swapTo	HARMONY_ISLAND	-
+walks	27	CONSUMABLE
+skipIfUnreachable
+optional	Worked while at the herb patch beside it
 
 site	POTATO_CACTUS	HERB
 stop	ARCEUUS LUNAR	AL_KHARID_CACTUS
@@ -454,7 +1015,7 @@ site	MUSHROOMS	HERB
 stop	ARCEUUS LUNAR	MORT_MYRE_MUSHROOM
 at	MORT_MYRE
 accessGate	MORYTANIA_ACCESS
-to	SALVE_GRAVEYARD	then run north-east to the patch
+to	SALVE_GRAVEYARD	then run north-east
 walks	19	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring CKS, then run east
 walks	2	FREE
@@ -468,7 +1029,7 @@ everyNthRun	3
 site	BELLADONNA	HERB
 stop	ARCEUUS LUNAR	DRAYNOR_MANOR_BELLADONNA
 at	DRAYNOR_MANOR
-to	DRAYNOR_MANOR	then run west to the patch
+to	DRAYNOR_MANOR	then run west
 walks	49	CONSUMABLE
 via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch, then run east
 walks	115	CHARGE
@@ -502,39 +1063,17 @@ plants	BELLADONNA
 optional	Grows more slowly than a herb run comes round
 everyNthRun	4
 
-site	ORTUS_FARM	HERB
-switch	visitOrtusFarm	Ortus Farm
-stop	ARCEUUS LUNAR	ORTUS_HERB
-at	ORTUS_FARM
-via	QUETZAL_WHISTLE	Quetzal whistle to the Hunter Guild landing site, then run north
-banks	87	HUNTER_GUILD
-walks	47	CHARGE
-to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
-banks	87	HUNTER_GUILD
-walks	62	CONSUMABLE
-via	HUNTER_CAPE	Hunter cape to the Hunter Guild, then run north
-banks	36	HUNTER_GUILD
-walks	74	FREE
-via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AJP to the Avium Savannah, then run north-west
-banks	106	CIVITAS_ILLA_FORTIS_WEST
-walks	91	FREE
-to	CIVITAS_ILLA_FORTIS	then run south-west from Sunrise Palace
-banks	15	CIVITAS_ILLA_FORTIS_WEST
-walks	114	CONSUMABLE
-to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Hunter Guild, then run north
-banks	87	HUNTER_GUILD
-walks	127	CONSUMABLE
-noFallbackGiven
-optional	No fixed place in the run; weave it in
-
 site	FOSSIL_ISLAND	HARDWOOD
 switch	visitFossilIsland	Fossil Island
 stop	ANY	FOSSIL_ISLAND_HARDWOOD_EAST,FOSSIL_ISLAND_HARDWOOD_MIDDLE,FOSSIL_ISLAND_HARDWOOD_WEST
 at	FOSSIL_ISLAND_HARDWOOD
 accessGate	CANAL_BARGE
-via	all(DIGSITE_PENDANT,CANAL_BARGE)	Digsite pendant to the Digsite, then the barge and the shortcut
+via	all(DIGSITE_PENDANT,CANAL_BARGE,FOSSIL_ISLAND_HOLE)	Digsite pendant to the Digsite, then the barge and the hole under the hill
+banks	32	MUSEUM_CAMP
+walks	33	CHARGE
+via	all(DIGSITE_PENDANT,CANAL_BARGE)	Digsite pendant to the Digsite, then the barge, then run round the hill
 banks	10	MUSEUM_CAMP
-walks	72	CHARGE
+walks	75	CHARGE
 noAlternative
 
 site	LOCUS_OASIS	HARDWOOD
@@ -569,7 +1108,7 @@ at	KASTORI
 accessGate	VARLAMORE_ACCESS
 via	all(PENDANT_OF_ATES,ATES_STATUE_KASTORI)	Pendant of Ates to the statue north of Kastori, then run south-west
 walks	56	CHARGE
-via	all(QUETZAL_WHISTLE,QUETZAL_SITE_KASTORI)	Quetzal whistle to the Kastori landing site, then run north-east. If you have a pendant of Ates, activate the statue north of the patch.
+via	all(QUETZAL_WHISTLE,QUETZAL_SITE_KASTORI)	Quetzal whistle to the Kastori landing site, then run north-east
 walks	20	CHARGE
 to	CIVITAS_ILLA_FORTIS	all(RENU,QUETZAL_SITE_KASTORI)	then run east to the quetzal landing site and ride Renu to Kastori, then run north-east
 walks	35	CONSUMABLE
@@ -698,7 +1237,7 @@ to	VARROCK	SPIRIT_TREE_NETWORK	then run north to the Grand Exchange spirit tree 
 banks	0	GNOME_STRONGHOLD_SOUTH
 walks	123	CONSUMABLE
 via	ROYAL_SEED_POD	Royal seed pod to the Grand Tree, then out of the tree and run south-west
-banks	3	GNOME_STRONGHOLD_NORTH
+banks	1	GNOME_STRONGHOLD_SOUTH
 walks	79	FREE
 via	all(RING_OF_DUELING,GNOME_GLIDER)	Ring of dueling to Al Kharid, then the glider
 skipIfUnreachable
@@ -710,9 +1249,13 @@ at	NEMUS_RETREAT
 accessGate	VARLAMORE_ACCESS
 via	all(PENDANT_OF_ATES,ATES_STATUE_NEMUS_RETREAT)	Pendant of Ates to Nemus Retreat
 walks	57	CHARGE
-via	all(QUETZAL_WHISTLE,MOUNTAIN_GUIDE)	Quetzal whistle to Quetzacalli Gorge, then the mountain guide. If you have a pendant of Ates, activate the statue at Nemus Retreat.
+via	all(QUETZAL_WHISTLE,MOUNTAIN_GUIDE)	Quetzal whistle to Quetzacalli Gorge, then the mountain guide
 walks	44	CHARGE
-to	VARROCK	all(RENU,MOUNTAIN_GUIDE)	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to Quetzacalli Gorge, then the mountain guide. If you have a pendant of Ates, activate the statue at Nemus Retreat.
+to	CIVITAS_ILLA_FORTIS	all(RENU,MOUNTAIN_GUIDE)	then run east to the quetzal landing site, ride Renu to Quetzacalli Gorge, then the mountain guide
+walks	59	CONSUMABLE
+via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn Valley, then run west to Nemus Retreat
+walks	111	FREE
+to	VARROCK	all(RENU,MOUNTAIN_GUIDE)	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to Quetzacalli Gorge, then the mountain guide
 walks	124	CONSUMABLE
 skipIfUnreachable
 
@@ -813,7 +1356,7 @@ at	KASTORI
 accessGate	VARLAMORE_ACCESS
 via	all(PENDANT_OF_ATES,ATES_STATUE_KASTORI)	Pendant of Ates to the statue north of Kastori, then run south-west
 walks	34	CHARGE
-via	all(QUETZAL_WHISTLE,QUETZAL_SITE_KASTORI)	Quetzal whistle to the Kastori landing site, then run north-east. If you have a pendant of Ates, activate the statue north of the patch.
+via	all(QUETZAL_WHISTLE,QUETZAL_SITE_KASTORI)	Quetzal whistle to the Kastori landing site, then run north-east
 walks	33	CHARGE
 to	CIVITAS_ILLA_FORTIS	all(RENU,QUETZAL_SITE_KASTORI)	then run east to the quetzal landing site and ride Renu to Kastori, then run north-east
 walks	48	CONSUMABLE

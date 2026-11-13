@@ -6,6 +6,8 @@ import com.larryfarming.farming.engine.DailyTeleportLedger;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import java.util.*;
+import lombok.AccessLevel;
+import lombok.With;
 
 /**
  * Answers what a player can currently do, both for single capabilities and for the
@@ -43,18 +45,22 @@ public final class CapabilityResolver {
      * Governs both {@link #teleport}'s already-there check and {@code STANDING_IN}, which
      * must switch together. See {@link #blindToPosition()}.
      */
+    @With(AccessLevel.PRIVATE)
     private final boolean readsPosition;
 
     /** Travel methods the player has switched off. See {@link #switchingOff}. */
+    @With(AccessLevel.PRIVATE)
     private final Set<TravelMethod> switchedOff;
 
     /** House items the player has declared built. See {@link #declaringHouse}. */
+    @With(AccessLevel.PRIVATE)
     private final Set<Capability> houseDeclared;
 
     /**
      * The teleport already spent on the way to the next stop. Read only with
      * {@link #readsPosition}: it pays for the stop it was cast for, never a later one.
      */
+    @With(AccessLevel.PRIVATE)
     private final TravelTaken taken;
 
     /** The book this resolver plans for: the one the trip will be walked on. */
@@ -72,6 +78,11 @@ public final class CapabilityResolver {
         this(onBook, dailyLedger, nowEpochSec, sight, house, true, Set.of(), Set.of(), TravelTaken.NONE);
     }
 
+    /**
+     * Every field in declaration order, which the {@code with} copies call. The Lombok copies
+     * return this resolver only for an identical value, so the derivations below keep their
+     * own {@code equals} checks for an equal one.
+     */
     private CapabilityResolver(Spellbook onBook, DailyTeleportLedger dailyLedger,
             long nowEpochSec, PatchSight sight, HouseSight house, boolean readsPosition,
             Set<TravelMethod> switchedOff, Set<Capability> houseDeclared, TravelTaken taken) {
@@ -92,8 +103,7 @@ public final class CapabilityResolver {
      * Derived from this resolver so the two cannot drift in anything else they carry.
      */
     public CapabilityResolver blindToPosition() {
-        return readsPosition ? new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house, false,
-                        switchedOff, houseDeclared, taken) : this;
+        return withReadsPosition(false);
     }
 
     /**
@@ -108,8 +118,7 @@ public final class CapabilityResolver {
     public CapabilityResolver switchingOff(Set<TravelMethod> methods) {
         Set<TravelMethod> wanted = methods == null || methods.isEmpty() ? Set.of()
                 : Collections.unmodifiableSet(EnumSet.copyOf(methods));
-        return wanted.equals(switchedOff) ? this : new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house,
-                        readsPosition, wanted, houseDeclared, taken);
+        return wanted.equals(switchedOff) ? this : withSwitchedOff(wanted);
     }
 
     /**
@@ -123,8 +132,7 @@ public final class CapabilityResolver {
     public CapabilityResolver declaringHouse(Set<Capability> declared) {
         Set<Capability> wanted = declared == null || declared.isEmpty() ? Set.of()
                 : Collections.unmodifiableSet(EnumSet.copyOf(declared));
-        return wanted.equals(houseDeclared) ? this : new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house,
-                        readsPosition, switchedOff, wanted, taken);
+        return wanted.equals(houseDeclared) ? this : withHouseDeclared(wanted);
     }
 
     /**
@@ -134,8 +142,7 @@ public final class CapabilityResolver {
      */
     public CapabilityResolver travelling(TravelTaken spent) {
         TravelTaken wanted = spent != null ? spent : TravelTaken.NONE;
-        return wanted.equals(taken) ? this : new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house,
-                        readsPosition, switchedOff, houseDeclared, wanted);
+        return wanted.equals(taken) ? this : withTaken(wanted);
     }
 
     /** Whether a spent teleport may answer for the stop this resolver plans. */
@@ -194,14 +201,9 @@ public final class CapabilityResolver {
     }
 
     /**
-     * Whether a tablet may take the player to this place: tablets are on, and so is this
-     * place's own tablet where it has a switch of its own.
+     * The switch that refuses this place's tablet, or null while the tablet is allowed:
+     * tablets are on, and so is this place's own tablet where it has a switch of its own.
      */
-    private boolean tabletsAllowed(Destination destination) {
-        return tabletsOff(destination) == null;
-    }
-
-    /** The switch that refuses this place's tablet, or null while the tablet is allowed. */
     private TravelMethod tabletsOff(Destination destination) {
         if (switchedOff.contains(TravelMethod.TELEPORT_TABLETS)) {
             return TravelMethod.TELEPORT_TABLETS;
@@ -552,7 +554,7 @@ public final class CapabilityResolver {
      */
     private Gap gapToPlace(Requirement place, PlayerState state) {
         Destination destination = place.getDestination();
-        boolean tablets = tabletsAllowed(destination);
+        boolean tablets = tabletsOff(destination) == null;
         TeleportPlanner.Choice choice = place.isBySwap() ? bySwap(destination, state) : teleport(destination, state);
         if (choice.getState() == CapabilityState.HAVE) {
             return Gap.NONE;

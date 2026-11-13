@@ -143,7 +143,7 @@ public class FarmingStopAdvice {
     boolean optional;
 
     /**
-     * Why this one is optional, as the catalogue words it: "regrows more slowly than a herb
+     * Why this one is optional, as the catalogue words it: "Grows more slowly than a herb
      * run comes round". Empty for a stop that is simply part of the route.
      *
      * <p>Kept out of {@link #getBecause()}, which for a visited stop holds the route.
@@ -183,8 +183,7 @@ public class FarmingStopAdvice {
      * here, or failing that the crop being harvested or checked. 0 when no single crop
      * covers the work, such as a contract errand alone.
      *
-     * <p>Not read off {@link #getPlants()}: a replant folded into the harvest line and a
-     * check both leave the plantings without that crop.
+     * <p>Not read off {@link #getPlants()}: a check leaves the plantings without that crop.
      */
     int iconItemId;
 

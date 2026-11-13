@@ -81,13 +81,13 @@ public final class LoadoutPlanner {
             if (worn != null && pick.getItemIds().contains(worn.getItemId())) {
                 return new SlotAdvice(slot, SlotAdvice.Verdict.SET, pick.formHolding(worn.getItemId()), "");
             }
-            int carried = firstCarried(state, pick);
+            int carried = first(state, pick, true);
             if (carried > 0) {
                 // Carrying serves the run for every item that need not be worn.
                 GearPick held = pick.formHolding(carried);
                 return slot.isMustWear() ? swap(slot, held) : new SlotAdvice(slot, SlotAdvice.Verdict.SET, held, "");
             }
-            int owned = firstOwned(state, pick);
+            int owned = first(state, pick, false);
             if (owned > 0) {
                 return swap(slot, pick.formHolding(owned));
             }
@@ -119,23 +119,17 @@ public final class LoadoutPlanner {
         return LookOnce.joined(names, conjunction);
     }
 
-    /** The first of this pick's items in the inventory, or 0 when none is. */
-    private static int firstCarried(PlayerState state, GearPick pick) {
-        for (int itemId : pick.getItemIds()) {
-            if (ItemCounts.countCarried(state, itemId, null) > 0) {
-                return itemId;
-            }
-        }
-        return 0;
-    }
-
     /**
-     * The first charge level, trim or form of this item the player owns, including in the
-     * bank, or 0 when they own none.
+     * The first charge level, trim or form of this pick's item the player has, or 0 when
+     * they have none.
+     *
+     * @param carried true to look only on the player, false to count the bank and every
+     *                other place they own items
      */
-    private static int firstOwned(PlayerState state, GearPick pick) {
+    private static int first(PlayerState state, GearPick pick, boolean carried) {
         for (int itemId : pick.getItemIds()) {
-            if (ItemCounts.countOwned(state, itemId, null) > 0) {
+            int count = carried ? ItemCounts.countCarried(state, itemId, null) : ItemCounts.countOwned(state, itemId, null);
+            if (count > 0) {
                 return itemId;
             }
         }
@@ -154,14 +148,15 @@ public final class LoadoutPlanner {
      */
     public static List<FarmingUpgrade> upgrades(List<SlotAdvice> plan) {
         List<FarmingUpgrade> rows = new ArrayList<>();
-        List<String> groupsDone = new ArrayList<>();
+        // Which groups already have their one row. Row order is kept by rows, not here.
+        Set<String> groupsDone = new HashSet<>();
         addEquips(plan, rows, false, groupsDone);
         addEquips(plan, rows, true, groupsDone);
         addGoals(plan, rows, groupsDone);
         return rows;
     }
 
-    private static void addEquips(List<SlotAdvice> plan, List<FarmingUpgrade> rows, boolean niceToHave, List<String> groupsDone) {
+    private static void addEquips(List<SlotAdvice> plan, List<FarmingUpgrade> rows, boolean niceToHave, Set<String> groupsDone) {
         for (SlotAdvice advice : plan) {
             String group = advice.getSlot().getGroup();
             if (advice.getVerdict() != SlotAdvice.Verdict.SWAP || advice.getSlot().isNiceToHave() != niceToHave) {
@@ -170,16 +165,15 @@ public final class LoadoutPlanner {
             if (group == null) {
                 rows.add(new FarmingUpgrade(FarmingUpgrade.Kind.EQUIP, advice.getBest().getIconItemId(), advice.getBest().getDisplayName(),
                         advice.getTip()));
-            } else if (!groupsDone.contains(group)) {
+            } else if (groupsDone.add(group)) {
                 // One row for the outfit, drawn as the first piece to put on.
-                groupsDone.add(group);
                 rows.add(new FarmingUpgrade(FarmingUpgrade.Kind.EQUIP,
                         advice.getBest().getIconItemId(), group, Loadouts.OUTFIT_TIP));
             }
         }
     }
 
-    private static void addGoals(List<SlotAdvice> plan, List<FarmingUpgrade> rows, List<String> groupsDone) {
+    private static void addGoals(List<SlotAdvice> plan, List<FarmingUpgrade> rows, Set<String> groupsDone) {
         for (SlotAdvice advice : plan) {
             LoadoutSlot slot = advice.getSlot();
             if (advice.getVerdict() != SlotAdvice.Verdict.NOTHING_YET) {
@@ -188,8 +182,7 @@ public final class LoadoutPlanner {
             if (slot.getGroup() == null) {
                 GearPick goal = slot.getGoal();
                 rows.add(new FarmingUpgrade(FarmingUpgrade.Kind.GOAL, goal.getIconItemId(), goal.getDisplayName(), slot.getGoalSentence()));
-            } else if (!groupsDone.contains(slot.getGroup())) {
-                groupsDone.add(slot.getGroup());
+            } else if (groupsDone.add(slot.getGroup())) {
                 rows.add(groupRow(plan, slot.getGroup()));
             }
         }

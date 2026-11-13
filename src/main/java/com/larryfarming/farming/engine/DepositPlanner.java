@@ -8,6 +8,7 @@ import com.larryfarming.model.ItemStack;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.*;
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.*;
 import net.runelite.api.gameval.ItemID;
 
@@ -19,9 +20,10 @@ import net.runelite.api.gameval.ItemID;
  * list would be a guess at a bag that does not exist yet.
  *
  * <p>Only the trip's own things are named: what Larry asked the player to bring and they
- * fetched for it, and what the run left behind (empty pots and buckets, produce, roots). The
+ * fetched for it, what the run left behind (empty pots and buckets, produce, roots), and
+ * loose seeds and saplings the rest of the trip does not plant, however they came. The
  * player's own kit stays theirs: the rune pouch, the seed box and its seeds, their coins,
- * anything they carried before packing, and anything worn, which never sits in the
+ * anything else they carried before packing, and anything worn, which never sits in the
  * inventory. Produce they brought from elsewhere, fruit for eating say, reads as left behind
  * and may be named.
  */
@@ -65,10 +67,8 @@ public final class DepositPlanner {
             return before;
         }
         Map<Integer, Integer> counts = new HashMap<>();
-        for (ItemStack stack : state.getInventory()) {
-            if (stack != null && stack.getItemId() > 0) {
-                counts.merge(stack.getItemId(), stack.getQuantity(), Integer::sum);
-            }
+        for (ItemStack stack : held(state)) {
+            counts.merge(stack.getItemId(), stack.getQuantity(), Integer::sum);
         }
         Map<Integer, Integer> lowest;
         if (built.isUnderway()) {
@@ -157,16 +157,16 @@ public final class DepositPlanner {
         }
         Set<Integer> keep = new HashSet<>(RunePouch.POUCH_ITEM_IDS);
         keep.addAll(SeedBox.BOX_ITEM_IDS);
+        // How many of each thing the rest of the trip uses, by every form of it.
+        Map<Integer, Integer> later = new HashMap<>();
         for (FarmingCarryItem line : neededLater) {
             keep.addAll(CarryPlanner.formsOf(line.getItemId()));
+            CarryPlanner.formsOf(line.getItemId()).forEach(form -> later.merge(form, line.getQuantity(), Integer::sum));
         }
 
         Map<Integer, Integer> counts = new LinkedHashMap<>();
         Map<Integer, String> names = new LinkedHashMap<>();
-        for (ItemStack stack : state.getInventory()) {
-            if (stack == null || stack.getItemId() <= 0) {
-                continue;
-            }
+        for (ItemStack stack : held(state)) {
             counts.merge(stack.getItemId(), stack.getQuantity(), Integer::sum);
             names.putIfAbsent(stack.getItemId(), stack.getName());
         }
@@ -174,7 +174,11 @@ public final class DepositPlanner {
         List<FarmingCarryItem> deposits = new ArrayList<>();
         for (Map.Entry<Integer, Integer> held : counts.entrySet()) {
             int itemId = held.getKey();
-            if (keep.contains(itemId)) {
+            // A seed or sapling is planting stock whoever packed it: what the rest of the trip
+            // does not plant goes back, and only that many when some of it still goes in.
+            boolean stock = !CropData.tagForPlantable(itemId).isEmpty();
+            int spare = held.getValue() - later.getOrDefault(itemId, 0);
+            if (stock ? spare <= 0 : keep.contains(itemId)) {
                 continue;
             }
             boolean travel = CarryItems.formsOf(itemId) != null;
@@ -186,14 +190,15 @@ public final class DepositPlanner {
             if (packedThisTrip.contains(itemId) && ItemCounts.leprechaunStores(itemId)) {
                 continue;
             }
-            if (!packedThisTrip.contains(itemId) && !leftBehind(itemId)) {
+            if (!stock && !packedThisTrip.contains(itemId) && !leftBehind(itemId)) {
                 continue;
             }
-            // No count on the tile: the whole stack goes back, and a count that ticks up with
-            // every herb picked would redraw the route mid-harvest.
+            // No count on the tile while the whole stack goes back: a count that ticks up with
+            // every herb picked would redraw the route mid-harvest. Spare planting stock beside
+            // what still goes in says how many.
             deposits.add(new FarmingCarryItem(travel ? FarmingCarryItem.Kind.TRAVEL : FarmingCarryItem.Kind.TOOL,
-                    itemId, names.get(itemId), 0, FarmingCarryItem.Availability.CARRIED, CropData.tagForPlantable(itemId), "",
-                    held.getValue()));
+                    itemId, names.get(itemId), spare < held.getValue() ? spare : 0, FarmingCarryItem.Availability.CARRIED,
+                    CropData.tagForPlantable(itemId), "", held.getValue()));
         }
         return deposits;
     }
@@ -246,12 +251,11 @@ public final class DepositPlanner {
         if (state == null || state.getInventory() == null) {
             return false;
         }
-        int used = 0;
-        for (ItemStack stack : state.getInventory()) {
-            if (stack != null && stack.getItemId() > 0) {
-                used++;
-            }
-        }
-        return InventorySim.SLOTS - used < withdrawals + InventorySim.HARVEST_HEADROOM;
+        return InventorySim.SLOTS - held(state).size() < withdrawals + InventorySim.HARVEST_HEADROOM;
+    }
+
+    /** The inventory's occupied slots, in slot order; the caller has checked it was read. */
+    private static List<ItemStack> held(PlayerState state) {
+        return state.getInventory().stream().filter(stack -> stack != null && stack.getItemId() > 0).collect(Collectors.toList());
     }
 }

@@ -6,8 +6,7 @@ import com.larryfarming.farming.detection.*;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.FarmingRunStatus;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import lombok.*;
 
@@ -98,6 +97,34 @@ public final class FarmingInputs {
      * Once a trip is underway, the trip keeps that order. Never null.
      */
     private final List<String> ahead;
+    /** The account's compost step, stock and thermostat. Never null: absent reads {@link CompostStock#NONE}. */
+    private final CompostStock compost;
+    /**
+     * The volcanic ash this trip's Fertile Soil casts take, which the compost bins leave to
+     * them. Zero until a plan of this snapshot has counted the casts.
+     */
+    private final int fertileAsh;
+    /**
+     * The compost bins' verdicts and the quiet picks, judged once by {@link #seeing} for
+     * every reader of the copy it returns. Null before then. A generated {@code with} copy
+     * carries this judgement along, but it was made for the original inputs, so the copy
+     * works out its bins' verdicts and quiet picks afresh.
+     */
+    @Getter(AccessLevel.NONE)
+    @With(AccessLevel.PRIVATE)
+    private final Judgement bins;
+
+    /**
+     * What {@link #seeing} judged for one player: the bins' verdicts and the preset picks the
+     * account can't plant yet. Owned by the one copy of the inputs that reads them.
+     */
+    @RequiredArgsConstructor
+    private static final class Judgement {
+        private final Map<CompostBins.Farm, CompostBins.Judged> verdicts;
+        private final Set<String> quiet;
+        private final PlayerState state;
+        private FarmingInputs owner;
+    }
 
     // On the constructor rather than the class, so every builder path goes through the
     // null normalisations below.
@@ -105,7 +132,10 @@ public final class FarmingInputs {
     private FarmingInputs(Spellbook previewBook, Function<PatchRef, PatchPrediction> patches, DailyTeleportLedger ledger, long nowEpochSec,
             Crop contractCrop, FarmingRunStatus contractRun,
             FarmingPreferences preferences, HouseSight house, boolean offeredBanksHidden, Set<Integer> packedThisTrip, TravelTaken travelTaken,
-            List<String> ahead) {
+            List<String> ahead, CompostStock compost, int fertileAsh, Judgement bins) {
+        this.compost = compost != null ? compost : CompostStock.NONE;
+        this.fertileAsh = fertileAsh;
+        this.bins = bins;
         this.packedThisTrip = packedThisTrip != null ? Set.copyOf(packedThisTrip) : Set.of();
         this.travelTaken = travelTaken != null ? travelTaken : TravelTaken.NONE;
         this.previewBook = previewBook;
@@ -189,14 +219,52 @@ public final class FarmingInputs {
 
     /**
      * These inputs with the sites this account is seen unable to reach marked on the
-     * preferences, so a run whose every reachable site is dropped switches off. Each entry
-     * point asks this of the state it plans, so the mark follows the account: a site that
-     * opens up holds its run open again. Read only while some site is dropped.
+     * preferences, so a run whose every reachable site is dropped switches off, and the
+     * preset's picks the account can't plant marked quiet. Each entry point asks this of the
+     * state it plans, so the marks follow the account: a site that opens up holds its run
+     * open again, and a pick starts planting at its level or with its seed in stock. Sites
+     * are read only while some site is dropped. The compost bins are judged here too, and
+     * every reader of the copy reads those verdicts. A copy this returned comes back as it
+     * is when asked again for the same player.
      */
     FarmingInputs seeing(PlayerState state) {
+        if (isSeenFor(state)) {
+            return this;
+        }
         Set<String> shut = preferences.sitesOff().isEmpty() ? Set.of() : RunSettings.shutSites(state, this::patchAt);
-        FarmingPreferences marked = preferences.withSitesShut(shut);
-        return marked == preferences ? this : withPreferences(marked);
+        Set<String> quiet = Set.copyOf(RunSettings.quietPicks(preferences, state, this::patchAt));
+        // Neither the bins' verdicts nor the quiet picks read the marks set below, so the
+        // verdicts judged here hold for the marked copy, and seeing that copy again for the
+        // same player changes nothing.
+        Map<CompostBins.Farm, CompostBins.Judged> judged = CompostBins.verdicts(this, state, quiet);
+        Set<String> held = new HashSet<>(quiet);
+        held.addAll(CompostBins.holding(this, judged));
+        FarmingPreferences marked = preferences.withSitesShut(shut).withPicksQuiet(held);
+        Judgement judgement = new Judgement(judged, quiet, state);
+        FarmingInputs seen = (marked == preferences ? this : withPreferences(marked)).withBins(judgement);
+        judgement.owner = seen;
+        return seen;
+    }
+
+    /** Whether {@link #seeing} returned this copy for this player. */
+    private boolean isSeenFor(PlayerState state) {
+        return bins != null && bins.owner == this && bins.state == state;
+    }
+
+    /**
+     * The compost bins' verdicts: those {@link #seeing} judged for this copy and player, or
+     * judged now for any other.
+     */
+    Map<CompostBins.Farm, CompostBins.Judged> bins(PlayerState state) {
+        return isSeenFor(state) ? bins.verdicts : CompostBins.verdicts(this, state);
+    }
+
+    /**
+     * The preset picks the account can't plant yet ({@link RunSettings#quietPicks}): those
+     * {@link #seeing} read for this copy and player, or read now for any other.
+     */
+    Set<String> quietPicks(PlayerState state) {
+        return isSeenFor(state) ? bins.quiet : RunSettings.quietPicks(preferences, state, this::patchAt);
     }
 
     /**

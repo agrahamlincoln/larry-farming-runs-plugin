@@ -3,9 +3,10 @@ package com.larryfarming.overlay;
 import com.larryfarming.snapshot.FarmingRunStatus;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import net.runelite.api.MenuAction;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
@@ -40,12 +41,10 @@ public class FarmingAdvisorInfoBox extends InfoBox {
     public FarmingAdvisorInfoBox(BufferedImage image, Plugin plugin, Supplier<List<FarmingRunStatus>> runs) {
         super(image, plugin);
         this.runs = runs;
-        // Right-clicking the box opens the side panel.
-        // The list must be mutable: InfoBoxManager.addInfoBox appends its own
-        // "Detach"/"Flip" entries, and an immutable list makes addInfoBox throw.
-        List<OverlayMenuEntry> menu = new ArrayList<>(1);
-        menu.add(new OverlayMenuEntry(MenuAction.RUNELITE_INFOBOX, MENU_OPTION, MENU_TARGET));
-        setMenuEntries(menu);
+        // Right-clicking the box opens the side panel. Added to InfoBox's own list, which
+        // must stay mutable: InfoBoxManager.addInfoBox appends its own "Detach"/"Flip"
+        // entries, and an immutable list makes addInfoBox throw.
+        getMenuEntries().add(new OverlayMenuEntry(MenuAction.RUNELITE_INFOBOX, MENU_OPTION, MENU_TARGET));
     }
 
     /** The right-click entry that opens the side panel, matched by the plugin. */
@@ -109,32 +108,15 @@ public class FarmingAdvisorInfoBox extends InfoBox {
     }
 
     private static List<FarmingRunStatus> due(List<FarmingRunStatus> runs) {
-        List<FarmingRunStatus> due = new ArrayList<>();
-        if (runs == null) {
-            return due;
-        }
-        for (FarmingRunStatus run : runs) {
-            if ("DUE".equals(run.getStatus())) {
-                due.add(run);
-            }
-        }
-        return due;
+        return runs == null ? List.of()
+                : runs.stream().filter(run -> "DUE".equals(run.getStatus())).collect(Collectors.toList());
     }
 
+    /** The pending run that finishes first; of two finishing together, the earlier listed. */
     private static FarmingRunStatus soonest(List<FarmingRunStatus> runs) {
-        FarmingRunStatus soonest = null;
-        if (runs == null) {
-            return null;
-        }
-        for (FarmingRunStatus run : runs) {
-            if (!"PENDING".equals(run.getStatus()) || run.getReadyAtEpochSec() <= 0) {
-                continue;
-            }
-            if (soonest == null || run.getReadyAtEpochSec() < soonest.getReadyAtEpochSec()) {
-                soonest = run;
-            }
-        }
-        return soonest;
+        return runs == null ? null : runs.stream()
+                .filter(run -> "PENDING".equals(run.getStatus()) && run.getReadyAtEpochSec() > 0)
+                .min(Comparator.comparingLong(FarmingRunStatus::getReadyAtEpochSec)).orElse(null);
     }
 
     /** True when at least one run is due; the plugin shows the box only then. */

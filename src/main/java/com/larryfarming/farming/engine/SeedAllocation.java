@@ -28,13 +28,6 @@ public class SeedAllocation {
     /** How many patches this end has to fill. */
     int wanted;
 
-    /**
-     * False when the answer rests on containers we have not been shown. Seeds live in the
-     * seed vault, which the game reports only while it is open, so before we have seen it
-     * an empty allocation means "I have not looked" rather than "you have none".
-     */
-    boolean confident;
-
     /** The crop for the nth best patch of this end, or null once the seeds run out. */
     public Crop at(int index) {
         return index >= 0 && index < perPatch.size() ? perPatch.get(index) : null;

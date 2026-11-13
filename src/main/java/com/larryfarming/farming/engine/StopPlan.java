@@ -4,7 +4,9 @@ import com.larryfarming.farming.detection.CapabilityState;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.snapshot.FarmingSkipReason;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.Value;
 import lombok.With;
 
@@ -89,6 +91,14 @@ public class StopPlan {
     /** A skip for a reason found in the ground or the stock, after the route was settled. */
     static StopPlan skip(RunStop stop, String because, FarmingSkipReason reason, long readyAtEpochSec) {
         return new StopPlan(stop, Outcome.SKIP, null, CapabilityState.HAVE, because, reason, readyAtEpochSec, Collections.emptySet(), null);
+    }
+
+    /**
+     * The entries of {@code all} at these indices, in the order given: the stops, or what
+     * they plant, at one arrival of a trip.
+     */
+    static <T> List<T> pick(List<T> all, List<Integer> indices) {
+        return indices.stream().map(all::get).collect(Collectors.toList());
     }
 
     public boolean isVisit() {

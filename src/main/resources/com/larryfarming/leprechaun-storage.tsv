@@ -5,7 +5,8 @@
 # for supplies, 100 for tools. Each id has RuneLite's ItemID or VarbitID constant in the
 # column after.
 #
-# Secateurs and the watering can are not counts of one item and have no rows here.
+# Secateurs have no rows here: plain and magic share one slot, which ItemCounts counts from
+# its own varbits. The watering can is not tracked.
 #
 # item id	ItemID name	varbit id	VarbitID name	shift
 # Ultracompost and plant cure each have a single ten-bit varbit (0-1023).

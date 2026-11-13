@@ -12,6 +12,7 @@
 # skill	capability	skill	level	description
 # houseIn	capability	town
 # open	capability	why everyone has it
+# diary	capability	area	tier	why yes	why no	why unsure (the tier's completion flag)
 #
 # Two kinds are facts rather than rules:
 # gate	capability	quest	how far along	(an item only that quest hands out or makes work)
@@ -74,7 +75,7 @@ gate	MOKHAIOTL_WAYSTONE	The Final Dawn	COMPLETED
 questItem	MOKHAIOTL_WAYSTONE	the Mokhaiotl waystone	a Mokhaiotl waystone
 # Velorina hands the ectophial over as the quest ends.
 gate	ECTOPHIAL	Ghosts Ahoy	COMPLETED
-questItem	ECTOPHIAL	the ectophial	a full ectophial
+questItem	ECTOPHIAL	the ectophial	an ectophial
 # King Narnode Shareen's reward, untradeable.
 gate	ROYAL_SEED_POD	Monkey Madness II	COMPLETED
 # Veos hands the memoirs over as the quest's reward.
@@ -92,7 +93,6 @@ varbit	ATES_STATUE_NEMUS_RETREAT	16757	PENDANT_OF_ATES_AUBURN_FOUND	1	the Nemus 
 items	SPADE	a spade	952	SPADE
 items	SEED_DIBBER	a seed dibber	5343	DIBBER
 items	MAGIC_SECATEURS	magic secateurs	7409	FAIRY_ENCHANTED_SECATEURS
-items	BOTTOMLESS_COMPOST_BUCKET	a bottomless compost bucket	22994 22997	BOTTOMLESS_COMPOST_BUCKET BOTTOMLESS_COMPOST_BUCKET_FILLED
 items	ULTRACOMPOST	ultracompost	21483	BUCKET_ULTRACOMPOST
 # Otto's planting lesson: 1 tasked, 2 seed planted, 3 reported back. The perk unlocks at 2,
 # when the seed is planted (wiki: "immediately upon successfully planting the seed
@@ -113,6 +113,14 @@ balloon	BALLOON_STATION_TAVERLEY	2868	ZEP_MULTI_PICCARD	Taverley
 balloon	BALLOON_STATION_CASTLE_WARS	2869	ZEP_MULTI_CAST	Castle Wars
 balloon	BALLOON_STATION_GRAND_TREE	2870	ZEP_MULTI_GNO	the Grand Tree
 balloon	BALLOON_STATION_VARROCK	2872	ZEP_MULTI_VARR	Varrock
+# The elite Lumbridge & Draynor diary lifts the fairy rings' staff requirement (wiki "Fairy
+# ring"). No quest does. An unread diary flag stays unsure, so the carry list keeps the
+# staff.
+diary	STAFFLESS_FAIRY_RINGS	Lumbridge	Elite	your elite Lumbridge & Draynor diary lets you use fairy rings without a staff	wield a dramen or lunar staff to use fairy rings	not sure whether you have the elite Lumbridge & Draynor diary
+# Completion flag: varbit 4480. Varbit 4585 holds the player's chosen Varrock landing,
+# which the house portal follows; the spell and the tablet offer the Grand Exchange
+# whichever landing is chosen.
+diary	VARROCK_DIARY_MEDIUM	Varrock	Medium	your medium Varrock diary lets the Varrock teleport land at the Grand Exchange	the Varrock teleport lands at the Grand Exchange only after the medium Varrock diary	not sure whether you have the medium Varrock diary
 quest	GNOME_GLIDER	The Grand Tree	the gnome gliders
 quest	CANAL_BARGE	Bone Voyage	the barge to Fossil Island
 # Started, not finished: Brother Tranquility ferries anyone who has begun the quest. The
@@ -152,6 +160,7 @@ spell	FERTILE_SOIL	83	Lunar Diplomacy	Fertile Soil
 
 # Skill-gated shortcuts.
 skill	FOSSIL_ISLAND_ZIPLINE	AGILITY	74	the zipline
+skill	FOSSIL_ISLAND_HOLE	AGILITY	70	the hole to the hardwood patches
 skill	TAVERLEY_CLIMBING_ROCKS	AGILITY	66	the climbing rocks into Taverley
 
 # The spirit tree network needs no Farming level: eight of its destinations are permanent

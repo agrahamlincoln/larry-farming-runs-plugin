@@ -175,18 +175,6 @@ final class CropAssigner {
     }
 
     /**
-     * Whether this patch holds a crop that has not finished growing.
-     *
-     * <p>{@link #occupiedByAlivingCrop} without disease. An unfinished crop is not worth
-     * trading away; a diseased tree dies unless cured, so felling it for a better one is a
-     * reasonable trade.
-     */
-    private static boolean stillFillingOut(PatchRef ref, FarmingInputs inputs) {
-        PatchPrediction seen = inputs.patchAt(ref);
-        return seen != null && seen.getCrop() != null && !seen.isIdle() && StopSkipRules.isStillGrowing(seen);
-    }
-
-    /**
      * What each stop plants, one entry per patch, keyed by position in {@code plans}.
      *
      * <p>Per patch because a stop is a visit: Fossil Island's three hardwood patches take
@@ -224,6 +212,8 @@ final class CropAssigner {
         // Patches an outstanding contract or a diary has spoken for, which draw no seed. Folded
         // back in below in the stop's own patch order.
         Map<Seat, Crop> claimed = new LinkedHashMap<>();
+        // The fixed crops' patches dealt so far, one entry each.
+        List<Crop> fixedDealt = new ArrayList<>();
         for (int index = 0; index < plans.size(); index++) {
             StopPlan plan = plans.get(index);
             List<Crop> atThisStop = new ArrayList<>();
@@ -233,18 +223,21 @@ final class CropAssigner {
             }
             if (plan.getStop().isFixedCrop()) {
                 Crop fixed = FixedCrops.cropFor(plan.getStop(), inputs.getPreferences(), state);
-                // Only where the player provably holds the seed.
-                // {@link StopSkipRules#skipIfNoSeed} drops the stop only when nothing else is
-                // waiting; here a harvest can keep the visit while the planting goes.
-                if (fixed == null || RunScheduler.outOfSeedFor(fixed, state)) {
+                // A crop no run plants has no seed to deal.
+                CropData data = CropData.forCrop(fixed);
+                if (data == null) {
                     continue;
                 }
-                // A patch holding any living crop takes no seed: one seaweed patch growing
-                // beside a ready one plants one, and packs one lot of spores and one
-                // protection fee.
-                for (int open = openFixedPatches(plan.getStop(), inputs, state); open > 0;
-                        open--) {
+                // Only where the player provably holds the seed, shared down the run's stops,
+                // so a patch past the stock takes none. {@link StopSkipRules#skipIfNoSeed}
+                // drops the stop only when nothing else is waiting; here a harvest can keep
+                // the visit while the planting goes. A patch holding any living crop takes no
+                // seed: one seaweed patch growing beside a ready one plants one, and packs one
+                // lot of spores and one protection fee.
+                for (int open = openFixedPatches(plan.getStop(), inputs, state); open > 0 && !SeedSelector.definitelyOutOf(fixed, state,
+                        (Collections.frequency(fixedDealt, fixed) + 1) * data.getSeedsPerPatch()); open--) {
                     atThisStop.add(fixed);
+                    fixedDealt.add(fixed);
                 }
                 continue;
             }
@@ -278,8 +271,9 @@ final class CropAssigner {
                 // growth, and waiting costs only the wait. A grown tree awaiting its health
                 // check stays a candidate, because the row asks for the felling only after
                 // the check turns it HARVESTABLE. It also covers a fruit tree stop with
-                // several patches.
-                if (standing != null && stillFillingOut(ref, inputs)) {
+                // several patches. Disease does not hold it: a diseased tree dies unless
+                // cured, so felling it for a better one is a reasonable trade.
+                if (standing != null && StopSkipRules.isStillGrowing(inputs.patchAt(ref))) {
                     continue;
                 }
                 // A contract's named crop claims its patch ahead of the rotation's filler,

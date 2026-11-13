@@ -1,0 +1,57 @@
+# Every arrival's attributes, one row per Arrival constant: its name for a player, written
+# to sit mid-sentence ("travel to the Farming Guild"), and how much a bank costs once the
+# player is standing there, as a BankProximity grade.
+#
+# arrival	name	bank
+
+# Kourend
+FARMING_GUILD	the Farming Guild	AT_ARRIVAL
+HOSIDIUS	Hosidius	FAR
+
+# Varlamore
+ORTUS_FARM	Ortus Farm	SHORT_WALK
+LOCUS_OASIS	the Locus Oasis	NONE
+KASTORI	Kastori	NONE
+NEMUS_RETREAT	Nemus Retreat	NONE
+AUBURNVALE	Auburnvale	NONE
+
+# Tirannwn
+LLETYA	Lletya	FAR
+
+# Kandarin and the gnome lands
+GNOME_STRONGHOLD	the Tree Gnome Stronghold	SHORT_WALK
+TREE_GNOME_VILLAGE	Tree Gnome Village	NONE
+ARDOUGNE_MONASTERY	Ardougne Monastery	FAR
+ARDOUGNE_FARM	Ardougne	FAR
+CATHERBY	Catherby	SHORT_WALK
+
+# Karamja
+BRIMHAVEN	Brimhaven	NONE
+TAI_BWO_WANNAI	Tai Bwo Wannai	NONE
+
+# Asgarnia
+TAVERLEY	Taverley	NONE
+FALADOR_PARK	Falador Park	SHORT_WALK
+FALADOR_FARM	Falador	FAR
+
+# Misthalin
+DRAYNOR_MANOR	Draynor Manor	NONE
+LUMBRIDGE	Lumbridge	SHORT_WALK
+VARROCK_PARK	Varrock	FAR
+AL_KHARID	Al Kharid	FAR
+
+# Morytania
+MORT_MYRE	the Mort Myre mushrooms	FAR
+CANIFIS	Canifis	FAR
+HARMONY_ISLAND	Harmony Island	NONE
+
+# Fossil Island
+FOSSIL_ISLAND_HARDWOOD	Fossil Island	SHORT_WALK
+FOSSIL_ISLAND_SEAWEED	the Fossil Island seaweed	FAR
+
+# The far north
+WEISS	Weiss	NONE
+TROLL_STRONGHOLD	the Troll Stronghold	NONE
+
+# The Great Conch
+GREAT_CONCH	the Great Conch	NONE

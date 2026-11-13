@@ -29,9 +29,7 @@ class LoggedOutCard extends JPanel
 
 	private static JComponent centred(JComponent inner)
 	{
-		JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-		row.setOpaque(false);
-		row.setAlignmentX(Component.LEFT_ALIGNMENT);
+		JPanel row = PanelText.panel(new FlowLayout(FlowLayout.CENTER, 0, 0));
 		row.add(inner);
 		row.setMaximumSize(new Dimension(Short.MAX_VALUE, inner.getPreferredSize().height));
 		return row;

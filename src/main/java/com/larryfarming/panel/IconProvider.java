@@ -55,13 +55,9 @@ public class IconProvider
 	}
 
 	/**
-	 * An item's sprite. Every item lookup goes through here and {@link #spriteAsync}.
+	 * An item's sprite, drawn for a stack of {@code quantity} when {@code stackable}. Every
+	 * item lookup goes through here and {@link #spriteAsync}.
 	 */
-	protected AsyncBufferedImage itemImage(int itemId)
-	{
-		return itemManager.getImage(itemId);
-	}
-
 	protected AsyncBufferedImage itemImage(int itemId, int quantity, boolean stackable)
 	{
 		return itemManager.getImage(itemId, quantity, stackable);
@@ -238,30 +234,29 @@ public class IconProvider
 		{
 			return null;
 		}
-		String cacheKey = "sprite:" + spriteId + ":" + size + (held ? "" : ":grey");
-		ImageIcon cached = cache.get(cacheKey);
-		if (cached != null)
+		// The callback only queues work for the EDT and never touches the cache, so it may
+		// run inline inside computeIfAbsent. The map's bin lock is held while the load is
+		// requested, which is safe because the loaders only queue work: none re-enters the
+		// cache, and none blocks on another thread that could.
+		return cache.computeIfAbsent("sprite:" + spriteId + ":" + size + (held ? "" : ":grey"), key ->
 		{
-			return cached;
-		}
-
-		ImageIcon icon = new ImageIcon(new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB));
-		cache.put(cacheKey, icon);
-		spriteAsync(spriteId, 0, img ->
-		{
-			if (img == null)
+			ImageIcon icon = new ImageIcon(new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB));
+			spriteAsync(spriteId, 0, img ->
 			{
-				return;
-			}
-			BufferedImage fitted = fitTo(img, size);
-			BufferedImage sized = held ? fitted : ImageUtil.grayscaleImage(fitted);
-			SwingUtilities.invokeLater(() ->
-			{
-				icon.setImage(sized);
-				repaintLater();
+				if (img == null)
+				{
+					return;
+				}
+				BufferedImage fitted = fitTo(img, size);
+				BufferedImage sized = held ? fitted : ImageUtil.grayscaleImage(fitted);
+				SwingUtilities.invokeLater(() ->
+				{
+					icon.setImage(sized);
+					repaintLater();
+				});
 			});
+			return icon;
 		});
-		return icon;
 	}
 
 	/**
@@ -290,39 +285,34 @@ public class IconProvider
 	 */
 	public ImageIcon getGearIcon(int itemId, int size, boolean earned, boolean fillSquare)
 	{
-		String cacheKey = "gear:" + itemId + ":" + size + ":" + earned + ":" + fillSquare;
-		ImageIcon cached = cache.get(cacheKey);
-		if (cached != null)
-		{
-			return cached;
-		}
-
-		BufferedImage sprite = loaded(() -> itemImage(itemId), "gear", itemId);
-		if (sprite == null)
-		{
-			return null;
-		}
-
-		ImageIcon icon = new ImageIcon(sprite);
-		// Cached before the callback is registered, so a fast client thread cannot have
-		// its styled result overwritten by this raw one.
-		cache.put(cacheKey, icon);
-		styleWhenLoaded(icon, sprite, art -> styleGear(art, size, earned, fillSquare));
-		return icon;
+		return cache.computeIfAbsent("gear:" + itemId + ":" + size + ":" + earned + ":" + fillSquare,
+			key -> styled(() -> itemImage(itemId, 1, false), "gear", itemId, art -> styleGear(art, size, earned, fillSquare)));
 	}
 
-	/** An item's sprite from {@code load}, or null when the client cannot give one. */
-	private static BufferedImage loaded(Supplier<BufferedImage> load, String kind, int itemId)
+	/**
+	 * An icon of the item's sprite from {@code load}, styled now or once its pixels arrive,
+	 * or null when the client cannot give one. Null is never cached (computeIfAbsent records
+	 * no mapping for it), so a failed load is asked again next time.
+	 */
+	private ImageIcon styled(Supplier<BufferedImage> load, String kind, int itemId, UnaryOperator<BufferedImage> style)
 	{
+		BufferedImage sprite;
 		try
 		{
-			return load.get();
+			sprite = load.get();
 		}
 		catch (RuntimeException e)
 		{
 			log.debug("Failed to load {} icon for item {}", kind, itemId, e);
 			return null;
 		}
+		if (sprite == null)
+		{
+			return null;
+		}
+		ImageIcon icon = new ImageIcon(sprite);
+		styleWhenLoaded(icon, sprite, style);
+		return icon;
 	}
 
 	/**
@@ -371,26 +361,11 @@ public class IconProvider
 	public ImageIcon getInventoryIcon(int itemId, int quantity, boolean held)
 	{
 		int stack = Math.max(1, quantity);
-		String cacheKey = "inv:" + itemId + ":" + stack + ":" + held;
-		ImageIcon cached = cache.get(cacheKey);
-		if (cached != null)
-		{
-			return cached;
-		}
-
-		// A non-stackable item ignores the stackable flag and draws a single sprite.
-		BufferedImage sprite = loaded(() -> itemImage(itemId, stack, stack > 1), "inventory", itemId);
-		if (sprite == null)
-		{
-			return null;
-		}
-
-		// A held item wraps the async image as-is. Greying waits for the pixels and
-		// restyles the same instance, since labels already hold it.
-		ImageIcon icon = new ImageIcon(sprite);
-		cache.put(cacheKey, icon);
-		styleWhenLoaded(icon, sprite, held ? UnaryOperator.identity() : ImageUtil::grayscaleImage);
-		return icon;
+		// A non-stackable item ignores the stackable flag and draws a single sprite. A held
+		// item wraps the async image as-is; greying waits for the pixels and restyles the
+		// same instance, since labels already hold it.
+		return cache.computeIfAbsent("inv:" + itemId + ":" + stack + ":" + held, key -> styled(() -> itemImage(itemId, stack, stack > 1),
+			"inventory", itemId, held ? UnaryOperator.identity() : ImageUtil::grayscaleImage));
 	}
 
 	private static BufferedImage styleGear(BufferedImage sprite, int size, boolean earned, boolean fillSquare)

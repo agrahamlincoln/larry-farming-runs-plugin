@@ -81,19 +81,15 @@ final class TripOrder {
      */
     static List<List<Integer>> groupByArrival(List<Integer> order, List<StopPlan> plans) {
         List<List<Integer>> groups = new ArrayList<>();
-        List<Integer> current = null;
-        Arrival currentArrival = null;
+        Arrival last = null;
         for (int index : order) {
-            StopPlan plan = plans.get(index);
-            Arrival arrival = arrivalOf(plan);
-            if (current != null && arrival == currentArrival) {
-                current.add(index);
-                continue;
+            Arrival arrival = arrivalOf(plans.get(index));
+            // A new arrival opens a group; a stop at the same one joins the last.
+            if (groups.isEmpty() || arrival != last) {
+                groups.add(new ArrayList<>());
             }
-            current = new ArrayList<>();
-            current.add(index);
-            currentArrival = arrival;
-            groups.add(current);
+            groups.get(groups.size() - 1).add(index);
+            last = arrival;
         }
         return groups;
     }

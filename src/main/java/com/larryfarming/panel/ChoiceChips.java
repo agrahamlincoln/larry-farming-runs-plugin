@@ -93,7 +93,7 @@ class ChoiceChips extends JPanel
 			return;
 		}
 		select(value);
-		if (send != null && key != null)
+		if (key != null)
 		{
 			send.accept(key, value);
 		}

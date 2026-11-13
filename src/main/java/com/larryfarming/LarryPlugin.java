@@ -75,8 +75,6 @@ public class LarryPlugin extends Plugin
 	 */
 	private static final Set<Integer> WATCHED_VARBITS = watchedVarbits();
 
-	/** The assigned contract's produce; zero while the contract slot is empty. */
-	private static final int VARBIT_FARMING_CONTRACT_TYPE = CapabilitySources.CONTRACT_PRODUCE_VARBIT;
 	/** Seed pack: fallback advisor icon. */
 	private static final int ADVISOR_FALLBACK_ICON_ITEM_ID = 22993;
 
@@ -175,11 +173,12 @@ public class LarryPlugin extends Plugin
 	 */
 	private final HouseWatch houseWatch = new HouseWatch();
 
-	// Deposit box inference: snapshot inventory when deposit box opens,
-	// diff on inventory changes to infer bank additions.
-	private boolean depositBoxOpen = false;
 	/** Ticks until the just-opened seed vault is checked for an empty one; zero for none. */
 	private int seedVaultCheckIn;
+	/**
+	 * Deposit box inference: the inventory snapshot taken when the deposit box opens, diffed
+	 * on inventory changes to infer bank additions. Non-null exactly while the box is open.
+	 */
 	private Map<Integer, ItemStack> depositBoxInventorySnapshot;
 
 	// Login readiness gate
@@ -235,7 +234,7 @@ public class LarryPlugin extends Plugin
 		FarmingPlannerPersistence plannerPersistence = new FarmingPlannerPersistence(store);
 		FarmingPlanner farmingPlanner = FarmingPlanner.attachTo(stateEngine, plannerPersistence);
 		farmingPlanner.setPreferences(ConfiguredCrops.from(store));
-		boolean showBanks = plannerPersistence.loadFarmingShowBanks();
+		boolean showBanks = plannerPersistence.flag(FarmingPlannerPersistence.SHOW_BANKS);
 		farmingPlanner.setOfferedBanksShown(showBanks);
 
 		// Published only once they hold the settings, so the client thread never sees them without.
@@ -247,27 +246,23 @@ public class LarryPlugin extends Plugin
 		farmingPanel.setSpellbookCallback(book -> clientThread.invoke(() ->
 			farmingPlanner.setSpellbookPreview(book == null ? null : Spellbook.valueOf(book))));
 		// A hidden bank holds no withdrawals, so the switch re-plans as well as redraws.
-		farmingPanel.setShowBanks(showBanks);
-		farmingPanel.setShowBanksCallback(show ->
+		farmingPanel.restoreShowBanks(showBanks, show ->
 		{
-			plannerPersistence.saveFarmingShowBanks(show);
+			plannerPersistence.saveFlag(FarmingPlannerPersistence.SHOW_BANKS, show);
 			clientThread.invoke(() -> farmingPlanner.setOfferedBanksShown(show));
 		});
 
 		// EDT is fine here: these only choose what the panel draws and save a config key.
 		// They touch no game state.
-		farmingPanel.setShowSkipped(plannerPersistence.loadFarmingShowSkipped());
-		farmingPanel.setShowSkippedCallback(plannerPersistence::saveFarmingShowSkipped);
-		farmingPanel.setTravelOpen(plannerPersistence.loadFarmingTravelOpen());
-		farmingPanel.setTravelOpenCallback(plannerPersistence::saveFarmingTravelOpen);
-		farmingPanel.setHouseOpen(plannerPersistence.loadFarmingHouseOpen());
-		farmingPanel.setHouseOpenCallback(plannerPersistence::saveFarmingHouseOpen);
-		farmingPanel.setSettingsOpen(plannerPersistence.loadFarmingSettingsOpen());
-		farmingPanel.setSettingsOpenCallback(plannerPersistence::saveFarmingSettingsOpen);
+		plannerPersistence.bindFlag(FarmingPlannerPersistence.SHOW_SKIPPED, farmingPanel::restoreShowSkipped);
+		plannerPersistence.bindFlag(FarmingPlannerPersistence.TRAVEL_OPEN, farmingPanel::restoreTravelOpen);
+		plannerPersistence.bindFlag(FarmingPlannerPersistence.HOUSE_OPEN, farmingPanel::restoreHouseOpen);
+		plannerPersistence.bindFlag(FarmingPlannerPersistence.SETTINGS_OPEN, farmingPanel::restoreSettingsOpen);
 
 		// A setting changed in the panel saves to its config key. The save posts a
 		// ConfigChanged, and onConfigChanged re-plans from it.
 		farmingPanel.setSettingCallback((key, value) -> ConfiguredCrops.write(store, key, value));
+		farmingPanel.setStopCompostCallback(() -> clientThread.invoke(farmingPlanner::stopCompost));
 		// Each key written posts a ConfigChanged, which re-plans as a single change does.
 		farmingPanel.setResetCallback(() -> ConfiguredCrops.apply(store, ConfiguredCrops.valuesOf(FarmingPreferences.defaults())));
 
@@ -339,7 +334,6 @@ public class LarryPlugin extends Plugin
 		resetSessionCaches();
 		loginReady = false;
 		loginSnapshotPending = false;
-		depositBoxOpen = false;
 		depositBoxInventorySnapshot = null;
 		seedVaultCheckIn = 0;
 		// An open listing would read its first "2 x Thing." as a seed in the box.
@@ -399,11 +393,7 @@ public class LarryPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
-		if (planner == null || !LarryConfig.GROUP.equals(event.getGroup()))
-		{
-			return;
-		}
-		if (ConfiguredCrops.isCropKey(event.getKey()))
+		if (LarryConfig.GROUP.equals(event.getGroup()) && ConfiguredCrops.isCropKey(event.getKey()))
 		{
 			reloadPreferences();
 		}
@@ -413,13 +403,10 @@ public class LarryPlugin extends Plugin
 	@Subscribe
 	public void onProfileChanged(ProfileChanged event)
 	{
-		if (planner == null)
-		{
-			return;
-		}
 		reloadPreferences();
 	}
 
+	/** Re-reads the farming settings on the client thread, once a planner is there to take them. */
 	private void reloadPreferences()
 	{
 		clientThread.invokeLater(() ->
@@ -792,7 +779,7 @@ public class LarryPlugin extends Plugin
 	}
 
 	// ---------------------------------------------------------------
-	// Chat: the seed box
+	// Chat: the seed box and the bottomless bucket
 	// ---------------------------------------------------------------
 
 	@Subscribe
@@ -802,7 +789,8 @@ public class LarryPlugin extends Plugin
 		{
 			return;
 		}
-		if (!SeedBoxChat.isReadableGameChat(event.getType()))
+		boolean gameChat = SeedBoxChat.isReadableGameChat(event.getType());
+		if (!gameChat && event.getType() != ChatMessageType.MESBOX)
 		{
 			return;
 		}
@@ -811,6 +799,20 @@ public class LarryPlugin extends Plugin
 		// which rarely carry a tag, and the replace would allocate a string per message.
 		String raw = event.getMessage();
 		String message = raw.indexOf('<') < 0 ? raw : WIDGET_TAG.matcher(raw).replaceAll("");
+
+		// The bottomless bucket answers Check and Fill in a message box as well as in chat.
+		// It reads the raw text, since a box's line break stands between words.
+		BottomlessBucket.Reading bucket = BottomlessBucket.read(raw);
+		FarmingPlanner farmingPlanner = planner;
+		if (bucket != null && farmingPlanner != null)
+		{
+			farmingPlanner.bottomlessBucketRead(bucket);
+			return;
+		}
+		if (!gameChat)
+		{
+			return;
+		}
 
 		// Checked before the movement lines. A whole-box statement is the only correction
 		// for a drifted tally, since movement lines only adjust the count.
@@ -1163,7 +1165,8 @@ public class LarryPlugin extends Plugin
 	 */
 	private void readContractCrop()
 	{
-		int value = client.getVarbitValue(VARBIT_FARMING_CONTRACT_TYPE);
+		// The assigned contract's produce; zero while the contract slot is empty.
+		int value = client.getVarbitValue(CapabilitySources.CONTRACT_PRODUCE_VARBIT);
 		Crop crop = ContractProduce.byVarbitValue(value);
 		if (crop == null && value != 0 && planner.getContractCrop() != null)
 		{
@@ -1179,8 +1182,7 @@ public class LarryPlugin extends Plugin
 		FarmingPlanner farmingPlanner = planner;
 		// No player state means the account is being replaced, and the advice still
 		// describes the one that is going.
-		FarmingAdvice advice = engine.getPlayerState() != null ? farmingPlanner.getAdvice() : null;
-		List<FarmingRunStatus> runs = advice != null ? advice.getRuns() : null;
+		List<FarmingRunStatus> runs = runsOf(engine.getPlayerState() != null ? farmingPlanner.getAdvice() : null);
 		if (!config.showFarmingAdvisor() || !FarmingAdvisorInfoBox.anythingDue(runs))
 		{
 			removeFarmingAdvisorInfoBox();
@@ -1191,11 +1193,8 @@ public class LarryPlugin extends Plugin
 		if (farmingAdvisorInfoBox == null)
 		{
 			advisorIconItemId = iconItemId;
-			farmingAdvisorInfoBox = new FarmingAdvisorInfoBox(itemManager.getImage(iconItemId), this, () ->
-				{
-					FarmingAdvice current = farmingPlanner.getAdvice();
-					return current != null ? current.getRuns() : null;
-				});
+			farmingAdvisorInfoBox = new FarmingAdvisorInfoBox(itemManager.getImage(iconItemId), this,
+				() -> runsOf(farmingPlanner.getAdvice()));
 			infoBoxManager.addInfoBox(farmingAdvisorInfoBox);
 		}
 		else if (iconItemId != advisorIconItemId)
@@ -1204,6 +1203,12 @@ public class LarryPlugin extends Plugin
 			farmingAdvisorInfoBox.setImage(itemManager.getImage(iconItemId));
 			infoBoxManager.updateInfoBoxImage(farmingAdvisorInfoBox);
 		}
+	}
+
+	/** The advice's runs, or null for no advice. */
+	private static List<FarmingRunStatus> runsOf(FarmingAdvice advice)
+	{
+		return advice != null ? advice.getRuns() : null;
 	}
 
 	/** Icon of the first due run, falling back to a seed pack. */
@@ -1501,11 +1506,9 @@ public class LarryPlugin extends Plugin
 
 		List<ItemStack> itemStacks = readInventory(items);
 
-		// Before updating the inventory, so the bank updates in the same tick.
-		if (depositBoxOpen)
-		{
-			inferDeposits(itemStacks);
-		}
+		// Before updating the inventory, so the bank updates in the same tick. Does nothing
+		// while the deposit box is shut.
+		inferDeposits(itemStacks);
 
 		engine.onInventoryChanged(itemStacks);
 	}
@@ -1612,7 +1615,6 @@ public class LarryPlugin extends Plugin
 		int group = event.getGroupId();
 		if (group == InterfaceID.BANK_DEPOSITBOX)
 		{
-			depositBoxOpen = true;
 			depositBoxInventorySnapshot = snapshotInventory();
 		}
 		else if (group == InterfaceID.POH_LOADING && engine != null && loginReady)
@@ -1671,7 +1673,6 @@ public class LarryPlugin extends Plugin
 
 		if (event.getGroupId() == InterfaceID.BANK_DEPOSITBOX)
 		{
-			depositBoxOpen = false;
 			depositBoxInventorySnapshot = null;
 		}
 	}

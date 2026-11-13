@@ -7,7 +7,6 @@ import com.larryfarming.farming.model.*;
 import com.larryfarming.model.Skill;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.*;
 
 /**
  * What a run family holds beside its sites: the gate, the respawn town and the seeds, one
@@ -19,40 +18,21 @@ final class Families {
     private Families() {
     }
 
-    /** One run's worth of family data: everything a run carries but its stops. */
-    @Value
-    @Builder
-    static class Family {
-        @NonNull
-        RunId id;
+    /**
+     * Every run, in the order the catalogue lists them, as its family data alone: everything
+     * a run carries but its stops, which {@link RunAssembler} adds. The preset's ticks, not
+     * the family, say which crops a seed patch type plants.
+     */
+    static final List<FarmingRun> ALL = load();
 
-        @NonNull
-        Spellbook book;
-
-        @NonNull
-        UnlockGate unlock;
-
-        /** Null when the run has no preference. */
-        String respawnTown;
-
-        /**
-         * The patch type whose ticked crops the run plants, or null when the shared seed
-         * policy decides. The preset's ticks, not the family, say which crops those are.
-         */
-        PatchType seedPatchType;
-    }
-
-    /** Every run, in the order the catalogue lists them. */
-    static final List<Family> ALL = load();
-
-    private static List<Family> load() {
-        List<Family> families = new ArrayList<>();
+    private static List<FarmingRun> load() {
+        List<FarmingRun> families = new ArrayList<>();
         for (Tables.Row row : Tables.read("/com/larryfarming/families.tsv", 8)) {
             PatchType seeds = row.optionalConstant(PatchType.class, 7);
             Skill skill = row.optionalConstant(Skill.class, 2);
             UnlockGate unlock = seeds != null && skill == null ? plantsFrom(seeds) : UnlockGate.builder().skill(skill).level(row.integer(3))
                             .boostedFromLevel(row.integer(4)).recommendedFromLevel(row.integer(5)).build();
-            families.add(Family.builder().id(row.constant(RunId.class, 0)).book(row.constant(Spellbook.class, 1)).unlock(unlock)
+            families.add(FarmingRun.builder().id(row.constant(RunId.class, 0)).spellbook(row.constant(Spellbook.class, 1)).unlock(unlock)
                     .respawnTown(row.optionalText(6)).seedPatchType(seeds).build());
         }
         return List.copyOf(families);
