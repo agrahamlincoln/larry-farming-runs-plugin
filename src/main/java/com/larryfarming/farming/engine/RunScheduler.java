@@ -164,12 +164,14 @@ public final class RunScheduler {
         // crop can: an unseen patch and a seedless empty one have nothing to wait for, so
         // each is left out here as it is from the verdict below. A diseased or dead patch
         // never waits: a diseased crop dies on its next growth tick, and a dead one is a
-        // patch growing nothing until it is cleared. A crop planted on this trip holds
-        // nothing back either, or the run would leave the walkthrough at its first
-        // replanted patch.
+        // patch growing nothing until it is cleared. The wait decides when a run starts, so
+        // once any patch of it went in on this trip nothing holds it back: the player is out
+        // on it. The rule asks this of the run, not of each crop, because a planting worked
+        // back from its finish estimate can read as older than the trip, and one such crop
+        // would end the run with patches still due.
         boolean waits = inputs.getPreferences().waitsForEveryPatch();
         boolean urgent = tally.needsHelp + tally.needsClearing > 0;
-        boolean holding = tally.growing > tally.plantedThisTrip;
+        boolean holding = tally.growing > 0 && tally.plantedThisTrip == 0;
         // Short of a sapling for every patch, the fruit trees wait for more, unless a tree
         // is diseased or dead.
         String saplings = saplingsShort(run, tally, inputs.getPreferences(), state);

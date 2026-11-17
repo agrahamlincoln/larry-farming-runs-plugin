@@ -53,6 +53,14 @@ public class FarmingCarryItem {
         MISSING
     }
 
+    /**
+     * The note on a tree line that the player's saplings and watered seedlings do not cover,
+     * where seeds or unwatered seedlings could make up the difference. Tree patches take
+     * saplings, so those are potted and watered before the trip rather than planted bare.
+     * The packing list repeats it under its grid.
+     */
+    public static final String POT_SEEDS_FIRST = "Pot and water the tree seeds first.";
+
     Kind kind;
 
     int itemId;

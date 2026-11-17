@@ -197,8 +197,9 @@ public final class WithdrawalPlanner {
      *
      * <p>Spreading withdrawals across banks saves bag slots. A seed box holds six types in
      * one slot the player already carries, so for seeds the spread saves nothing and costs a
-     * bank visit per stop. Saplings do not go in the box; {@link CropData#boxesAsAseed} draws
-     * that line, so tree runs keep the per-stretch schedule.
+     * bank visit per stop. Saplings and tree seeds do not go in the box;
+     * {@link CropData#boxesAsAseed} draws that line, so tree runs keep the per-stretch
+     * schedule.
      *
      * <p>The box holds six kinds, counted over what the trip plants. A kind already in it
      * that the trip does not plant is emptied out at the bank, so it takes no room. Past that,

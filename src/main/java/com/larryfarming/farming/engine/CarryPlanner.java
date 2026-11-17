@@ -926,7 +926,8 @@ public final class CarryPlanner {
     }
 
     /**
-     * The seed box, on a trip with seeds to put in it, listed only when owned.
+     * The seed box, on a trip with seeds to put in it, listed only when owned. A trip that
+     * plants only trees leaves it behind: see {@link CropData#boxesAsAseed}.
      *
      * <p>Where the kinds it holds and the kinds the trip plants come to more than it fits,
      * the line names the kinds the trip does not plant, to empty at the bank: the plan
@@ -945,9 +946,14 @@ public final class CarryPlanner {
         Set<Integer> kinds = new HashSet<>();
         planting.forEach(tally -> Optional.ofNullable(CropData.forCrop(tally.getCrop())).map(CropData::getSeedItemId)
                 .filter(CropData::boxesAsAseed).ifPresent(kinds::add));
+        if (kinds.isEmpty()) {
+            return;
+        }
         List<String> idle = new ArrayList<>();
         for (ItemStack stack : SeedBox.contentsCarried(state) ? state.getSeedBox() : List.<ItemStack>of()) {
-            if (CropData.boxesAsAseed(stack.getItemId()) && kinds.add(stack.getItemId())) {
+            // Any kind in the box holds a place, tree seeds included, though the plan never
+            // boxes one itself.
+            if (stack.getItemId() != 0 && kinds.add(stack.getItemId())) {
                 idle.add(stack.getName().toLowerCase(Locale.ROOT));
             }
         }
@@ -999,7 +1005,14 @@ public final class CarryPlanner {
         } else {
             name = data.getSeedName();
         }
-        return item(FarmingCarryItem.Kind.SEED, bestOwned(state, stages, seed), name, count, count, state, ids(data.getPlantingForms()));
+        FarmingCarryItem line = item(FarmingCarryItem.Kind.SEED, bestOwned(state, stages, seed), name, count, count, state,
+                ids(data.getPlantingForms()));
+        // A watered seedling grows into a sapling in the bag with no errand, so it counts as
+        // ready. A bare seed needs potting and an unwatered seedling needs water, and both
+        // are done before setting off. With neither owned there is nothing to pot.
+        int ready = ItemCounts.countOwned(state, stages[0], null) + ItemCounts.countOwned(state, stages[1], null);
+        int toPot = ItemCounts.countOwned(state, seed, null) + ItemCounts.countOwned(state, stages[2], null);
+        return ready < count && toPot > 0 ? line.withNote(FarmingCarryItem.POT_SEEDS_FIRST) : line;
     }
 
     private static int[] ids(List<Integer> itemIds) {

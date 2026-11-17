@@ -60,7 +60,9 @@ public final class DepositPlanner {
      * fewest it held while packing: the player fetched it. A ring they always wear in the
      * bag, or a coin stack, never dips, so it stays theirs. The low marks reset when a new
      * packing list follows a trip. Underway the packed set only grows, since a thing only
-     * finished stops used drops off every list yet is still the trip's to put back.
+     * finished stops used drops off every list yet is still the trip's to put back. While
+     * packing, a fetched thing stays packed as long as the bag holds it, though the list drops
+     * the stop that wanted it.
      */
     public static TripRecord record(PlayerState state, FarmingAdvice built, TripRecord before) {
         if (state == null || built == null || state.getInventory() == null) {
@@ -86,7 +88,14 @@ public final class DepositPlanner {
             }
         }
         Set<Integer> asked = askedFor(built);
-        Set<Integer> packed = built.isUnderway() ? new HashSet<>(before.packed) : new HashSet<>();
+        Set<Integer> packed = new HashSet<>();
+        if (built.isUnderway()) {
+            packed.addAll(before.packed);
+        } else if (!before.underway) {
+            // Still packing: a thing fetched for a stop the list has since dropped stays the
+            // trip's while the bag holds it, so the first bank underway takes it back.
+            before.packed.stream().filter(counts::containsKey).forEach(packed::add);
+        }
         for (Map.Entry<Integer, Integer> held : counts.entrySet()) {
             int itemId = held.getKey();
             if (itemId != ItemID.COINS && asked.contains(itemId) && held.getValue() > lowest.getOrDefault(itemId, 0)) {
@@ -215,8 +224,8 @@ public final class DepositPlanner {
 
     /**
      * The inventory slots a bank's withdrawals take. A seed going into a carried box takes
-     * none, nor do runes in an owned pouch or a seed-box check; a compost bucket or a
-     * sapling takes one each; anything else stacks into one.
+     * none, nor do runes in an owned pouch or a seed-box check; a compost bucket, a sapling
+     * or a tree seed to be potted takes one each; anything else stacks into one.
      */
     static int slotsFor(List<FarmingCarryItem> withdrawals, PlayerState state, boolean ownsRunePouch) {
         int slots = 0;
@@ -227,8 +236,8 @@ public final class DepositPlanner {
                             && CropData.boxesAsAseed(line.getItemId()))) {
                 continue;
             }
-            // A seed the box does not take is a sapling or a tree seed: counted one each,
-            // which over-counts the tree seeds, the safe way.
+            // A seed the plan does not box is a sapling, or a tree seed to be potted into one:
+            // each pot takes its own slot.
             boolean eachTakesOne = ONE_SLOT_EACH.contains(line.getItemId()) || (line.getKind() == FarmingCarryItem.Kind.SEED
                             && !CropData.boxesAsAseed(line.getItemId()));
             slots += eachTakesOne ? Math.max(1, line.getQuantity()) : 1;

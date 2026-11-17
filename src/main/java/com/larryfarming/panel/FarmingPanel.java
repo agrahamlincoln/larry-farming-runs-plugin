@@ -472,7 +472,7 @@ public class FarmingPanel extends StretchPanel
 			nowContainer.removeAll();
 			stopsContainer.removeAll();
 			runsList.clear();
-			carryView.rebuild(null, icons);
+			carryView.rebuild(null, null, icons);
 			laterContainer.removeAll();
 			wearList.rebuild(null, icons, 0);
 			goalsList.rebuild(null, icons, 0);
@@ -650,7 +650,7 @@ public class FarmingPanel extends StretchPanel
 		List<FarmingCarryItem> carry = advice.getCarry();
 		// Split at the first later bank: what to pack now, then what each bank hands over.
 		boolean split = !carryNow(advice).isEmpty();
-		carryView.rebuild(phase == Phase.PACKING ? (split ? carryNow(advice) : carry) : null, icons);
+		carryView.rebuild(phase == Phase.PACKING ? (split ? carryNow(advice) : carry) : null, carry, icons);
 		carryHeading.setVisible(carry != null && !carry.isEmpty());
 		rebuildLater(phase == Phase.PACKING && split ? stops : null, drawBanks, icons, width);
 

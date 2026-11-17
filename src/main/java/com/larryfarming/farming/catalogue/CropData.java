@@ -216,25 +216,30 @@ public final class CropData {
     }
 
     /**
-     * Whether a seed box would take this item.
+     * Whether the packing plan puts this item in a seed box.
      *
      * <p>The box holds seeds only. Seedlings and saplings are not seeds, so each takes its
-     * own inventory slot however many boxes the player carries. Asked of the item, not the
-     * crop: an acorn boxes, an oak sapling does not.
+     * own inventory slot however many boxes the player carries.
+     *
+     * <p>A tree seed fits in the box, but the plan never puts one there: a tree patch takes
+     * the sapling, so the seed is potted and watered before the trip and travels as a
+     * seedling or sapling. So an acorn answers false here, like the oak sapling.
      *
      * <p>Mushroom spores box by a game exception and are covered by the mushroom row.
      */
     public static boolean boxesAsAseed(int itemId) {
-        return itemId != 0 && SEED_ITEM_IDS.contains(itemId);
+        return itemId != 0 && BOXED_SEED_IDS.contains(itemId);
     }
 
     /** Computed once: this is asked per carry line. */
-    private static final Set<Integer> SEED_ITEM_IDS = seedItemIds();
+    private static final Set<Integer> BOXED_SEED_IDS = boxedSeedIds();
 
-    private static Set<Integer> seedItemIds() {
+    private static Set<Integer> boxedSeedIds() {
         Set<Integer> ids = new HashSet<>();
         for (CropData data : ALL) {
-            ids.add(data.seedItemId);
+            if (!data.isSaplingPlanted()) {
+                ids.add(data.seedItemId);
+            }
         }
         return Collections.unmodifiableSet(ids);
     }

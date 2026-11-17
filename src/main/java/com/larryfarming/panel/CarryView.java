@@ -42,14 +42,26 @@ class CarryView extends StretchPanel
 	/**
 	 * Redraws the bag. Called only when the carry signature has changed, since the caller
 	 * guards structural rebuilds. An empty or null bag hides the view.
+	 *
+	 * @param carry   what to pack now, the squares drawn
+	 * @param wholeTrip every line of the trip, later banks' included, checked for errands
+	 *                that come before setting off
 	 */
-	void rebuild(List<FarmingCarryItem> carry, IconProvider icons)
+	void rebuild(List<FarmingCarryItem> carry, List<FarmingCarryItem> wholeTrip, IconProvider icons)
 	{
 		removeAll();
 		setVisible(carry != null && !carry.isEmpty());
 		if (isVisible())
 		{
 			add(SettingGrid.grid(carry.stream().map(item -> square(item, icons)).collect(Collectors.toList()), icons));
+			// Potting is an errand before setting off, even for seeds a later bank hands over,
+			// so it shows without a hover. One line however many trees: one trip to a pot and
+			// a watering can covers them all.
+			if (wholeTrip != null && wholeTrip.stream().anyMatch(item -> FarmingCarryItem.POT_SEEDS_FIRST.equals(item.getNote())))
+			{
+				// Amber like the seed box check: an errand to do, not an item to fetch.
+				add(PanelText.small(FarmingCarryItem.POT_SEEDS_FIRST, FarmingPanel.COLOR_DUE));
+			}
 		}
 	}
 

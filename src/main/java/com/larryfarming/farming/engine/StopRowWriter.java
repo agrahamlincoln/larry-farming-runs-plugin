@@ -221,8 +221,9 @@ final class StopRowWriter {
         List<Crop> unspoken = new ArrayList<>(felling);
         for (int i = 0; i < waiting.size(); i++) {
             Work work = waiting.get(i);
-            // The lead is the only one that may absorb a planting or announce itself a
-            // replacement; the rest name their act plainly.
+            // Only the lead may announce itself a replacement or say a digging. Every act may
+            // say its own crop's replanting, so the Farming Guild reads "Kill, replant Hespori"
+            // and "Harvest, replant irit" rather than leaving both to the planting line.
             String phrase;
             if (i == 0 && work.crop != null && unspoken.contains(work.crop)) {
                 phrase = sayItIsAreplacement(work, plants, state);
@@ -238,11 +239,11 @@ final class StopRowWriter {
                 boolean digs = work.act == PatchWork.Act.HARVEST && !diggingUp.isEmpty() && Collections.frequency(diggingUp, work.crop) == diggingUp.size()
                         && diggingUp.size() == work.count;
                 // A digging the fold cannot say would follow its replant, so no fold then.
-                phrase = digs || diggingUp.isEmpty() ? foldReplantIntoHarvest(work, plants, digs) : work.word();
+                phrase = digs || diggingUp.isEmpty() ? foldReplant(work, plants, digs) : work.word();
                 // A fold says the digging with it.
                 dugUpSaid = digs && !phrase.equals(work.word());
             } else {
-                phrase = work.word();
+                phrase = diggingUp.isEmpty() ? foldReplant(work, plants, false) : work.word();
             }
             if (firstRoutine < 0 && (work.act == PatchWork.Act.CHECK || work.act == PatchWork.Act.HARVEST)) {
                 firstRoutine = lines.size();
@@ -478,10 +479,11 @@ final class StopRowWriter {
     }
 
     /**
-     * The harvest and replanting of one crop, said once: "Harvest, replant ranarr ×2".
+     * A harvest or a kill and the replanting of the same crop, said once: "Harvest, replant
+     * ranarr ×2", "Kill, replant Hespori".
      *
      * <p>Only where the crops and counts match (the rotation often picks a ranarr and
-     * replants a toadflax), and only where the harvested patches are the ones replanted: a
+     * replants a toadflax), and only where the patches worked are the ones replanted: a
      * ranarr going into the empty patch beside a harvested one is no replant of it. Other
      * crops planted here stay in the planting line.
      *
@@ -489,12 +491,12 @@ final class StopRowWriter {
      * @param digs whether every harvested plant is dug up before its replanting, which the
      *     folded line then says between the two
      */
-    private static String foldReplantIntoHarvest(Work work, List<FarmingPlantAdvice> plants, boolean digs) {
-        if (work.crop == null || work.act != PatchWork.Act.HARVEST || !work.replanted
+    private static String foldReplant(Work work, List<FarmingPlantAdvice> plants, boolean digs) {
+        if (work.crop == null || work.act != PatchWork.Act.HARVEST && work.act != PatchWork.Act.KILL || !work.replanted
                 || !claim(plants, Collections.singletonMap(displayNameOf(work.crop), work.count))) {
             return work.word();
         }
-        return line(digs ? "Harvest, dig up, replant" : "Harvest, replant", work.crop, work.count);
+        return line(work.act.verb + (digs ? ", dig up, replant" : ", replant"), work.crop, work.count);
     }
 
     /** The plantings no act line has claimed, which the planting line says. */
