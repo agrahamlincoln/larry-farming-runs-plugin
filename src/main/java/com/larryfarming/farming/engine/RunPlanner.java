@@ -463,10 +463,10 @@ public final class RunPlanner {
     /**
      * The route sentence, with the stop it depends on named when that stop is itself a guess.
      *
-     * <p>A hedged row is drawn in orange. Most routes name their own doubt: in "House
-     * spirit tree to the Grand Tree" the house tree is right there. A route leaning on an
-     * earlier stop does not: "Run west to the Stronghold spirit tree" says nothing about the
-     * Grand Tree visit it assumes. The sentence states the dependency; it does not ask the
+     * <p>A hedged row is drawn in orange. Most routes name their own doubt: in "Construction
+     * cape to your house, then the spirit tree to the Grand Tree" the house tree is right
+     * there. A route leaning on an earlier stop does not: "Run west to the Stronghold spirit
+     * tree" says nothing about the Grand Tree visit it assumes. The sentence states the dependency; it does not ask the
      * player whether that stop will happen.
      */
     private static String sayWhatItLeansOn(String because, TravelOption option, Map<PatchRef, CapabilityState> reached) {

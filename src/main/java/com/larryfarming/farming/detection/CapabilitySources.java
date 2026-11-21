@@ -319,7 +319,20 @@ public final class CapabilitySources {
                         .construction(75).skill(Skill.FARMING, 83)));
         rules.put(Capability.POH_FAIRY_RING, built(HouseFeature.FAIRY_RING, "a fairy ring", floor("a fairy ring in your house")
                         .construction(85)));
+        // The talisman and the pendant hang in the Portal Nexus room, the glory in the quest
+        // hall, and the boxes stand in the achievement gallery.
+        rules.put(Capability.POH_XERICS_TALISMAN, built(HouseFeature.XERICS_TALISMAN, "a mounted Xeric's talisman", 72));
+        rules.put(Capability.POH_DIGSITE_PENDANT, built(HouseFeature.DIGSITE_PENDANT, "a mounted digsite pendant", 82));
+        rules.put(Capability.POH_GLORY, built(HouseFeature.GLORY, "a mounted amulet of glory", 47));
+        rules.put(Capability.POH_JEWELLERY_BOX_BASIC, built(HouseFeature.JEWELLERY_BOX_BASIC, "a basic jewellery box", 81));
+        rules.put(Capability.POH_JEWELLERY_BOX_FANCY, built(HouseFeature.JEWELLERY_BOX_FANCY, "a fancy jewellery box", 86));
+        rules.put(Capability.POH_JEWELLERY_BOX_ORNATE, built(HouseFeature.JEWELLERY_BOX_ORNATE, "an ornate jewellery box", 91));
         return Collections.unmodifiableMap(rules);
+    }
+
+    /** Teleport jewellery kept in the house, which asks only for a Construction level. */
+    private static HouseRule built(HouseFeature feature, String what, int construction) {
+        return built(feature, what, floor(what + " in your house").construction(construction));
     }
 
     private static HouseRule portal(HouseFeature feature, String what, String quest) {
@@ -366,7 +379,7 @@ public final class CapabilitySources {
                 if (house.has(feature)) {
                     return HouseSighting.BUILT;
                 }
-                return house.isScanned() ? HouseSighting.ABSENT : HouseSighting.UNSEEN;
+                return house.lookedFor(feature) ? HouseSighting.ABSENT : HouseSighting.UNSEEN;
             }
             if (house.isAttuned(destination)) {
                 return HouseSighting.BUILT;

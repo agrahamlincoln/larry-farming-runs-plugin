@@ -443,7 +443,7 @@ public final class RunSettings {
         int sprite = method == TravelMethod.SPELLBOOK_SWAP ? Teleports.SPELLBOOK_SWAP.getSpriteId() : 0;
         boolean missing = !owns(method, state, house, prefs.houseDeclared());
         return new FarmingSettingChoice(method.getKey(), method.getLabel(),
-                sprite > 0 ? 0 : itemFor(method), tagFor(method), 0, prefs.uses(method), missing, false, sprite,
+                sprite > 0 ? 0 : itemFor(method), method.getTag(), 0, prefs.uses(method), missing, false, sprite,
                 missing && isSeenAbsent(method, house) ? notBuilt(method) : null, false, null);
     }
 
@@ -460,36 +460,10 @@ public final class RunSettings {
         return method.getCapabilities().size() == 1 ? "Not built" : "None built";
     }
 
-    /**
-     * The item a method's square draws: its first capability's, or for a method with no item
-     * of its own a tablet that stands for it, tagged by {@link #tagFor}.
-     */
+    /** The item a method's square draws: its icon item, otherwise its first capability's. */
     private static int itemFor(TravelMethod method) {
-        switch (method) {
-            case SALVE_GRAVEYARD_TABLETS:
-                return SALVE_GRAVEYARD_TABLET;
-            case TELEPORT_TABLETS:
-                return CAMELOT_TABLET;
-            case HOUSE_PORTALS:
-            case HOUSE_FAIRY_RING:
-                return HOUSE_TABLET;
-            default:
-                return CarryItems.iconFor(method.getCapabilities().get(0));
-        }
-    }
-
-    /** The word on a square whose sprite stands for something else, or null. */
-    private static String tagFor(TravelMethod method) {
-        switch (method) {
-            case TELEPORT_TABLETS:
-                return "TABS";
-            case HOUSE_PORTALS:
-                return "PORT";
-            case HOUSE_FAIRY_RING:
-                return "RING";
-            default:
-                return null;
-        }
+        int icon = method.getIconItemId();
+        return icon > 0 ? icon : CarryItems.iconFor(method.getCapabilities().get(0));
     }
 
     /**
@@ -503,8 +477,9 @@ public final class RunSettings {
             return true;
         }
         switch (method) {
+            // The square draws the one tablet it switches.
             case SALVE_GRAVEYARD_TABLETS:
-                return state.getBankLastSeen() == null || ItemCounts.ownsAny(state, SALVE_GRAVEYARD_TABLET);
+                return state.getBankLastSeen() == null || ItemCounts.ownsAny(state, method.getIconItemId());
             case TELEPORT_TABLETS:
                 return state.getBankLastSeen() == null || ownsAnyTablet(state) || ownsAnyOf(method, state, house, houseDeclared);
             case SPELLBOOK_SWAP:
@@ -570,31 +545,14 @@ public final class RunSettings {
         for (Map.Entry<HouseItem.Group, List<FarmingSettingChoice>> group : rows.entrySet()) {
             groups.add(new FarmingSettingGroup(group.getKey().getLabel(), List.copyOf(group.getValue())));
         }
-        FarmingHouse.Sight sight = house == null || !house.isScanned() ? FarmingHouse.Sight.NOT_SEEN
+        // A scan by a lower scanner asks for a visit too: it never looked for every feature.
+        FarmingHouse.Sight sight = house == null || house.getScanner() < HouseFeature.SCANNER ? FarmingHouse.Sight.NOT_SEEN
                 : nexusUnseen ? FarmingHouse.Sight.NEXUS_NOT_SEEN : FarmingHouse.Sight.SEEN;
         return new FarmingHouse(sight, List.copyOf(groups));
     }
 
-    /** Teleport to house, the tablet drawn for the house's portals and fairy ring. */
-    private static final int HOUSE_TABLET = 8013;
-
-    /** Camelot teleport, the tablet drawn for every teleport tablet. */
-    private static final int CAMELOT_TABLET = 8010;
-
-    /** The tablet the Salve graveyard rung spends, read off the catalogue's teleports. */
-    private static final int SALVE_GRAVEYARD_TABLET = salveGraveyardTablet();
-
     /** Every teleport tablet the catalogue names, for whether the player owns any. */
     private static final int[] TABLETS = tablets();
-
-    private static int salveGraveyardTablet() {
-        for (TeleportMeans means : Teleports.to(Destination.SALVE_GRAVEYARD)) {
-            if (means.isTablet()) {
-                return means.getItemId();
-            }
-        }
-        throw new IllegalStateException("the catalogue has no Salve graveyard tablet");
-    }
 
     private static int[] tablets() {
         Set<Integer> ids = new LinkedHashSet<>();

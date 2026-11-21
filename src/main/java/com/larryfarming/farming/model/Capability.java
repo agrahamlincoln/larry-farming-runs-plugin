@@ -239,6 +239,14 @@ public enum Capability {
     POH_NEXUS_TROLL_STRONGHOLD,
     POH_SPIRIT_TREE,
     POH_FAIRY_RING,
+    // Teleport jewellery kept in the house, used for free once there. Each box is its own
+    // tier: a rung asks for any box holding its jewellery.
+    POH_XERICS_TALISMAN,
+    POH_DIGSITE_PENDANT,
+    POH_GLORY,
+    POH_JEWELLERY_BOX_BASIC,
+    POH_JEWELLERY_BOX_FANCY,
+    POH_JEWELLERY_BOX_ORNATE,
     /** Teleports beside the Wizards' Tower ring, for accounts with no Ardougne diary. */
     NECKLACE_OF_PASSAGE,
 

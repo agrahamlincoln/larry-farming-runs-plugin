@@ -79,6 +79,12 @@ POH_NEXUS_HARMONY	Harmony Island attuned in your Portal Nexus	SEEN	0	NONE	0
 POH_NEXUS_TROLL_STRONGHOLD	Troll Stronghold attuned in your Portal Nexus	SEEN	0	NONE	0
 POH_SPIRIT_TREE	Spirit tree in your house	SEEN	0	NONE	0
 POH_FAIRY_RING	Fairy ring in your house	SEEN	0	NONE	0
+POH_XERICS_TALISMAN	Mounted Xeric's talisman in your house	SEEN	0	NONE	0
+POH_DIGSITE_PENDANT	Mounted digsite pendant in your house	SEEN	0	NONE	0
+POH_GLORY	Mounted amulet of glory in your house	SEEN	0	NONE	0
+POH_JEWELLERY_BOX_BASIC	Basic jewellery box in your house	SEEN	0	NONE	0
+POH_JEWELLERY_BOX_FANCY	Fancy jewellery box in your house	SEEN	0	NONE	0
+POH_JEWELLERY_BOX_ORNATE	Ornate jewellery box in your house	SEEN	0	NONE	0
 NECKLACE_OF_PASSAGE	Necklace of passage	ITEM	0	NONE	0
 SPIRIT_TREE_NETWORK	Spirit tree network	VARBIT	0	NONE	0
 SPIRIT_TREE_STRONGHOLD	Gnome Stronghold spirit tree	VARBIT	0	NONE	0

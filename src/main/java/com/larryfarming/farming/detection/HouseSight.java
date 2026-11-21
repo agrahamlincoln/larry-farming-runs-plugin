@@ -10,7 +10,7 @@ import lombok.Value;
  * capability: the furniture of the last complete scan, and the Portal Nexus's attunement.
  *
  * <p>Absence means something only once it has been looked for. Furniture is absent when the
- * last scan of the house lacked it. A Nexus destination is absent when the last full read of
+ * last scan of the house looked for it and lacked it. A Nexus destination is absent when the last full read of
  * the Nexus lacked it. Before either, nothing is known and the rules keep their "not seen"
  * answer.
  *
@@ -23,11 +23,13 @@ public final class HouseSight {
     /** A stamp meaning "never". Real stamps are epoch seconds, so always above it. */
     private static final long NEVER = 0L;
 
-    private static final HouseSight UNSEEN = new HouseSight(Collections.emptySet(), NEVER, Collections.emptySet(), NEVER);
+    private static final HouseSight UNSEEN = new HouseSight(Collections.emptySet(), NEVER, 0, Collections.emptySet(), NEVER);
 
     Set<HouseFeature> built;
     /** When the furniture was last scanned, or 0 for never. */
     long scannedAtEpochSec;
+    /** The scanner that made the last scan ({@link HouseFeature#SCANNER}), or 0 for never. */
+    int scanner;
     /** The destination keys known to be attuned, in key order. */
     Set<Integer> attuned;
     /** When the Nexus was last read in full, or 0 for never. */
@@ -42,10 +44,13 @@ public final class HouseSight {
      * A sight as saved.
      *
      * @param scannedAtEpochSec when the furniture was scanned, or 0 for never
+     * @param scanner the scanner that made that scan, or 0 for never
      * @param nexusReadAtEpochSec when the Nexus was fully read, or 0 for never
      */
-    public static HouseSight of(Set<HouseFeature> built, long scannedAtEpochSec, Set<Integer> attuned, long nexusReadAtEpochSec) {
-        return new HouseSight(copyOf(built), Math.max(NEVER, scannedAtEpochSec), keysOf(attuned), Math.max(NEVER, nexusReadAtEpochSec));
+    public static HouseSight of(Set<HouseFeature> built, long scannedAtEpochSec, int scanner, Set<Integer> attuned,
+            long nexusReadAtEpochSec) {
+        return new HouseSight(copyOf(built), Math.max(NEVER, scannedAtEpochSec), scanner, keysOf(attuned),
+                Math.max(NEVER, nexusReadAtEpochSec));
     }
 
     /**
@@ -54,12 +59,12 @@ public final class HouseSight {
      * varbits answer that.
      */
     public HouseSight scanned(Set<HouseFeature> found, long nowEpochSec) {
-        return new HouseSight(copyOf(found), stamp(nowEpochSec), attuned, nexusReadAtEpochSec);
+        return new HouseSight(copyOf(found), stamp(nowEpochSec), HouseFeature.SCANNER, attuned, nexusReadAtEpochSec);
     }
 
     /** This house with the Nexus read in full. Replaces the attunement. */
     public HouseSight nexusRead(Set<Integer> destinations, long nowEpochSec) {
-        return new HouseSight(built, scannedAtEpochSec, keysOf(destinations), stamp(nowEpochSec));
+        return new HouseSight(built, scannedAtEpochSec, scanner, keysOf(destinations), stamp(nowEpochSec));
     }
 
     /**
@@ -73,7 +78,7 @@ public final class HouseSight {
         }
         Set<Integer> more = new TreeSet<>(attuned);
         more.addAll(destinations);
-        return new HouseSight(built, scannedAtEpochSec, Collections.unmodifiableSet(more), nexusReadAtEpochSec);
+        return new HouseSight(built, scannedAtEpochSec, scanner, Collections.unmodifiableSet(more), nexusReadAtEpochSec);
     }
 
     /** Whether the house has been scanned at least once. */
@@ -84,6 +89,11 @@ public final class HouseSight {
     /** Whether the last scan found this. False for a house never scanned. */
     public boolean has(HouseFeature feature) {
         return built.contains(feature);
+    }
+
+    /** Whether the last scan looked for this, so its absence there means it is not built. */
+    public boolean lookedFor(HouseFeature feature) {
+        return isScanned() && feature.isLookedForBy(scanner);
     }
 
     /** Whether the Nexus has been read in full at least once. */

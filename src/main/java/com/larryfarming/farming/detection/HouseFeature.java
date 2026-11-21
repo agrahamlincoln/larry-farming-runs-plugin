@@ -13,7 +13,8 @@ import java.util.Set;
  * ({@code POH_TELENEXUS_*}, {@code POH_NEXUS_4_AMULET}, {@code POH_NEXUS_5_AMULET}) and the
  * superior garden's centrepiece space ({@code POH_SUPERIOR_GARDEN_HOTSPOT_TREERING}).
  *
- * <p>None of these portals is a multiloc, so the spawned id is the built one.
+ * <p>None of these portals is a multiloc, so the spawned id is the built one. The mounted
+ * jewellery hangs on walls, so it spawns as wall decoration rather than as a game object.
  */
 public enum HouseFeature {
 
@@ -34,7 +35,13 @@ public enum HouseFeature {
     /** The spirit tree, alone or as the spiritual fairy tree, in every skin. */
     SPIRIT_TREE,
     /** The fairy ring, alone or as the spiritual fairy tree, which is both. */
-    FAIRY_RING;
+    FAIRY_RING,
+    XERICS_TALISMAN,
+    DIGSITE_PENDANT,
+    GLORY,
+    JEWELLERY_BOX_BASIC,
+    JEWELLERY_BOX_FANCY,
+    JEWELLERY_BOX_ORNATE;
 
     static {
         Rows.TABLE.requireAll(values());
@@ -45,15 +52,27 @@ public enum HouseFeature {
     /** Every id any feature matches, sorted, so a miss costs one binary search. */
     private static final int[] ANY_ID = anyId();
 
+    /** The scanner this build runs: the highest that any feature names. */
+    public static final int SCANNER = Arrays.stream(ALL).mapToInt(feature -> feature.scanner).max().orElse(1);
+
     private final int[] objectIds;
+    /** The first scanner that looks for this feature. */
+    private final int scanner;
 
     HouseFeature() {
-        this.objectIds = Rows.TABLE.of(name()).integers(1);
+        Tables.Row row = Rows.TABLE.of(name());
+        this.objectIds = row.integers(1);
+        this.scanner = row.integer(3);
     }
 
     /** The feature table, held apart so the constructors can read it; see {@link Tables#byName}. */
     private static final class Rows {
-        static final Tables.Named TABLE = Tables.byName("/com/larryfarming/house-features.tsv", 3);
+        static final Tables.Named TABLE = Tables.byName("/com/larryfarming/house-features.tsv", 4);
+    }
+
+    /** Whether a scan by this scanner looked for this feature, so its absence there counts. */
+    public boolean isLookedForBy(int scanner) {
+        return scanner >= this.scanner;
     }
 
     private static int[] anyId() {

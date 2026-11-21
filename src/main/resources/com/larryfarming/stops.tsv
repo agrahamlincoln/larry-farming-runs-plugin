@@ -18,7 +18,8 @@
 
 # --- Approaches ---
 approach	RING
-leg	POH_FAIRY_RING	5	FREE
+leg	all(CONSTRUCTION_CAPE,POH_FAIRY_RING)	5	FREE
+leg	all(reach:HOUSE,POH_FAIRY_RING)	5	CONSUMABLE
 leg	QUEST_CAPE	12	FREE
 leg	SLAYER_RING	16	CHARGE
 leg	DIARY_CAPE	20	FREE
@@ -32,7 +33,8 @@ leg	ECTOPHIAL	92	FREE
 leg	reach:VARROCK	116	CONSUMABLE
 leg	COMBAT_BRACELET	123	CHARGE
 approach	SPIRIT_TREE_DEPARTURE
-leg	POH_SPIRIT_TREE	0	FREE
+leg	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE)	5	FREE
+leg	all(reach:HOUSE,POH_SPIRIT_TREE)	5	CONSUMABLE
 leg	all(VARROCK_DIARY_MEDIUM,reach:GRAND_EXCHANGE)	30	CONSUMABLE
 leg	reach:VARROCK	87	CONSUMABLE
 approach	STRONGHOLD_TREE
@@ -79,8 +81,10 @@ via	SLAYER_RING	Slayer ring to the Stronghold Slayer Cave, then run south to the
 walks	51	CHARGE
 via	ROYAL_SEED_POD	Royal seed pod to the Grand Tree, then run south to the fruit tree and south-west across the Stronghold to the tree patch
 walks	92	FREE
-via	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	House spirit tree to the Grand Tree. The fruit tree is just east and the tree patch is south-west.
-walks	57	FREE
+via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK))	Construction cape to your house, then the spirit tree to the Grand Tree. The fruit tree is just east and the tree patch is south-west.
+walks	62	FREE
+to	HOUSE	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	then the spirit tree to the Grand Tree. The fruit tree is just east and the tree patch is south-west.
+walks	62	CONSUMABLE
 to	GRAND_EXCHANGE	all(VARROCK_DIARY_MEDIUM,SPIRIT_TREE_NETWORK)	choosing the Grand Exchange, then run north-east to its spirit tree and ride it to the Grand Tree. The fruit tree is just east and the tree patch is south-west.
 walks	87	CONSUMABLE
 to	VARROCK	SPIRIT_TREE_NETWORK	then run north to the Grand Exchange spirit tree and ride it to the Grand Tree. The fruit tree is just east and the tree patch is south-west.
@@ -120,18 +124,28 @@ at	WEISS
 accessGate	WEISS_HERB_PATCH
 via	ICY_BASALT	Icy basalt to Weiss
 walks	4	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_WEISS)	Construction cape to your house, then the Weiss portal
+walks	9	FREE
 to	HOUSE	POH_PORTAL_WEISS	then the Weiss portal
-walks	4	CONSUMABLE
+walks	9	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_NEXUS_WEISS)	Construction cape to your house, then Weiss from the Portal Nexus
+walks	9	FREE
 to	HOUSE	POH_NEXUS_WEISS	then Weiss from the Portal Nexus
-walks	4	CONSUMABLE
+walks	9	CONSUMABLE
 skipIfUnreachable
 stop	LUNAR	WEISS_HERB
 at	WEISS
 accessGate	WEISS_HERB_PATCH
-via	all(CONSTRUCTION_CAPE,POH_PORTAL_WEISS)	Construction cape to your house, then the Weiss portal
-walks	4	FREE
 via	ICY_BASALT	Icy basalt to Weiss
 walks	4	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_WEISS)	Construction cape to your house, then the Weiss portal
+walks	9	FREE
+to	HOUSE	POH_PORTAL_WEISS	then the Weiss portal
+walks	9	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_NEXUS_WEISS)	Construction cape to your house, then Weiss from the Portal Nexus
+walks	9	FREE
+to	HOUSE	POH_NEXUS_WEISS	then Weiss from the Portal Nexus
+walks	9	CONSUMABLE
 noFallbackGiven
 
 site	TROLLHEIM	HERB
@@ -142,18 +156,28 @@ at	TROLL_STRONGHOLD
 accessGate	TROLL_STRONGHOLD_HERB_PATCH
 via	STONY_BASALT	Stony basalt to the Troll Stronghold
 walks	9	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold portal
+walks	14	FREE
 to	HOUSE	POH_PORTAL_TROLL_STRONGHOLD	then the Troll Stronghold portal
-walks	9	CONSUMABLE
+walks	14	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_NEXUS_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold from the Portal Nexus
+walks	14	FREE
 to	HOUSE	POH_NEXUS_TROLL_STRONGHOLD	then the Troll Stronghold from the Portal Nexus
-walks	9	CONSUMABLE
+walks	14	CONSUMABLE
 skipIfUnreachable
 stop	LUNAR	TROLLHEIM_HERB
 at	TROLL_STRONGHOLD
 accessGate	TROLL_STRONGHOLD_HERB_PATCH
-via	all(CONSTRUCTION_CAPE,POH_PORTAL_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold portal
-walks	9	FREE
 via	STONY_BASALT	Stony basalt to the Troll Stronghold
 walks	9	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold portal
+walks	14	FREE
+to	HOUSE	POH_PORTAL_TROLL_STRONGHOLD	then the Troll Stronghold portal
+walks	14	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_NEXUS_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold from the Portal Nexus
+walks	14	FREE
+to	HOUSE	POH_NEXUS_TROLL_STRONGHOLD	then the Troll Stronghold from the Portal Nexus
+walks	14	CONSUMABLE
 noFallbackGiven
 
 site	MORYTANIA	HERB
@@ -167,6 +191,12 @@ walks	56	CONSUMABLE
 via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
 banks	272	CANIFIS
 walks	60	FREE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	FREE
+to	HOUSE	POH_PORTAL_FENKENSTRAIN	then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
@@ -176,9 +206,6 @@ noAlternative
 stop	LUNAR	MORYTANIA_HERB
 at	CANIFIS
 accessGate	MORYTANIA_ACCESS
-via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
-banks	157	CANIFIS
-walks	56	FREE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
@@ -195,6 +222,12 @@ walks	56	CONSUMABLE
 via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
 banks	272	CANIFIS
 walks	60	FREE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	FREE
+to	HOUSE	POH_PORTAL_FENKENSTRAIN	then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	CONSUMABLE
 to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
 noAlternative
@@ -203,7 +236,7 @@ site	FALADOR_HERB	HERB
 switch	visitFaladorHerb	Falador
 attributes	-	-	-	-	-	-
 xpTier	Falador	Medium	10
-stop	ARCEUUS	FALADOR_HERB
+stop	ARCEUUS LUNAR	FALADOR_HERB
 at	FALADOR_FARM
 via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
 walks	20	CHARGE
@@ -211,26 +244,22 @@ via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
 walks	20	CHARGE
 via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
 walks	20	CHARGE
-via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
+via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)))	Construction cape to your house, then its spirit tree to Port Sarim, then run north
+walks	60	FREE
+to	HOUSE	all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	then its spirit tree to Port Sarim, then run north
+walks	60	CONSUMABLE
+via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
 walks	55	FREE
 via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
 walks	95	CHARGE
-to	FALADOR	then run south-east
-banks	22	FALADOR_EAST
-walks	129	CONSUMABLE
-skipIfUnreachable
-stop	LUNAR	FALADOR_HERB
-at	FALADOR_FARM
-via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
-walks	20	CHARGE
-via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
-walks	20	CHARGE
-via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
-walks	20	CHARGE
-via	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Construction cape to your house, then its spirit tree to Port Sarim, then run north
-walks	55	FREE
-via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
-walks	95	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_GLORY)	Construction cape to your house, then its mounted glory to Draynor Village, then run north-west
+walks	100	FREE
+to	HOUSE	POH_GLORY	then its mounted glory to Draynor Village, then run north-west
+walks	100	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to Draynor Village, then run north-west
+walks	100	FREE
+to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Draynor Village, then run north-west
+walks	100	CONSUMABLE
 to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
@@ -292,11 +321,17 @@ site	HOSIDIUS_HERB	HERB
 switch	visitHosidiusHerb	Hosidius
 attributes	-	Kourend	Easy	-	-	-
 yieldTier	Kourend	Hard	5
-stop	ARCEUUS	HOSIDIUS_HERB
+stop	ARCEUUS LUNAR	HOSIDIUS_HERB
 at	HOSIDIUS
 via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
 banks	91	HOSIDIUS
 walks	23	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_XERICS_TALISMAN)	Construction cape to your house, then the mounted Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	28	FREE
+to	HOUSE	POH_XERICS_TALISMAN	then the mounted Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	28	CONSUMABLE
 to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
 walks	33	CONSUMABLE
 onlyWhenCertain
@@ -306,25 +341,10 @@ walks	74	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
-to	KOUREND_CASTLE	then run south-east
-walks	185	CONSUMABLE
-skipIfUnreachable
-stop	LUNAR	HOSIDIUS_HERB
-at	HOSIDIUS
-via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
-banks	91	HOSIDIUS
-walks	23	CHARGE
 via	all(CONSTRUCTION_CAPE,POH_PORTAL_KOUREND)	Construction cape to your house, then the Kourend portal
-walks	185	FREE
-to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
-walks	33	CONSUMABLE
-onlyWhenCertain
-via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
-banks	55	HOSIDIUS
-walks	74	CHARGE
-via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
-banks	55	HOSIDIUS
-walks	74	CHARGE
+walks	190	FREE
+to	HOUSE	POH_PORTAL_KOUREND	then the Kourend portal
+walks	190	CONSUMABLE
 to	KOUREND_CASTLE	then run south-east
 walks	185	CONSUMABLE
 skipIfUnreachable
@@ -336,9 +356,13 @@ stop	LUNAR	HARMONY_HERB
 at	HARMONY_ISLAND
 accessGate	HARMONY_ISLAND_ACCESS
 via	all(CONSTRUCTION_CAPE,POH_PORTAL_HARMONY)	Construction cape to your house, then the Harmony Island portal
-walks	27	FREE
+walks	32	FREE
+to	HOUSE	POH_PORTAL_HARMONY	then the Harmony Island portal
+walks	32	CONSUMABLE
 via	all(CONSTRUCTION_CAPE,POH_NEXUS_HARMONY)	Construction cape to your house, then Harmony Island from the Portal Nexus
-walks	27	FREE
+walks	32	FREE
+to	HOUSE	POH_NEXUS_HARMONY	then Harmony Island from the Portal Nexus
+walks	32	CONSUMABLE
 to	HARMONY_ISLAND	-
 walks	28	CONSUMABLE
 swapTo	HARMONY_ISLAND	-
@@ -421,11 +445,17 @@ optional	Worked while at the herb patch beside it
 
 site	HOSIDIUS_NORTH_EAST_ALLOTMENT	HERB
 pick	pickHosidiusNorthEast	compostHosidiusNorthEast	Hosidius	Hosidius north-east	-
-stop	ARCEUUS	HOSIDIUS_NORTH_EAST_ALLOTMENT
+stop	ARCEUUS LUNAR	HOSIDIUS_NORTH_EAST_ALLOTMENT
 at	HOSIDIUS
 via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
 banks	91	HOSIDIUS
 walks	23	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_XERICS_TALISMAN)	Construction cape to your house, then the mounted Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	28	FREE
+to	HOUSE	POH_XERICS_TALISMAN	then the mounted Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	28	CONSUMABLE
 to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
 walks	33	CONSUMABLE
 onlyWhenCertain
@@ -435,26 +465,10 @@ walks	74	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
-to	KOUREND_CASTLE	then run south-east
-walks	185	CONSUMABLE
-skipIfUnreachable
-optional	Worked while at the herb patch beside it
-stop	LUNAR	HOSIDIUS_NORTH_EAST_ALLOTMENT
-at	HOSIDIUS
-via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
-banks	91	HOSIDIUS
-walks	23	CHARGE
 via	all(CONSTRUCTION_CAPE,POH_PORTAL_KOUREND)	Construction cape to your house, then the Kourend portal
-walks	185	FREE
-to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
-walks	33	CONSUMABLE
-onlyWhenCertain
-via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
-banks	55	HOSIDIUS
-walks	74	CHARGE
-via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
-banks	55	HOSIDIUS
-walks	74	CHARGE
+walks	190	FREE
+to	HOUSE	POH_PORTAL_KOUREND	then the Kourend portal
+walks	190	CONSUMABLE
 to	KOUREND_CASTLE	then run south-east
 walks	185	CONSUMABLE
 skipIfUnreachable
@@ -462,11 +476,17 @@ optional	Worked while at the herb patch beside it
 
 site	HOSIDIUS_SOUTH_WEST_ALLOTMENT	HERB
 pick	pickHosidiusSouthWest	compostHosidiusSouthWest	Hosidius	Hosidius south-west	-
-stop	ARCEUUS	HOSIDIUS_SOUTH_WEST_ALLOTMENT
+stop	ARCEUUS LUNAR	HOSIDIUS_SOUTH_WEST_ALLOTMENT
 at	HOSIDIUS
 via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
 banks	91	HOSIDIUS
 walks	23	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_XERICS_TALISMAN)	Construction cape to your house, then the mounted Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	28	FREE
+to	HOUSE	POH_XERICS_TALISMAN	then the mounted Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	28	CONSUMABLE
 to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
 walks	33	CONSUMABLE
 onlyWhenCertain
@@ -476,26 +496,10 @@ walks	74	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
-to	KOUREND_CASTLE	then run south-east
-walks	185	CONSUMABLE
-skipIfUnreachable
-optional	Worked while at the herb patch beside it
-stop	LUNAR	HOSIDIUS_SOUTH_WEST_ALLOTMENT
-at	HOSIDIUS
-via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
-banks	91	HOSIDIUS
-walks	23	CHARGE
 via	all(CONSTRUCTION_CAPE,POH_PORTAL_KOUREND)	Construction cape to your house, then the Kourend portal
-walks	185	FREE
-to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
-walks	33	CONSUMABLE
-onlyWhenCertain
-via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
-banks	55	HOSIDIUS
-walks	74	CHARGE
-via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
-banks	55	HOSIDIUS
-walks	74	CHARGE
+walks	190	FREE
+to	HOUSE	POH_PORTAL_KOUREND	then the Kourend portal
+walks	190	CONSUMABLE
 to	KOUREND_CASTLE	then run south-east
 walks	185	CONSUMABLE
 skipIfUnreachable
@@ -503,11 +507,17 @@ optional	Worked while at the herb patch beside it
 
 site	HOSIDIUS_FLOWER	HERB
 pick	pickHosidiusFlower	-	Hosidius	Hosidius flowers	LIMPWURT
-stop	ARCEUUS	HOSIDIUS_FLOWER
+stop	ARCEUUS LUNAR	HOSIDIUS_FLOWER
 at	HOSIDIUS
 via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
 banks	91	HOSIDIUS
 walks	26	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_XERICS_TALISMAN)	Construction cape to your house, then the mounted Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	31	FREE
+to	HOUSE	POH_XERICS_TALISMAN	then the mounted Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	31	CONSUMABLE
 to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
 walks	39	CONSUMABLE
 onlyWhenCertain
@@ -517,27 +527,10 @@ walks	68	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	68	CHARGE
-to	KOUREND_CASTLE	then run south-east
-walks	179	CONSUMABLE
-skipIfUnreachable
-actions	HARVEST PLANT
-optional	Worked while at the herb patch beside it
-stop	LUNAR	HOSIDIUS_FLOWER
-at	HOSIDIUS
-via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
-banks	91	HOSIDIUS
-walks	26	CHARGE
 via	all(CONSTRUCTION_CAPE,POH_PORTAL_KOUREND)	Construction cape to your house, then the Kourend portal
-walks	179	FREE
-to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
-walks	39	CONSUMABLE
-onlyWhenCertain
-via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
-banks	55	HOSIDIUS
-walks	68	CHARGE
-via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
-banks	55	HOSIDIUS
-walks	68	CHARGE
+walks	184	FREE
+to	HOUSE	POH_PORTAL_KOUREND	then the Kourend portal
+walks	184	CONSUMABLE
 to	KOUREND_CASTLE	then run south-east
 walks	179	CONSUMABLE
 skipIfUnreachable
@@ -648,7 +641,7 @@ optional	Worked while at the herb patch beside it
 
 site	FALADOR_NORTH_WEST_ALLOTMENT	HERB
 pick	pickFaladorNorthWest	compostFaladorNorthWest	Falador	Falador north-west	-
-stop	ARCEUUS	FALADOR_NORTH_WEST_ALLOTMENT
+stop	ARCEUUS LUNAR	FALADOR_NORTH_WEST_ALLOTMENT
 at	FALADOR_FARM
 via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
 walks	20	CHARGE
@@ -656,27 +649,22 @@ via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
 walks	20	CHARGE
 via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
 walks	20	CHARGE
-via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
+via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)))	Construction cape to your house, then its spirit tree to Port Sarim, then run north
+walks	60	FREE
+to	HOUSE	all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	then its spirit tree to Port Sarim, then run north
+walks	60	CONSUMABLE
+via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
 walks	55	FREE
 via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
 walks	95	CHARGE
-to	FALADOR	then run south-east
-banks	22	FALADOR_EAST
-walks	129	CONSUMABLE
-skipIfUnreachable
-optional	Worked while at the herb patch beside it
-stop	LUNAR	FALADOR_NORTH_WEST_ALLOTMENT
-at	FALADOR_FARM
-via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
-walks	20	CHARGE
-via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
-walks	20	CHARGE
-via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
-walks	20	CHARGE
-via	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Construction cape to your house, then its spirit tree to Port Sarim, then run north
-walks	55	FREE
-via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
-walks	95	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_GLORY)	Construction cape to your house, then its mounted glory to Draynor Village, then run north-west
+walks	100	FREE
+to	HOUSE	POH_GLORY	then its mounted glory to Draynor Village, then run north-west
+walks	100	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to Draynor Village, then run north-west
+walks	100	FREE
+to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Draynor Village, then run north-west
+walks	100	CONSUMABLE
 to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
@@ -685,7 +673,7 @@ optional	Worked while at the herb patch beside it
 
 site	FALADOR_SOUTH_EAST_ALLOTMENT	HERB
 pick	pickFaladorSouthEast	compostFaladorSouthEast	Falador	Falador south-east	-
-stop	ARCEUUS	FALADOR_SOUTH_EAST_ALLOTMENT
+stop	ARCEUUS LUNAR	FALADOR_SOUTH_EAST_ALLOTMENT
 at	FALADOR_FARM
 via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
 walks	20	CHARGE
@@ -693,27 +681,22 @@ via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
 walks	20	CHARGE
 via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
 walks	20	CHARGE
-via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
+via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)))	Construction cape to your house, then its spirit tree to Port Sarim, then run north
+walks	60	FREE
+to	HOUSE	all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	then its spirit tree to Port Sarim, then run north
+walks	60	CONSUMABLE
+via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
 walks	55	FREE
 via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
 walks	95	CHARGE
-to	FALADOR	then run south-east
-banks	22	FALADOR_EAST
-walks	129	CONSUMABLE
-skipIfUnreachable
-optional	Worked while at the herb patch beside it
-stop	LUNAR	FALADOR_SOUTH_EAST_ALLOTMENT
-at	FALADOR_FARM
-via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
-walks	20	CHARGE
-via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
-walks	20	CHARGE
-via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
-walks	20	CHARGE
-via	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Construction cape to your house, then its spirit tree to Port Sarim, then run north
-walks	55	FREE
-via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
-walks	95	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_GLORY)	Construction cape to your house, then its mounted glory to Draynor Village, then run north-west
+walks	100	FREE
+to	HOUSE	POH_GLORY	then its mounted glory to Draynor Village, then run north-west
+walks	100	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to Draynor Village, then run north-west
+walks	100	FREE
+to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Draynor Village, then run north-west
+walks	100	CONSUMABLE
 to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
@@ -722,7 +705,7 @@ optional	Worked while at the herb patch beside it
 
 site	FALADOR_FLOWER	HERB
 pick	pickFaladorFlower	-	Falador	Falador flowers	-
-stop	ARCEUUS	FALADOR_FLOWER
+stop	ARCEUUS LUNAR	FALADOR_FLOWER
 at	FALADOR_FARM
 via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
 walks	20	CHARGE
@@ -730,27 +713,22 @@ via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
 walks	20	CHARGE
 via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
 walks	20	CHARGE
-via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
+via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)))	Construction cape to your house, then its spirit tree to Port Sarim, then run north
+walks	60	FREE
+to	HOUSE	all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	then its spirit tree to Port Sarim, then run north
+walks	60	CONSUMABLE
+via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
 walks	55	FREE
 via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
 walks	95	CHARGE
-to	FALADOR	then run south-east
-banks	22	FALADOR_EAST
-walks	129	CONSUMABLE
-skipIfUnreachable
-optional	Worked while at the herb patch beside it
-stop	LUNAR	FALADOR_FLOWER
-at	FALADOR_FARM
-via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
-walks	20	CHARGE
-via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
-walks	20	CHARGE
-via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
-walks	20	CHARGE
-via	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Construction cape to your house, then its spirit tree to Port Sarim, then run north
-walks	55	FREE
-via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
-walks	95	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_GLORY)	Construction cape to your house, then its mounted glory to Draynor Village, then run north-west
+walks	100	FREE
+to	HOUSE	POH_GLORY	then its mounted glory to Draynor Village, then run north-west
+walks	100	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to Draynor Village, then run north-west
+walks	100	FREE
+to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Draynor Village, then run north-west
+walks	100	CONSUMABLE
 to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
@@ -768,6 +746,12 @@ walks	56	CONSUMABLE
 via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
 banks	272	CANIFIS
 walks	60	FREE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	FREE
+to	HOUSE	POH_PORTAL_FENKENSTRAIN	then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
@@ -778,9 +762,6 @@ optional	Worked while at the herb patch beside it
 stop	LUNAR	MORYTANIA_NORTH_WEST_ALLOTMENT
 at	CANIFIS
 accessGate	MORYTANIA_ACCESS
-via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
-banks	157	CANIFIS
-walks	56	FREE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
@@ -797,6 +778,12 @@ walks	56	CONSUMABLE
 via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
 banks	272	CANIFIS
 walks	60	FREE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	FREE
+to	HOUSE	POH_PORTAL_FENKENSTRAIN	then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	CONSUMABLE
 to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
 noAlternative
@@ -813,6 +800,12 @@ walks	56	CONSUMABLE
 via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
 banks	272	CANIFIS
 walks	60	FREE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	FREE
+to	HOUSE	POH_PORTAL_FENKENSTRAIN	then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
@@ -823,9 +816,6 @@ optional	Worked while at the herb patch beside it
 stop	LUNAR	MORYTANIA_SOUTH_EAST_ALLOTMENT
 at	CANIFIS
 accessGate	MORYTANIA_ACCESS
-via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
-banks	157	CANIFIS
-walks	56	FREE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
@@ -842,6 +832,12 @@ walks	56	CONSUMABLE
 via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
 banks	272	CANIFIS
 walks	60	FREE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	FREE
+to	HOUSE	POH_PORTAL_FENKENSTRAIN	then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	CONSUMABLE
 to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
 noAlternative
@@ -858,6 +854,12 @@ walks	56	CONSUMABLE
 via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
 banks	272	CANIFIS
 walks	60	FREE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	FREE
+to	HOUSE	POH_PORTAL_FENKENSTRAIN	then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
@@ -868,9 +870,6 @@ optional	Worked while at the herb patch beside it
 stop	LUNAR	MORYTANIA_FLOWER
 at	CANIFIS
 accessGate	MORYTANIA_ACCESS
-via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
-banks	157	CANIFIS
-walks	56	FREE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
@@ -887,6 +886,12 @@ walks	56	CONSUMABLE
 via	ECTOPHIAL	Ectophial to the Ectofuntus, then run west
 banks	272	CANIFIS
 walks	60	FREE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_FENKENSTRAIN)	Construction cape to your house, then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	FREE
+to	HOUSE	POH_PORTAL_FENKENSTRAIN	then the Fenkenstrain's Castle portal
+banks	157	CANIFIS
+walks	61	CONSUMABLE
 to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
 noAlternative
@@ -973,9 +978,13 @@ stop	LUNAR	HARMONY_ALLOTMENT
 at	HARMONY_ISLAND
 accessGate	HARMONY_ISLAND_ACCESS
 via	all(CONSTRUCTION_CAPE,POH_PORTAL_HARMONY)	Construction cape to your house, then the Harmony Island portal
-walks	27	FREE
+walks	32	FREE
+to	HOUSE	POH_PORTAL_HARMONY	then the Harmony Island portal
+walks	32	CONSUMABLE
 via	all(CONSTRUCTION_CAPE,POH_NEXUS_HARMONY)	Construction cape to your house, then Harmony Island from the Portal Nexus
-walks	27	FREE
+walks	32	FREE
+to	HOUSE	POH_NEXUS_HARMONY	then Harmony Island from the Portal Nexus
+walks	32	CONSUMABLE
 to	HARMONY_ISLAND	-
 walks	28	CONSUMABLE
 swapTo	HARMONY_ISLAND	-
@@ -991,6 +1000,20 @@ banks	105	AL_KHARID
 walks	34	CHARGE
 via	AMULET_OF_GLORY	Amulet of glory to Al Kharid, then run north-east
 walks	43	CHARGE
+via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_BASIC,POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to Emir's Arena
+banks	105	AL_KHARID
+walks	39	FREE
+to	HOUSE	any(POH_JEWELLERY_BOX_BASIC,POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to Emir's Arena
+banks	105	AL_KHARID
+walks	39	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_GLORY)	Construction cape to your house, then its mounted glory to Al Kharid, then run north-east
+walks	48	FREE
+to	HOUSE	POH_GLORY	then its mounted glory to Al Kharid, then run north-east
+walks	48	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to Al Kharid, then run north-east
+walks	48	FREE
+to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Al Kharid, then run north-east
+walks	48	CONSUMABLE
 noFallbackGiven
 plants	POTATO_CACTUS
 optional	Replanted each visit for its health check
@@ -1074,6 +1097,18 @@ walks	33	CHARGE
 via	all(DIGSITE_PENDANT,CANAL_BARGE)	Digsite pendant to the Digsite, then the barge, then run round the hill
 banks	10	MUSEUM_CAMP
 walks	75	CHARGE
+via	all(CONSTRUCTION_CAPE,all(POH_DIGSITE_PENDANT,CANAL_BARGE,FOSSIL_ISLAND_HOLE))	Construction cape to your house, then the mounted digsite pendant to the Digsite, then the barge and the hole under the hill
+banks	32	MUSEUM_CAMP
+walks	38	FREE
+to	HOUSE	all(POH_DIGSITE_PENDANT,CANAL_BARGE,FOSSIL_ISLAND_HOLE)	then the mounted digsite pendant to the Digsite, then the barge and the hole under the hill
+banks	32	MUSEUM_CAMP
+walks	38	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_DIGSITE_PENDANT,CANAL_BARGE))	Construction cape to your house, then the mounted digsite pendant to the Digsite, then the barge, then run round the hill
+banks	10	MUSEUM_CAMP
+walks	80	FREE
+to	HOUSE	all(POH_DIGSITE_PENDANT,CANAL_BARGE)	then the mounted digsite pendant to the Digsite, then the barge, then run round the hill
+banks	10	MUSEUM_CAMP
+walks	80	CONSUMABLE
 noAlternative
 
 site	LOCUS_OASIS	HARDWOOD
@@ -1146,8 +1181,10 @@ at	VARROCK_PARK
 to	VARROCK	-
 banks	62	VARROCK_EAST
 walks	37	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK))	Construction cape to your house, then the spirit tree to Varrock
+walks	86	FREE
 to	HOUSE	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	then the spirit tree to Varrock
-walks	81	CONSUMABLE
+walks	86	CONSUMABLE
 via	CHRONICLE	Chronicle to the Champions' Guild
 banks	42	VARROCK_EAST
 walks	110	CHARGE
@@ -1175,6 +1212,12 @@ at	FALADOR_PARK
 via	RING_OF_WEALTH	Ring of wealth to Falador Park
 banks	49	FALADOR_EAST
 walks	6	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to Falador Park
+banks	49	FALADOR_EAST
+walks	11	FREE
+to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Falador Park
+banks	49	FALADOR_EAST
+walks	11	CONSUMABLE
 to	FALADOR	then run east into the park
 banks	41	FALADOR_EAST
 walks	39	CONSUMABLE
@@ -1198,6 +1241,10 @@ stop	ANY	TAVERLEY_TREE
 at	TAVERLEY
 via	all(RING_OF_DUELING,BALLOON_STATION_CASTLE_WARS,BALLOON_STATION_TAVERLEY)	Ring of dueling to Castle Wars, then the balloon to Taverley
 walks	48	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(any(POH_JEWELLERY_BOX_BASIC,POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE),BALLOON_STATION_CASTLE_WARS,BALLOON_STATION_TAVERLEY))	Construction cape to your house, then its jewellery box to Castle Wars, then the balloon to Taverley
+walks	53	FREE
+to	HOUSE	all(any(POH_JEWELLERY_BOX_BASIC,POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE),BALLOON_STATION_CASTLE_WARS,BALLOON_STATION_TAVERLEY)	then its jewellery box to Castle Wars, then the balloon to Taverley
+walks	53	CONSUMABLE
 to	HOUSE	POH_IN_TAVERLEY	with your house in Taverley
 walks	49	CONSUMABLE
 onlyWhenCertain
@@ -1224,9 +1271,12 @@ at	GNOME_STRONGHOLD
 via	SLAYER_RING	Slayer ring to the Stronghold Slayer Cave, then run south
 banks	18	GNOME_STRONGHOLD_SOUTH
 walks	7	CHARGE
-via	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	House spirit tree to the Grand Tree, then run south-west
+via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK))	Construction cape to your house, then the spirit tree to the Grand Tree, then run south-west
 banks	0	GNOME_STRONGHOLD_SOUTH
-walks	36	FREE
+walks	41	FREE
+to	HOUSE	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	then the spirit tree to the Grand Tree, then run south-west
+banks	0	GNOME_STRONGHOLD_SOUTH
+walks	41	CONSUMABLE
 via	DIARY_CAPE	Achievement diary cape to the Elder Gnome child, then run south-west
 banks	0	GNOME_STRONGHOLD_SOUTH
 walks	48	FREE
@@ -1307,9 +1357,12 @@ walks	48	FREE
 via	SLAYER_RING	Slayer ring to the Stronghold Slayer Cave, then run north-east
 banks	3	GNOME_STRONGHOLD_SOUTH
 walks	46	CHARGE
-via	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	House spirit tree to the Grand Tree
+via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK))	Construction cape to your house, then the spirit tree to the Grand Tree
 banks	65	GNOME_STRONGHOLD_SOUTH
-walks	13	FREE
+walks	18	FREE
+to	HOUSE	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	then the spirit tree to the Grand Tree
+banks	65	GNOME_STRONGHOLD_SOUTH
+walks	18	CONSUMABLE
 to	VARROCK	SPIRIT_TREE_NETWORK	then run north to the Grand Exchange spirit tree and ride it to the Grand Tree
 banks	65	GNOME_STRONGHOLD_SOUTH
 walks	100	CONSUMABLE
@@ -1385,9 +1438,18 @@ walks	19	FREE
 via	SKILLS_NECKLACE	Skills necklace to the Farming Guild
 banks	25	FARMING_GUILD
 walks	19	CHARGE
-via	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	House spirit tree, then the Farming Guild tree
+via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to the Farming Guild
+banks	25	FARMING_GUILD
+walks	24	FREE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Farming Guild
+banks	25	FARMING_GUILD
+walks	24	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD))	Construction cape to your house, then the spirit tree to the Farming Guild
 banks	4	FARMING_GUILD
-walks	35	FREE
+walks	40	FREE
+to	HOUSE	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	then the spirit tree to the Farming Guild
+banks	4	FARMING_GUILD
+walks	40	CONSUMABLE
 via	all(@STRONGHOLD_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	Reach the Gnome Stronghold, then its spirit tree to the Farming Guild
 banks	4	FARMING_GUILD
 walks	35	FREE
@@ -1421,9 +1483,18 @@ walks	18	FREE
 via	SKILLS_NECKLACE	Skills necklace to the Farming Guild
 banks	25	FARMING_GUILD
 walks	18	CHARGE
-via	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	House spirit tree, then the Farming Guild tree
+via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to the Farming Guild
+banks	25	FARMING_GUILD
+walks	23	FREE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Farming Guild
+banks	25	FARMING_GUILD
+walks	23	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD))	Construction cape to your house, then the spirit tree to the Farming Guild
 banks	4	FARMING_GUILD
-walks	34	FREE
+walks	39	FREE
+to	HOUSE	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	then the spirit tree to the Farming Guild
+banks	4	FARMING_GUILD
+walks	39	CONSUMABLE
 via	all(@STRONGHOLD_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	Reach the Gnome Stronghold, then its spirit tree to the Farming Guild
 banks	4	FARMING_GUILD
 walks	34	FREE
@@ -1452,7 +1523,11 @@ site	SEAWEED	SEAWEED
 stop	ANY	SEAWEED_NORTH,SEAWEED_SOUTH
 at	FOSSIL_ISLAND_SEAWEED
 via	all(DIGSITE_PENDANT,FOSSIL_ISLAND_ZIPLINE)	Digsite pendant to the House on the Hill, then the zipline down
+via	all(CONSTRUCTION_CAPE,all(POH_DIGSITE_PENDANT,FOSSIL_ISLAND_ZIPLINE))	Construction cape to your house, then the mounted digsite pendant to the House on the Hill, then the zipline down
+to	HOUSE	all(POH_DIGSITE_PENDANT,FOSSIL_ISLAND_ZIPLINE)	then the mounted digsite pendant to the House on the Hill, then the zipline down
 via	all(DIGSITE_PENDANT,CANAL_BARGE)	Digsite pendant to the Digsite, barge to the Museum Camp, then row out and dive
+via	all(CONSTRUCTION_CAPE,all(POH_DIGSITE_PENDANT,CANAL_BARGE))	Construction cape to your house, then the mounted digsite pendant to the Digsite, barge to the Museum Camp, then row out and dive
+to	HOUSE	all(POH_DIGSITE_PENDANT,CANAL_BARGE)	then the mounted digsite pendant to the Digsite, barge to the Museum Camp, then row out and dive
 noFallbackGiven
 actions	HARVEST COMPOST PLANT PAY_PROTECTION
 plants	SEAWEED
@@ -1468,9 +1543,18 @@ walks	11	FREE
 via	SKILLS_NECKLACE	Skills necklace to the Farming Guild
 banks	25	FARMING_GUILD
 walks	11	CHARGE
-via	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	House spirit tree, then the Farming Guild tree
+via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to the Farming Guild
+banks	25	FARMING_GUILD
+walks	16	FREE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Farming Guild
+banks	25	FARMING_GUILD
+walks	16	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD))	Construction cape to your house, then the spirit tree to the Farming Guild
 banks	4	FARMING_GUILD
-walks	27	FREE
+walks	32	FREE
+to	HOUSE	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	then the spirit tree to the Farming Guild
+banks	4	FARMING_GUILD
+walks	32	CONSUMABLE
 via	all(@STRONGHOLD_TREE,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_FARMING_GUILD)	Reach the Gnome Stronghold, then its spirit tree to the Farming Guild
 banks	4	FARMING_GUILD
 walks	27	FREE

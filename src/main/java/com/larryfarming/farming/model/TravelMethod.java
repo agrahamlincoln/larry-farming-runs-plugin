@@ -59,7 +59,11 @@ public enum TravelMethod {
     /** Spellbook Swap, and so every spell borrowed from another book for one cast. */
     SPELLBOOK_SWAP,
     HOUSE_PORTALS,
-    HOUSE_FAIRY_RING;
+    HOUSE_FAIRY_RING,
+    HOUSE_JEWELLERY_BOX,
+    MOUNTED_XERICS_TALISMAN,
+    MOUNTED_DIGSITE_PENDANT,
+    MOUNTED_GLORY;
 
     static {
         Rows.TABLE.requireAll(values());
@@ -78,11 +82,18 @@ public enum TravelMethod {
     @Getter
     private final Group group;
     /**
-     * The capabilities this method covers, the one drawn on its square first. Empty for a
-     * method that covers a place's tablet or spell rather than an item.
+     * The capabilities this method covers, the one drawn on its square first unless it has
+     * an icon item. Empty for a method that covers a place's tablet or spell rather than an
+     * item.
      */
     @Getter
     private final List<Capability> capabilities;
+    /** The item its square draws in place of its first capability's, or 0 for none. */
+    @Getter
+    private final int iconItemId;
+    /** The word on its square when the item drawn is not the thing itself, or null. */
+    @Getter
+    private final String tag;
 
     TravelMethod() {
         Tables.Row row = Rows.TABLE.of(name());
@@ -91,6 +102,9 @@ public enum TravelMethod {
         this.label = row.text(3);
         this.inSentence = row.text(4);
         this.capabilities = row.constants(Capability.class, 5);
+        int[] icon = row.integers(6);
+        this.iconItemId = icon.length > 0 ? icon[0] : 0;
+        this.tag = row.optionalText(8);
     }
 
     /**
@@ -98,7 +112,7 @@ public enum TravelMethod {
      * {@link Tables#byName}.
      */
     private static final class Rows {
-        static final Tables.Named TABLE = Tables.byName("/com/larryfarming/travel-methods.tsv", 6);
+        static final Tables.Named TABLE = Tables.byName("/com/larryfarming/travel-methods.tsv", 9);
     }
 
     private static Map<Capability, TravelMethod> byCapability() {

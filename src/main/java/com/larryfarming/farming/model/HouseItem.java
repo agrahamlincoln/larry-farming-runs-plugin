@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
  * declare built before Larry has seen it.
  *
  * <p>Declared in the order the settings draw them, which never changes: the portal chamber,
- * then the Portal Nexus, then the garden.
+ * then the Portal Nexus, then the garden, then the teleport jewellery.
  *
  * <p>Each item's group, label, config key and capability come from the house items table.
  */
@@ -25,7 +25,14 @@ public enum HouseItem {
     TROLL_STRONGHOLD_IN_NEXUS,
     HARMONY_IN_NEXUS,
     SPIRIT_TREE,
-    FAIRY_RING;
+    FAIRY_RING,
+    // Drawn in two columns, left to right: the boxes down the left, the mounts down the right.
+    BASIC_JEWELLERY_BOX,
+    MOUNTED_XERICS_TALISMAN,
+    FANCY_JEWELLERY_BOX,
+    MOUNTED_DIGSITE_PENDANT,
+    ORNATE_JEWELLERY_BOX,
+    MOUNTED_GLORY;
 
     static {
         Rows.TABLE.requireAll(values());
@@ -37,7 +44,8 @@ public enum HouseItem {
     public enum Group {
         PORTALS("Portals"),
         NEXUS("Portal Nexus"),
-        GARDEN("Garden");
+        GARDEN("Garden"),
+        JEWELLERY("Jewellery");
 
         private final String label;
     }

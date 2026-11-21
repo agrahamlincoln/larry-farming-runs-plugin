@@ -27,6 +27,8 @@ public class FarmingPlannerPersistence {
     private static final String KEY_DAILY_TELEPORT_DAY = "farming.dailyTeleportDay";
     private static final String KEY_HOUSE = "farming.house";
     private static final String KEY_HOUSE_NEXUS = "farming.houseNexus";
+    /** The entry in a saved scan's list that names the scanner that made it. */
+    private static final String SCANNER_ENTRY = "SCANNER_";
     private static final String KEY_COMPOST_UPKEEP = "farming.compostUpkeep";
     private static final String KEY_COMPOST_STEP = "farming.compostStep";
     private static final String KEY_BOTTOMLESS_BUCKET = "farming.bottomlessBucket";
@@ -135,12 +137,13 @@ public class FarmingPlannerPersistence {
 
     /**
      * Persist what the player's own house was last seen to hold, as two keys: the last scan
-     * as "scannedAtEpochSec:FEATURE,FEATURE" and the Nexus attunement as
+     * as "scannedAtEpochSec:FEATURE,FEATURE,SCANNER_n" and the Nexus attunement as
      * "readAtEpochSec:key,key", where a read stamp of 0 means only passive reads. A house
      * never seen leaves both keys unset.
      *
      * <p>Features are stored by name. Load skips a name no feature carries and keeps the
-     * rest.
+     * rest. The scanner rides in the same list, so whatever rewrites the scan rewrites it too;
+     * a list with no scanner entry is read as scanner 1.
      */
     public void saveHouse(HouseSight house) {
         if (house == null || !house.isScanned()) {
@@ -150,6 +153,7 @@ public class FarmingPlannerPersistence {
             for (HouseFeature feature : house.getBuilt()) {
                 names.add(feature.name());
             }
+            names.add(SCANNER_ENTRY + house.getScanner());
             put(KEY_HOUSE, house.getScannedAtEpochSec() + ":" + String.join(",", names));
         }
         if (house == null || (!house.isNexusRead() && house.getAttuned().isEmpty())) {
@@ -169,17 +173,24 @@ public class FarmingPlannerPersistence {
      */
     public HouseSight loadHouse() {
         long scannedAt = 0L;
+        int scanner = 0;
         Set<HouseFeature> built = EnumSet.noneOf(HouseFeature.class);
         String[] scan = stampAndList(get(KEY_HOUSE));
         // A scan without a real stamp is no scan, so none of its furniture is credited.
         long scanStamp = scan != null ? parseStamp(scan[0]) : -1L;
         if (scanStamp > 0L) {
             scannedAt = scanStamp;
+            scanner = 1;
             for (String name : scan[1].split(",")) {
+                Integer saved = name.startsWith(SCANNER_ENTRY) ? parseInt(name.substring(SCANNER_ENTRY.length())) : null;
+                if (saved != null) {
+                    scanner = saved;
+                    continue;
+                }
                 try {
                     built.add(HouseFeature.valueOf(name));
                 } catch (IllegalArgumentException ex) {
-                    // A feature dropped since the write, or an empty list.
+                    // A name no feature here carries, a malformed scanner entry, or an empty list.
                 }
             }
         }
@@ -197,7 +208,7 @@ public class FarmingPlannerPersistence {
                 }
             }
         }
-        return HouseSight.of(built, scannedAt, attuned, readAt);
+        return HouseSight.of(built, scannedAt, scanner, attuned, readAt);
     }
 
     /**

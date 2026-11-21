@@ -1661,6 +1661,13 @@ public class LarryPlugin extends Plugin
 		houseWatch.objectSpawned(event.getGameObject().getId());
 	}
 
+	/** Wall decorations, for the house scan: the mounted jewellery hangs on walls. */
+	@Subscribe
+	public void onDecorativeObjectSpawned(DecorativeObjectSpawned event)
+	{
+		houseWatch.objectSpawned(event.getDecorativeObject().getId());
+	}
+
 	@Subscribe
 	public void onWidgetClosed(WidgetClosed event)
 	{

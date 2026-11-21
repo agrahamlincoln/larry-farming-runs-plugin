@@ -168,10 +168,10 @@ public final class RunScheduler {
         // once any patch of it went in on this trip nothing holds it back: the player is out
         // on it. The rule asks this of the run, not of each crop, because a planting worked
         // back from its finish estimate can read as older than the trip, and one such crop
-        // would end the run with patches still due.
+        // would end the run with patches still due. Stock packed for the run counts the same.
         boolean waits = inputs.getPreferences().waitsForEveryPatch();
         boolean urgent = tally.needsHelp + tally.needsClearing > 0;
-        boolean holding = tally.growing > 0 && tally.plantedThisTrip == 0;
+        boolean holding = tally.growing > 0 && tally.plantedThisTrip == 0 && !packedFor(run, inputs);
         // Short of a sapling for every patch, the fruit trees wait for more, unless a tree
         // is diseased or dead.
         String saplings = saplingsShort(run, tally, inputs.getPreferences(), state);
@@ -186,6 +186,27 @@ public final class RunScheduler {
         long readyAt = !waits ? tally.earliestReady : tally.undated > 0 ? 0L : tally.latestReady;
         return build(run, RunStatus.PENDING, pendingDetail(tally, readyAt, waits, nowEpochSec),
                 readyAt, unfinished, false);
+    }
+
+    /**
+     * Whether this trip packed any form of a seed or sapling the run's patches take. The
+     * player set off for the run, so a patch found growing on the way, planted where Larry
+     * never saw it, drops only itself and not the rest of the run.
+     *
+     * <p>Only the tree runs name their own seed list, so every other run answers no. The herb
+     * run can't tell its seeds from the contract's filler herb.
+     */
+    private static boolean packedFor(FarmingRun run, FarmingInputs inputs) {
+        Set<Integer> packed = inputs.getPackedThisTrip();
+        if (run.getSeedPatchType() == null || packed.isEmpty()) {
+            return false;
+        }
+        for (Crop crop : CropData.plantableIn(run.getSeedPatchType())) {
+            if (!Collections.disjoint(packed, CropData.forCrop(crop).getPlantingForms())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Whether the player's herb runs wait for {@link Preset#HERB_RUN_LEVEL} Farming. */
