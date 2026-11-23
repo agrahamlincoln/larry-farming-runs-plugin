@@ -4,6 +4,7 @@ import com.larryfarming.farming.FarmingPlanner;
 import com.larryfarming.snapshot.FarmingAdvice;
 import java.awt.*;
 import javax.swing.*;
+import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
 
@@ -29,6 +30,7 @@ public class LarryPanel extends PluginPanel
 	private final Timer countdownTicker;
 
 	private volatile FarmingPlanner planner;
+	@Setter
 	private volatile IconProvider iconProvider;
 
 	/** The advice version last handed to the EDT; -1 forces the next refresh through. */
@@ -70,11 +72,6 @@ public class LarryPanel extends PluginPanel
 	{
 		this.planner = planner;
 		this.lastAdviceVersion = -1;
-	}
-
-	public void setIconProvider(IconProvider iconProvider)
-	{
-		this.iconProvider = iconProvider;
 	}
 
 	/**

@@ -1,0 +1,28 @@
+# The diary tier that grants each tiered reward item, and the varbit that counts the item's
+# teleports spent today where the game keeps one. The highest completed tier of a family
+# names what the player holds. The name beside each varbit is its RuneLite VarbitID constant.
+#
+# 4552 counts the Explorer's ring's cabbage-patch teleports (4553 counts energy restores,
+# 4554 free alchs). Varbit 6069 (ARDOUGNE_CLOAK_LOWBITS) is a single bit and cannot hold
+# the cloak's three or five daily farm teleports, so the cloak's uses are counted as they
+# happen instead.
+#
+# capability	diary area	tier	uses-spent varbit	VarbitID
+EXPLORERS_RING_2	Lumbridge	Medium	4552	LUMBRIDGE_CABBAGE_TELEPORT
+EXPLORERS_RING_3	Lumbridge	Hard	-	-
+EXPLORERS_RING_4	Lumbridge	Elite	-	-
+# Cloak 1 matters because its Monastery teleport lands beside a fairy ring.
+ARDOUGNE_CLOAK_1	Ardougne	Easy	-	-
+ARDOUGNE_CLOAK_2	Ardougne	Medium	-	-
+ARDOUGNE_CLOAK_3	Ardougne	Hard	-	-
+ARDOUGNE_CLOAK_4	Ardougne	Elite	-	-
+KANDARIN_HEADGEAR_3	Kandarin	Hard	4561	SEERS_SHERLOCK_TELEPORT
+KANDARIN_HEADGEAR_4	Kandarin	Elite	-	-
+# Only the elite legs teleport to the slime pit without limit, so the lower tiers have no row.
+MORYTANIA_LEGS_4	Morytania	Elite	-	-
+# 7937 counts Rada's blessing's Kourend Woodland teleports, the first three bits of varp
+# kebos_blessing_tracker, for the easy and the medium blessing alike, so the medium one is
+# rationed as the easy one: three a day where the game allows five. The elite blessing
+# teleports there as the hard one does, without limit.
+RADAS_BLESSING_1	Kourend	Easy	7937	ZEAH_BLESSING_WOODLAND_TELEPORT
+RADAS_BLESSING_3	Kourend	Hard	-	-

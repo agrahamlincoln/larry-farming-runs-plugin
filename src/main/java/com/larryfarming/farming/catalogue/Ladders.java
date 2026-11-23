@@ -39,11 +39,6 @@ final class Ladders {
     }
 
     private static boolean asksForAnApproach(TravelOption rung, Collection<Approach> approaches) {
-        for (Approach approach : approaches) {
-            if (rung.getRequires().contains(approach.getWay())) {
-                return true;
-            }
-        }
-        return false;
+        return approaches.stream().anyMatch(approach -> rung.getRequires().contains(approach.getWay()));
     }
 }

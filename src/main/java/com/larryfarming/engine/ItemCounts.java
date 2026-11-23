@@ -16,7 +16,7 @@ import java.util.*;
  * their contents count wherever the container is; the seed vault and the tool leprechaun
  * are storage, so they count toward ownership only.
  *
- * <p>An item matches by id when the id is non-zero, otherwise by case-insensitive name.
+ * <p>An item matches by id. An id of 0 names no item, and every count of it is 0.
  */
 public final class ItemCounts {
 
@@ -27,13 +27,13 @@ public final class ItemCounts {
      * How many of an item the player owns anywhere they can retrieve it from: inventory,
      * equipment, bank, rune pouch, seed box, seed vault or the tool leprechaun.
      */
-    public static int countOwned(PlayerState state, int itemId, String itemName) {
-        if (state == null || (itemId == 0 && itemName == null)) {
+    public static int countOwned(PlayerState state, int itemId) {
+        if (state == null || itemId == 0) {
             return 0;
         }
-        SideContainerCounts side = sideContainerCounts(state, itemId, itemName);
-        return countIn(state.getInventory(), itemId, itemName) + countItemInStorage(state.getEquipment().values(), itemId, itemName)
-                + countIn(state.getBank(), itemId, itemName) + side.carried + side.banked + side.stored;
+        SideContainerCounts side = sideContainerCounts(state, itemId);
+        return countIn(state.getInventory(), itemId) + countItemInStorage(state.getEquipment().values(), itemId)
+                + countIn(state.getBank(), itemId) + side.carried + side.banked + side.stored;
     }
 
     /**
@@ -41,12 +41,12 @@ public final class ItemCounts {
      * carried container such as the rune pouch, as opposed to owning something they would
      * have to fetch.
      */
-    public static int countCarried(PlayerState state, int itemId, String itemName) {
-        if (state == null || (itemId == 0 && itemName == null)) {
+    public static int countCarried(PlayerState state, int itemId) {
+        if (state == null || itemId == 0) {
             return 0;
         }
-        return countIn(state.getInventory(), itemId, itemName) + countItemInStorage(state.getEquipment().values(), itemId, itemName)
-                + sideContainerCounts(state, itemId, itemName).carried;
+        return countIn(state.getInventory(), itemId) + countItemInStorage(state.getEquipment().values(), itemId)
+                + sideContainerCounts(state, itemId).carried;
     }
 
     /**
@@ -61,7 +61,7 @@ public final class ItemCounts {
 
     /** Whether the player owns at least one of the item anywhere; see {@link #countOwned}. */
     public static boolean ownsAny(PlayerState state, int itemId) {
-        return countOwned(state, itemId, null) > 0;
+        return countOwned(state, itemId) > 0;
     }
 
     /** Whether the player owns at least one of any of these items anywhere. */
@@ -69,30 +69,23 @@ public final class ItemCounts {
         return itemIds.stream().anyMatch(id -> ownsAny(state, id));
     }
 
-    /** Counts items matching {@code itemId}/{@code itemName} in one container's snapshot. */
-    static int countItemInStorage(Collection<ItemStack> storage, int itemId, String itemName) {
+    /** Counts the item in one container's snapshot. */
+    static int countItemInStorage(Collection<ItemStack> storage, int itemId) {
         if (storage == null) {
             return 0;
         }
         int total = 0;
         for (ItemStack item : storage) {
-            if (itemMatches(item, itemId, itemName)) {
+            if (item.getItemId() == itemId) {
                 total += item.getQuantity();
             }
         }
         return total;
     }
 
-    private static boolean itemMatches(ItemStack item, int itemId, String itemName) {
-        if (itemId != 0) {
-            return item.getItemId() == itemId;
-        }
-        return itemName.equalsIgnoreCase(item.getName());
-    }
-
     /** The inventory or the bank: loose items plus the contents of filled sacks and baskets. */
-    private static int countIn(List<ItemStack> items, int itemId, String itemName) {
-        return countItemInStorage(items, itemId, itemName) + countContainerContents(items, itemId);
+    private static int countIn(List<ItemStack> items, int itemId) {
+        return countItemInStorage(items, itemId) + countContainerContents(items, itemId);
     }
 
     /** Whether any of these stacks is one of the items. */
@@ -132,7 +125,7 @@ public final class ItemCounts {
         }
     }
 
-    private static SideContainerCounts sideContainerCounts(PlayerState state, int itemId, String itemName) {
+    private static SideContainerCounts sideContainerCounts(PlayerState state, int itemId) {
         int carried = 0;
         int banked = 0;
         int stored = 0;
@@ -149,7 +142,7 @@ public final class ItemCounts {
         // An untrusted seed box tally answers ownership but not "is it on me" (see
         // SeedBox#trustedOf). Under-counting carried seeds costs a needless withdrawal;
         // over-counting sends the player off without seeds to plant.
-        int boxed = countItemInStorage(state.getSeedBox(), itemId, itemName);
+        int boxed = countItemInStorage(state.getSeedBox(), itemId);
         if (boxed > 0) {
             int trusted = SeedBox.trustedOf(state, itemId, boxed);
             carried += trusted;
@@ -163,7 +156,7 @@ public final class ItemCounts {
             }
         }
 
-        stored += countItemInStorage(state.getSeedVault(), itemId, itemName) + countInLeprechaunStorage(state, itemId);
+        stored += countItemInStorage(state.getSeedVault(), itemId) + countInLeprechaunStorage(state, itemId);
 
         return SideContainerCounts.of(carried, banked, stored);
     }

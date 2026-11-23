@@ -41,8 +41,14 @@ public enum Destination {
     DRAYNOR_MANOR,
     ARCEUUS_LIBRARY,
     HARMONY_ISLAND,
+    /** Canifis, by the Kharyrll tablet or the house's Kharyrll portal. */
+    KHARYRLL,
     KOUREND_CASTLE,
-    CIVITAS_ILLA_FORTIS;
+    CIVITAS_ILLA_FORTIS,
+    TROLLHEIM,
+    SENNTISTEN,
+    PORT_KHAZARD,
+    BARBARIAN_OUTPOST;
 
     static {
         Rows.TABLE.requireAll(values());

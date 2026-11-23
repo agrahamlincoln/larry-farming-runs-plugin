@@ -57,6 +57,8 @@ compostsWithFertileSoil	-
 # more than one run's output of room under the leprechaun's 1,000.
 makeCompostBelow	300
 stopCompostAt	800
+# The longest run after a teleport a route may ask for, in seconds: 45 is 150 tiles.
+longestRunSeconds	45
 # The herb farms' allotments and flower patches, each a SITE:CROP pair; a patch missing here
 # plants nothing. One snape grass patch and a white lily guarding Catherby's allotments, one
 # limpwurt patch, and watermelons for compost in every other allotment beside a bin.

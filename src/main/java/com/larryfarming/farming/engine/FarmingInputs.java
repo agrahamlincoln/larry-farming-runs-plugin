@@ -113,6 +113,8 @@ public final class FarmingInputs {
     @Getter(AccessLevel.NONE)
     @With(AccessLevel.PRIVATE)
     private final Judgement bins;
+    /** When the trip the player is on began, or zero when they are on none. */
+    private final long tripStartedAt;
 
     /**
      * What {@link #seeing} judged for one player: the bins' verdicts and the preset picks the
@@ -132,7 +134,8 @@ public final class FarmingInputs {
     private FarmingInputs(Spellbook previewBook, Function<PatchRef, PatchPrediction> patches, DailyTeleportLedger ledger, long nowEpochSec,
             Crop contractCrop, FarmingRunStatus contractRun,
             FarmingPreferences preferences, HouseSight house, boolean offeredBanksHidden, Set<Integer> packedThisTrip, TravelTaken travelTaken,
-            List<String> ahead, CompostStock compost, int fertileAsh, Judgement bins) {
+            List<String> ahead, CompostStock compost, int fertileAsh, Judgement bins, long tripStartedAt) {
+        this.tripStartedAt = tripStartedAt;
         this.compost = compost != null ? compost : CompostStock.NONE;
         this.fertileAsh = fertileAsh;
         this.bins = bins;
@@ -174,7 +177,7 @@ public final class FarmingInputs {
      */
     public CapabilityResolver resolverOn(Spellbook book) {
         return new CapabilityResolver(book, ledger, nowEpochSec, this::patchAt, house).switchingOff(preferences.travelOff())
-                .declaringHouse(preferences.houseDeclared()).travelling(travelTaken);
+                .declaringHouse(preferences.houseDeclared()).travelling(travelTaken).limitingWalks(preferences.longestWalkTiles());
     }
 
     /**

@@ -3,6 +3,7 @@ package com.larryfarming.farming.catalogue;
 import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.model.*;
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.Value;
 
 /**
@@ -42,6 +43,12 @@ public final class FarmingCatalogue {
      */
     public static Map<RunId, List<FarmingRun>> runsById() {
         return RUNS_BY_ID;
+    }
+
+    /** The map regions of the patches at this arrival; empty for none. */
+    public static Set<Integer> regionsAt(Arrival arrival) {
+        return RUNS.stream().flatMap(run -> run.getStops().stream()).filter(stop -> stop.getArrival() == arrival)
+                .flatMap(stop -> stop.getPatches().stream()).map(PatchRef::getRegionId).collect(Collectors.toSet());
     }
 
     /**

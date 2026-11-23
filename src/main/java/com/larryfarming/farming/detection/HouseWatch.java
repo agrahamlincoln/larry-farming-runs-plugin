@@ -33,7 +33,7 @@ public final class HouseWatch {
      * The map regions a house is built from, by instance template: every house, wherever
      * its portal stands, is copied from these.
      */
-    private static final int[] HOUSE_REGIONS = {7534, 7535, 7790, 7791, 8046, 8047, 8302, 8303};
+    private static final Set<Integer> HOUSE_REGIONS = Set.of(7534, 7535, 7790, 7791, 8046, 8047, 8302, 8303);
 
     /** {@code VarbitID.IRONMAN}'s values for the ironman, ultimate and hardcore modes. */
     private static final int FIRST_SOLO_IRONMAN = 1;
@@ -70,12 +70,7 @@ public final class HouseWatch {
 
     /** Whether this map region, by instance template, is part of a house. */
     public static boolean isHouseRegion(int templateRegionId) {
-        for (int region : HOUSE_REGIONS) {
-            if (region == templateRegionId) {
-                return true;
-            }
-        }
-        return false;
+        return HOUSE_REGIONS.contains(templateRegionId);
     }
 
     /** Whether an {@code IRONMAN} varbit value is a mode that visits no other house. */

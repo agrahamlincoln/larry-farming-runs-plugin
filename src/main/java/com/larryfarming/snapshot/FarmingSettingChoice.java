@@ -62,8 +62,8 @@ public class FarmingSettingChoice {
     boolean seen;
 
     /**
-     * One short line for a checkbox whose label cannot make its effect obvious, or null for
-     * none.
+     * One short line for a checkbox whose label cannot make its effect obvious or, for a
+     * locked site, what opens it; null for none.
      */
     @With
     String tip;

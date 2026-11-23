@@ -114,13 +114,7 @@ final class CompostBins {
 
     /** The farm any stop of this arrival belongs to, or null for an arrival with no bin. */
     static Farm farmAt(List<Integer> group, List<StopPlan> plans) {
-        for (int index : group) {
-            Farm farm = farmOf(plans.get(index));
-            if (farm != null) {
-                return farm;
-            }
-        }
-        return null;
+        return group.stream().map(index -> farmOf(plans.get(index))).filter(Objects::nonNull).findFirst().orElse(null);
     }
 
     /** The farm whose map region holds this stop's patch, or null. */
@@ -152,11 +146,8 @@ final class CompostBins {
      * carried, noted or not.
      */
     static int emptyBuckets(PlayerState state, boolean carried) {
-        int buckets = 0;
-        for (int itemId : EMPTY_BUCKETS) {
-            buckets += carried ? ItemCounts.countCarried(state, itemId, null) : ItemCounts.countOwned(state, itemId, null);
-        }
-        return buckets;
+        return Arrays.stream(EMPTY_BUCKETS)
+                .map(itemId -> carried ? ItemCounts.countCarried(state, itemId) : ItemCounts.countOwned(state, itemId)).sum();
     }
 
     /**
@@ -203,12 +194,12 @@ final class CompostBins {
         Crop step = compost.getStep();
         // What the player owns, and what is left of it for the next bin.
         int ownedDoses = doses(state, false);
-        int ownedAsh = ItemCounts.countOwned(state, ItemID.FOSSIL_VOLCANIC_ASH, null);
+        int ownedAsh = ItemCounts.countOwned(state, ItemID.FOSSIL_VOLCANIC_ASH);
         int ownedEmpties = emptyBuckets(state, false);
         int doses = ownedDoses;
         int ash = Math.max(0, ownedAsh - inputs.getFertileAsh());
         int empties = ownedEmpties;
-        int carried = ItemCounts.countCarried(state, ItemID.BUCKET_EMPTY, null);
+        int carried = ItemCounts.countCarried(state, ItemID.BUCKET_EMPTY);
         // An unread bucket may hold any kind, so no bin goes into it.
         boolean bottomless = BottomlessBucket.toHand(state) && !compost.isBucketUnread();
         // The bucket holds one kind at a time: what it holds now, then what the bins put in it.
@@ -299,7 +290,7 @@ final class CompostBins {
             leans |= judged.getAsh() > 0;
             ash += judged.getAsh();
         }
-        return leans && ash > ItemCounts.countOwned(state, ItemID.FOSSIL_VOLCANIC_ASH, null);
+        return leans && ash > ItemCounts.countOwned(state, ItemID.FOSSIL_VOLCANIC_ASH);
     }
 
     /** One dose of compost potion, as a row names it. */
@@ -345,12 +336,8 @@ final class CompostBins {
     static Needs over(List<StopPlan> plans, FarmingInputs inputs, PlayerState state) {
         Map<Farm, Judged> verdicts = inputs.bins(state);
         // Null for a stop at no farm, which has no verdict.
-        Set<Farm> visited = new HashSet<>();
-        for (StopPlan plan : plans) {
-            if (plan.isVisit()) {
-                visited.add(farmOf(plan));
-            }
-        }
+        Set<Farm> visited = plans.stream().filter(StopPlan::isVisit).map(CompostBins::farmOf)
+                .collect(Collectors.toCollection(HashSet::new));
         int doses = 0;
         int ash = 0;
         boolean bucket = false;
@@ -394,7 +381,7 @@ final class CompostBins {
      */
     static Row rowAt(List<Integer> group, List<StopPlan> plans, FarmingInputs inputs, PlayerState state) {
         Farm farm = farmAt(group, plans);
-        Judged judged = judgedAt(group, plans, inputs, state);
+        Judged judged = judgedAt(farm, inputs, state);
         if (judged == null) {
             return Row.NONE;
         }
@@ -450,15 +437,14 @@ final class CompostBins {
         return new Row(steps.isEmpty() ? List.of() : List.of("Compost: " + String.join(", ", steps)), fills);
     }
 
-    /** The verdict on the bin at an arrival, or null for none. A null player has none. */
-    private static Judged judgedAt(List<Integer> group, List<StopPlan> plans, FarmingInputs inputs, PlayerState state) {
-        Farm farm = farmAt(group, plans);
+    /** The verdict on a farm's bin, or null for none: no farm, or a null player. */
+    private static Judged judgedAt(Farm farm, FarmingInputs inputs, PlayerState state) {
         return farm == null ? null : inputs.bins(state).get(farm);
     }
 
     /** Whether the bin at an arrival is emptied into empty buckets this visit, or waits for them. */
     static boolean wantsBucketsAt(List<Integer> group, List<StopPlan> plans, FarmingInputs inputs, PlayerState state) {
-        Judged judged = judgedAt(group, plans, inputs, state);
+        Judged judged = judgedAt(farmAt(group, plans), inputs, state);
         return judged != null && judged.getBuckets() > 0;
     }
 
@@ -466,7 +452,7 @@ final class CompostBins {
     static int doses(PlayerState state, boolean carried) {
         int doses = 0;
         for (int i = 0; i < POTIONS.length; i++) {
-            doses += (i + 1) * (carried ? ItemCounts.countCarried(state, POTIONS[i], null) : ItemCounts.countOwned(state, POTIONS[i], null));
+            doses += (i + 1) * (carried ? ItemCounts.countCarried(state, POTIONS[i]) : ItemCounts.countOwned(state, POTIONS[i]));
         }
         return doses;
     }

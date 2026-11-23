@@ -22,11 +22,6 @@ import java.util.function.IntUnaryOperator;
  */
 public final class PortalNexus {
 
-    /** Enum 1377's keys for the destinations the farm runs use. */
-    public static final int TROLL_STRONGHOLD = 15;
-    public static final int WEISS = 19;
-    public static final int HARMONY_ISLAND = 27;
-
     /** Added to a key for the destination's alternate arrival. */
     private static final int ALTERNATE_ARRIVAL = 150;
 

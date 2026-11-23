@@ -41,6 +41,19 @@ public enum Capability {
     EXPLORERS_RING_2,
     EXPLORERS_RING_3,
     EXPLORERS_RING_4,
+    // Kandarin headgear 3 teleports to Sherlock once a day, 4 without limit.
+    KANDARIN_HEADGEAR_3,
+    KANDARIN_HEADGEAR_4,
+    /**
+     * Teleports to the Ectofuntus's slime pit without limit; legs 3 do so five times a day.
+     * Read from the elite Morytania diary, as the other diary rewards are.
+     */
+    MORYTANIA_LEGS_4,
+    // Rada's blessing teleports to the Kourend Woodland three times a day at 1, five at 2,
+    // and without limit at 3 and 4. Blessing 2 counts as 1: one varbit counts both tiers'
+    // uses, so its last two daily uses go unoffered.
+    RADAS_BLESSING_1,
+    RADAS_BLESSING_3,
     DIARY_CAPE,
     /**
      * The medium Varrock diary. Its reward adds the Grand Exchange as a second landing for
@@ -48,6 +61,12 @@ public enum Capability {
      * diary flag, since no item carries it.
      */
     VARROCK_DIARY_MEDIUM,
+    /**
+     * The hard Fremennik diary. With {@link #TROLL_STRONGHOLD_ROCKS}'s 73 Agility, stony
+     * basalt and the house's Troll Stronghold portal land on the stronghold roof rather than
+     * at its entrance.
+     */
+    FREMENNIK_DIARY_HARD,
 
     // --- Skill capes --------------------------------------------------------
     FARMING_CAPE,
@@ -64,6 +83,8 @@ public enum Capability {
     RING_OF_WEALTH,
     AMULET_OF_GLORY,
     RING_OF_THE_ELEMENTS,
+    /** Charged with air runes; teleports to the Lumbridge cow field. */
+    COWBELL_AMULET,
     SLAYER_RING,
     ROYAL_SEED_POD,
     XERICS_TALISMAN,
@@ -95,6 +116,24 @@ public enum Capability {
      * {@link #POH_IN_BRIMHAVEN} does, with different unlocks and costs.
      */
     BRIMHAVEN_TABLET,
+    /** The same for Yanille, landing where {@link #POH_IN_YANILLE} does. */
+    YANILLE_TABLET,
+    /** The same for Taverley, landing where {@link #POH_IN_TAVERLEY} does. */
+    TAVERLEY_TABLET,
+    HOSIDIUS_TABLET,
+    // Teleport scrolls, held loose or in a master scroll book.
+    TAI_BWO_SCROLL,
+    DIGSITE_SCROLL,
+    WATSON_SCROLL,
+    MOS_LE_HARMLESS_SCROLL,
+    LUMBERYARD_SCROLL,
+    /**
+     * The master scroll book, holding scrolls of any kind. Packed in place of a scroll the
+     * book holds and the bag does not; never a rung on its own.
+     */
+    MASTER_SCROLL_BOOK,
+    /** Planted to teleport to the Farming Guild; consumed. */
+    SEED_OF_GROWTH,
 
     // --- Spells --------------------------------------------------------------
     // Teleports to a fixed place are not capabilities: a tablet and a spell to the same
@@ -102,6 +141,12 @@ public enum Capability {
     // because it lands at a setting rather than a place.
     RESPAWN_TELEPORT,
     FERTILE_SOIL,
+    // Slow teleports on a long cooldown, each used at most once a trip: a minigame
+    // teleport to the Tithe Farm or the Rat Pits, and the standard book's home teleport.
+    MINIGAME_TELEPORT,
+    TITHE_FARM_TELEPORT,
+    RAT_PITS_TELEPORT,
+    LUMBRIDGE_HOME_TELEPORT,
 
     /**
      * Where the player respawns, which decides where Respawn Teleport lands. The default
@@ -179,6 +224,8 @@ public enum Capability {
      * Teklan instead of the patch.
      */
     QUETZAL_SITE_KASTORI,
+    QUETZAL_SITE_COLOSSAL_WYRM,
+    QUETZAL_SITE_OUTER_FORTIS,
     MOUNTAIN_GUIDE,
     CANAL_BARGE,
     /**
@@ -193,6 +240,22 @@ public enum Capability {
     FOSSIL_ISLAND_HOLE,
     /** The climbing rocks on Taverley's east wall, crossed east to west only. */
     TAVERLEY_CLIMBING_ROCKS,
+    /**
+     * The two climbs on the way down from the Trollheim Teleport's landing to the Troll
+     * Stronghold entrance, at 43 and 41 Agility.
+     */
+    TROLLHEIM_CLIMBS,
+    /** The rocks beside the Troll Stronghold entrance, up to its roof, at 73 Agility. */
+    TROLL_STRONGHOLD_ROCKS,
+    /**
+     * The rocks between the Barbarian Outpost and the Gnome Stronghold's north-east corner,
+     * by Agility. They also need The Grand Tree, which
+     * {@link #GNOME_STRONGHOLD_ROCKS_UNLOCKED} answers.
+     */
+    GNOME_STRONGHOLD_ROCKS,
+    GNOME_STRONGHOLD_ROCKS_UNLOCKED,
+    NEMUS_STEPPING_STONES,
+    NEMUS_BROKEN_WALL,
 
     // --- Sailing travel ------------------------------------------------------
     // Holding the item is readable, and so is statue activation for the two pendant
@@ -218,25 +281,46 @@ public enum Capability {
     // BRIMHAVEN_TABLET.
     POH_IN_HOSIDIUS,
     POH_IN_BRIMHAVEN,
+    POH_IN_YANILLE,
     POH_IN_TAVERLEY,
+    POH_IN_RIMMINGTON,
     POH_PORTAL_WEISS,
     /**
      * The Troll Stronghold Portal, directed with stony basalt's salts, which lands where the
      * basalt does: the stronghold entrance, or its roof after the hard Fremennik diary with
-     * 73 Agility. Not the Trollheim Portal, which lands on the mountain far from the patch.
+     * 73 Agility. Not the Trollheim Portal.
      */
     POH_PORTAL_TROLL_STRONGHOLD,
+    /**
+     * The Trollheim Portal, which lands where the Trollheim Teleport does, on the mountain
+     * east of the stronghold.
+     */
+    POH_PORTAL_TROLLHEIM,
     POH_PORTAL_KOUREND,
     /** Lands where Fenkenstrain's Castle Teleport does, west of the Morytania herb patch. */
     POH_PORTAL_FENKENSTRAIN,
     /** Lands where Harmony Island Teleport does, 27 walked tiles north of the herb patch. */
     POH_PORTAL_HARMONY,
+    POH_PORTAL_LUMBRIDGE,
+    /**
+     * Lands where the player's default Varrock teleport does: Varrock square, or the Grand
+     * Exchange once the medium Varrock diary lets them choose it (varbit 4585).
+     */
+    POH_PORTAL_VARROCK,
+    POH_PORTAL_SALVE_GRAVEYARD,
+    /**
+     * Directing it needs Desert Treasure I; using a built one needs only Priest in Peril.
+     */
+    POH_PORTAL_KHARYRLL,
+    POH_PORTAL_CIVITAS,
     // A Portal Nexus destination is a separate build from a portal room portal, and
     // the chains rank them as separate rungs, so they cannot share a constant.
     POH_NEXUS_WEISS,
     POH_NEXUS_HARMONY,
     /** The Nexus's stony basalt slot, which lands where the Troll Stronghold Portal does. */
     POH_NEXUS_TROLL_STRONGHOLD,
+    /** The Nexus's Trollheim slot, which lands where the Trollheim Teleport does. */
+    POH_NEXUS_TROLLHEIM,
     POH_SPIRIT_TREE,
     POH_FAIRY_RING,
     // Teleport jewellery kept in the house, used for free once there. Each box is its own
@@ -283,6 +367,7 @@ public enum Capability {
     SPIRIT_TREE_GROWN_BRIMHAVEN,
     SPIRIT_TREE_GROWN_FARMING_GUILD,
     SPIRIT_TREE_GROWN_PORT_SARIM,
+    SPIRIT_TREE_GROWN_HOSIDIUS,
 
     /**
      * Being allowed into Lletya, which Mourning's End Part I opens once <em>started</em>.
@@ -352,7 +437,10 @@ public enum Capability {
         /** Stands alone; nothing else substitutes for it. */
         NONE,
         EXPLORERS_RING,
-        ARDOUGNE_CLOAK
+        ARDOUGNE_CLOAK,
+        KANDARIN_HEADGEAR,
+        RADAS_BLESSING,
+        MORYTANIA_LEGS
     }
 
     /** How, if at all, this capability can be answered from observable game state. */

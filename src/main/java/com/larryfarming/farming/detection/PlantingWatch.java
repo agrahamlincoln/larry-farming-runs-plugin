@@ -67,12 +67,7 @@ public final class PlantingWatch {
     }
 
     private static boolean lostASeed(Map<Integer, Integer> before, Map<Integer, Integer> after) {
-        for (Map.Entry<Integer, Integer> seed : before.entrySet()) {
-            if (after.getOrDefault(seed.getKey(), 0) < seed.getValue()) {
-                return true;
-            }
-        }
-        return false;
+        return before.entrySet().stream().anyMatch(seed -> after.getOrDefault(seed.getKey(), 0) < seed.getValue());
     }
 
     /**
@@ -84,7 +79,7 @@ public final class PlantingWatch {
         for (CropData data : CropData.values()) {
             // A crop planted as a sapling goes in as the sapling, not its seed.
             int planted = data.isSaplingPlanted() ? data.getSaplingItemId() : data.getSeedItemId();
-            int held = ItemCounts.countCarried(state, planted, null);
+            int held = ItemCounts.countCarried(state, planted);
             if (held > 0) {
                 carried.merge(planted, held, Math::max);
             }

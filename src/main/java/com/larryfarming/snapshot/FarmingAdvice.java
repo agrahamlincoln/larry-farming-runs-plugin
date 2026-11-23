@@ -131,6 +131,9 @@ public class FarmingAdvice {
      */
     List<FarmingSettingGroup> travelGroups;
 
+    /** The longest run after a teleport a route may ask for, drawn above the travel methods. */
+    FarmingSettingPick longestRun;
+
     /** What the player's house holds, seen or declared, drawn after the travel methods. */
     FarmingHouse house;
 

@@ -15,7 +15,9 @@ import lombok.With;
  * player who can cast its spells. So every variant is planned against the book the player
  * is on and the book the variant is written for, and the pairing that reaches the most
  * patches wins. The same pairing decides both the walkthrough and the run's readiness, so
- * the two screens agree.
+ * the two screens agree, with one exception: when a trip undoes a swap that would strand
+ * another family, the runs list still scores the herb run on its own book while the trip
+ * walks it on the open one.
  *
  * <p>Ties go to the book already open: a swap costs a trip to an altar, so it has to earn
  * its keep in patches.
@@ -69,9 +71,18 @@ public final class RunVariants {
      */
     public static Choice best(List<FarmingRun> variants, PlayerState state, Spellbook openBook, FarmingInputs inputs,
             Map<Spellbook, CapabilityResolver> resolvers) {
+        return bestOn(variants, state, openBook, null, inputs, resolvers);
+    }
+
+    /**
+     * The same, with every variant planned on {@code only} when it is not null: the book a
+     * trip is walked on, which decides for every family on it.
+     */
+    static Choice bestOn(List<FarmingRun> variants, PlayerState state, Spellbook openBook, Spellbook only, FarmingInputs inputs,
+            Map<Spellbook, CapabilityResolver> resolvers) {
         Choice best = null;
         for (FarmingRun run : variants) {
-            for (Spellbook book : booksWorthTrying(run, openBook)) {
+            for (Spellbook book : only != null ? List.of(only) : booksWorthTrying(run, openBook)) {
                 CapabilityResolver resolver = resolvers.computeIfAbsent(book, inputs::resolverOn);
                 Choice candidate = score(run, book, state, resolver, inputs.getPreferences());
                 if (best == null || beats(candidate, best, state, inputs.getPreferences(), openBook)) {
@@ -150,10 +161,10 @@ public final class RunVariants {
         // STANDING_IN answers LACK elsewhere and TeleportPlanner's short-circuit uses the
         // same test. Otherwise the two plans are provably the same list, so the second is
         // skipped.
-        List<StopPlan> plans = new RunPlanner(resolver).plan(run, state);
+        List<StopPlan> plans = new RunPlanner(resolver).plan(run, state, false);
         boolean positionCouldMatter = resolver.readsPosition() && (Zone.covering(state == null ? null : state.getRegionId()) != null
                         || resolver.hasTravelTaken());
-        List<StopPlan> anywhere = positionCouldMatter ? new RunPlanner(resolver.blindToPosition()).plan(run, state) : plans;
+        List<StopPlan> anywhere = positionCouldMatter ? new RunPlanner(resolver.blindToPosition()).plan(run, state, false) : plans;
         int certain = 0;
         int reachable = 0;
         for (StopPlan plan : anywhere) {

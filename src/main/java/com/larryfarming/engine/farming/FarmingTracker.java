@@ -57,6 +57,32 @@ public class FarmingTracker {
     private static final long STORE_FUTURE_GRACE_SECONDS = 30;
 
     /**
+     * The longest gap between two patch sightings on one trip. A player gone longer has
+     * finished the trip, and the next sighting starts another.
+     *
+     * <p>Generous, because real runs have long gaps: a quetzal out to Ortus Farm, a bank
+     * detour for a seed. It only needs to notice that the player has <em>stopped</em>, so a
+     * run with an extra left undone releases the tab once they have.
+     */
+    public static final long ONE_TRIP_SECONDS = 20 * 60L;
+
+    /**
+     * The longest a trip is taken to last. Standing beside a patch keeps re-reading it, so
+     * without a ceiling an afternoon at the Farming Guild would stretch one trip back to the
+     * run before.
+     */
+    public static final long LONGEST_TRIP_SECONDS = 2 * 60 * 60L;
+
+    /**
+     * The trip the player is on: its first patch sighting and its latest. Kept apart from
+     * the patches, whose records a growth tick or a relog replaces.
+     */
+    @Getter
+    private long tripStartEpochSec;
+    @Getter
+    private long tripLastEpochSec;
+
+    /**
      * Above this precision the learned offset is trusted for any tick rate — a
      * 40-minute (or longer) observed tick nails the alignment for shorter crops
      * too. Mirrors RuneLite's magic 40 in {@code getTickTime}.
@@ -204,6 +230,11 @@ public class FarmingTracker {
             }
 
             lastSeen.put(patch, nowEpochSec);
+            // A trip that starts after now was saved by a clock running ahead, and ends here.
+            if (nowEpochSec - tripLastEpochSec > ONE_TRIP_SECONDS || nowEpochSec < tripStartEpochSec) {
+                tripStartEpochSec = nowEpochSec;
+            }
+            tripLastEpochSec = nowEpochSec;
 
             if (old != null && old.varbitValue == raw) {
                 // Same value: keep the old entry while it is fresh; otherwise re-stamp.
@@ -271,29 +302,19 @@ public class FarmingTracker {
 
     /**
      * True when the transition from {@code prev} to {@code cur} is an exact
-     * farming-tick boundary we can read the offset from. Mirrors RuneLite's
-     * {@code isObservedGrowthTick}, including its DISEASED->DEAD arm, which is
-     * unreachable because DISEASED has tick rate 0.
+     * farming-tick boundary we can read the offset from: a growing crop seen a stage on,
+     * diseased, or ready where no health check stands between. Follows RuneLite's
+     * {@code isObservedGrowthTick} without its DISEASED->DEAD arm, which is unreachable
+     * because DISEASED has tick rate 0.
      */
     private boolean isObservedGrowthTick(DecodedPatch prev, DecodedPatch cur, PatchType type) {
-        int prevTickRate = prev.tickRateMinutes();
-        if (prev.getCrop() == Crop.WEEDS || cur.getCrop() == Crop.WEEDS || cur.getCrop() != prev.getCrop() || prevTickRate <= 0) {
+        if (prev.getState() != CropState.GROWING || prev.getCrop() == Crop.WEEDS || cur.getCrop() != prev.getCrop()
+                || prev.tickRateMinutes() <= 0) {
             return false;
         }
-
-        CropState prevState = prev.getState();
         CropState curState = cur.getState();
-
-        if (prevState == CropState.GROWING) {
-            if ((curState == CropState.GROWING && cur.getStage() - prev.getStage() == 1) || curState == CropState.DISEASED) {
-                return true;
-            }
-            if (curState == CropState.HARVESTABLE && !type.isHealthCheckRequired()) {
-                return true;
-            }
-        }
-
-        return prevState == CropState.DISEASED && curState == CropState.DEAD;
+        return (curState == CropState.GROWING && cur.getStage() - prev.getStage() == 1) || curState == CropState.DISEASED
+                || (curState == CropState.HARVESTABLE && !type.isHealthCheckRequired());
     }
 
     // --- Prediction ---
@@ -308,15 +329,10 @@ public class FarmingTracker {
             return null;
         }
         DecodedPatch decoded = obs.decoded;
-        Crop crop = decoded.getCrop();
-        CropState state = decoded.getState();
         int stage = decoded.getStage();
         int stages = decoded.getStages();
         int tickRate = decoded.tickRateMinutes();
-        long observedAt = obs.observedAtEpochSec;
-
         long doneEstimate = finishWindowEnd(patch, obs);
-        long earliestDone = finishWindowStart(patch, obs);
 
         if (tickRate > 0) {
             long anchor = anchorFor(patch, obs);
@@ -334,8 +350,8 @@ public class FarmingTracker {
             }
         }
 
-        return new PatchPrediction(crop, state, stage, stages, earliestDone, doneEstimate,
-                observedAt, decoded.isFellable(), obs.plantedAtEpochSec);
+        return new PatchPrediction(decoded.getCrop(), decoded.getState(), stage, stages, finishWindowStart(patch, obs), doneEstimate,
+                obs.observedAtEpochSec, decoded.isFellable(), obs.plantedAtEpochSec);
     }
 
     /**
@@ -467,8 +483,7 @@ public class FarmingTracker {
      * {@link #sightingPastTheEstimate} handles.
      */
     private long anchorFor(FarmingWorldMap.PatchDef patch, Observation obs) {
-        Long seen = lastSeen.get(patch);
-        return seen == null ? obs.observedAtEpochSec : Math.max(seen, obs.observedAtEpochSec);
+        return Math.max(lastSeen.getOrDefault(patch, 0L), obs.observedAtEpochSec);
     }
 
     /**
@@ -551,6 +566,22 @@ public class FarmingTracker {
         }
     }
 
+    /**
+     * When the trip the player is on began, or zero once it has ended. A player standing
+     * near patches keeps the latch alive, so it is held to the {@link #LONGEST_TRIP_SECONDS}
+     * before now.
+     */
+    public long tripStartedAt(long nowEpochSec) {
+        return nowEpochSec - tripLastEpochSec <= ONE_TRIP_SECONDS
+                ? Math.max(tripStartEpochSec, nowEpochSec - LONGEST_TRIP_SECONDS) : 0L;
+    }
+
+    /** The trip as saved, read back at login. */
+    public void loadTrip(long startEpochSec, long lastEpochSec) {
+        tripStartEpochSec = startEpochSec;
+        tripLastEpochSec = lastEpochSec;
+    }
+
     /** Snapshot for saving to config. */
     public Collection<PersistedEntry> exportForPersist() {
         List<PersistedEntry> out = new ArrayList<>();
@@ -581,5 +612,6 @@ public class FarmingTracker {
         tickOffsetPrecisionMins = OFFSET_UNKNOWN;
         tickOffsetResolutionSeconds = OFFSET_RESOLUTION_SECONDS;
         offsetDirty = false;
+        loadTrip(0L, 0L);
     }
 }

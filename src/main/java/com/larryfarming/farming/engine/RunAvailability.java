@@ -114,7 +114,7 @@ public final class RunAvailability {
             return CapabilityState.LACK;
         }
         for (int itemId : boosts) {
-            if (ItemCounts.countOwned(state, itemId, null) > 0) {
+            if (ItemCounts.countOwned(state, itemId) > 0) {
                 return CapabilityState.HAVE;
             }
         }

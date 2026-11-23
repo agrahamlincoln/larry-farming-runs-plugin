@@ -138,6 +138,17 @@ public final class FarmingPreferences {
     /** The compost thresholds move in steps of this many patches, starting at one step. */
     public static final int COMPOST_STEP = 100;
 
+    /**
+     * The longest run after a teleport a route may ask for, in whole seconds, from
+     * {@link #RUN_LEAST_SECONDS} up to {@link #RUN_MOST_SECONDS}.
+     */
+    private final int longestRunSeconds;
+
+    /** The shortest limit offered: 33 tiles, a short run from the landing. */
+    public static final int RUN_LEAST_SECONDS = 10;
+    /** The longest limit offered: 200 tiles, a minute's run. */
+    public static final int RUN_MOST_SECONDS = 60;
+
     /** The highest compost threshold: the tool leprechaun holds 1,000 of each compost. */
     public static final int COMPOST_MOST = 1000;
 
@@ -185,7 +196,9 @@ public final class FarmingPreferences {
             Set<String> sitesShut, Set<Capability> houseDeclared, Crop favouriteHerb,
             boolean plantsBestSeedsEverywhere, boolean herbRunFirst, boolean waitsForEveryPatch, boolean fruitTreesWaitForSaplings,
             boolean replantsGrownTrees, boolean herbRunsWaitForLevel, boolean compostsWithFertileSoil, Map<String, Crop> picks,
-            Set<String> forCompost, Set<String> picksChosen, Set<String> picksQuiet, int makeCompostBelow, int stopCompostAt) {
+            Set<String> forCompost, Set<String> picksChosen, Set<String> picksQuiet, int makeCompostBelow, int stopCompostAt,
+            int longestRunSeconds) {
+        this.longestRunSeconds = Math.max(RUN_LEAST_SECONDS, Math.min(RUN_MOST_SECONDS, longestRunSeconds));
         this.enabled = copy(Crop.class, enabled);
         this.picksFruitInPassing = picksFruitInPassing;
         this.travelOff = copy(TravelMethod.class, travelOff);
@@ -266,6 +279,11 @@ public final class FarmingPreferences {
     /** The default route's settings, which an untouched install runs on. */
     public static FarmingPreferences defaults() {
         return Preset.DEFAULT.preferences();
+    }
+
+    /** {@link #longestRunSeconds} as walked tiles, at a run's two tiles a 0.6-second tick. */
+    public int longestWalkTiles() {
+        return longestRunSeconds * 10 / 3;
     }
 
     /** Whether this travel method may be used. Every method is on by default. */

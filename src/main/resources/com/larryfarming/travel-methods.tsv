@@ -25,6 +25,7 @@ XERICS_TALISMAN	useXericsTalisman	JEWELLERY	Xeric's talisman	Xeric's talisman	XE
 KHAREDSTS_MEMOIRS	useKharedstsMemoirs	ITEMS	Kharedst's memoirs	Kharedst's memoirs	KHAREDSTS_MEMOIRS BOOK_OF_THE_DEAD	-	-	-
 PENDANT_OF_ATES	usePendantOfAtes	JEWELLERY	Pendant of Ates	the pendant of Ates	PENDANT_OF_ATES	-	-	-
 SAILORS_AMULET	useSailorsAmulet	JEWELLERY	Sailors' amulet	the Sailors' amulet	SAILORS_AMULET	-	-	-
+COWBELL_AMULET	useCowbellAmulet	JEWELLERY	Cowbell amulet	the cowbell amulet	COWBELL_AMULET	-	-	-
 TELEPORT_CRYSTAL	useTeleportCrystal	ITEMS	Teleport crystal	the teleport crystal	TELEPORT_CRYSTAL	-	-	-
 CHRONICLE	useChronicle	ITEMS	Chronicle	the Chronicle	CHRONICLE	-	-	-
 QUETZAL_WHISTLE	useQuetzalWhistle	ITEMS	Quetzal whistle	the quetzal whistle	QUETZAL_WHISTLE	-	-	-
@@ -32,16 +33,50 @@ ROYAL_SEED_POD	useRoyalSeedPod	ITEMS	Royal seed pod	the royal seed pod	ROYAL_SEE
 ECTOPHIAL	useEctophial	ITEMS	Ectophial	the ectophial	ECTOPHIAL	-	-	-
 BASALT	useBasalt	ITEMS	Basalt	basalt	STONY_BASALT ICY_BASALT	-	-	-
 MOKHAIOTL_WAYSTONE	useMokhaiotlWaystone	ITEMS	Mokhaiotl waystone	the Mokhaiotl waystone	MOKHAIOTL_WAYSTONE	-	-	-
+SEED_OF_GROWTH	useSeedOfGrowth	ITEMS	Seed of growth	the seed of growth	SEED_OF_GROWTH	-	-	-
 EXPLORERS_RING	useExplorersRing	REWARDS	Explorer's ring	the Explorer's ring	EXPLORERS_RING_2 EXPLORERS_RING_3 EXPLORERS_RING_4	-	-	-
 ARDOUGNE_CLOAK	useArdougneCloak	REWARDS	Ardougne cloak	the Ardougne cloak	ARDOUGNE_CLOAK_1 ARDOUGNE_CLOAK_2 ARDOUGNE_CLOAK_3 ARDOUGNE_CLOAK_4	-	-	-
+KANDARIN_HEADGEAR	useKandarinHeadgear	REWARDS	Kandarin headgear	Kandarin headgear	KANDARIN_HEADGEAR_3 KANDARIN_HEADGEAR_4	-	-	-
+RADAS_BLESSING	useRadasBlessing	REWARDS	Rada's blessing	Rada's blessing	RADAS_BLESSING_1 RADAS_BLESSING_3	-	-	-
+MORYTANIA_LEGS	useMorytaniaLegs	REWARDS	Morytania legs 4	Morytania legs 4	MORYTANIA_LEGS_4	-	-	-
 DIARY_CAPE	useDiaryCape	REWARDS	Achievement diary cape	the Achievement diary cape	DIARY_CAPE	-	-	-
 QUEST_CAPE	useQuestCape	REWARDS	Quest point cape	the Quest point cape	QUEST_CAPE	-	-	-
 SKILL_CAPES	useSkillCapes	REWARDS	Skill capes	skill capes	FARMING_CAPE FISHING_CAPE HUNTER_CAPE	-	-	-
 CONSTRUCTION_CAPE	useConstructionCape	REWARDS	Construction cape	the Construction cape	CONSTRUCTION_CAPE	-	-	-
-TELEPORT_TABLETS	useTeleportTablets	SPELLS	Teleport tablets	teleport tablets	BRIMHAVEN_TABLET	8010	POH_TABLET_CAMELOTTELEPORT	TABS
-SALVE_GRAVEYARD_TABLETS	useSalveGraveyardTeleports	SPELLS	Salve graveyard tablets	Salve graveyard tablets	-	19619	TELETAB_SALVE	-
+TAI_BWO_SCROLL	useTaiBwoWannaiScroll	SPELLS	Tai Bwo Wannai teleport scroll	the Tai Bwo Wannai teleport scroll	TAI_BWO_SCROLL	-	-	-
+DIGSITE_SCROLL	useDigsiteScroll	SPELLS	Digsite teleport scroll	the Digsite teleport scroll	DIGSITE_SCROLL	-	-	-
+WATSON_SCROLL	useWatsonScroll	SPELLS	Watson teleport scroll	the Watson teleport scroll	WATSON_SCROLL	-	-	-
+LUMBERYARD_SCROLL	useLumberyardScroll	SPELLS	Lumberyard teleport scroll	the Lumberyard teleport scroll	LUMBERYARD_SCROLL	-	-	-
+MOS_LE_HARMLESS_SCROLL	useMosLeHarmlessScroll	SPELLS	Mos le'harmless teleport scroll	the Mos le'harmless teleport scroll	MOS_LE_HARMLESS_SCROLL	-	-	-
 SPELLBOOK_SWAP	useSpellbookSwap	SPELLS	Spellbook Swap	Spellbook Swap	-	-	-	-
-HOUSE_PORTALS	useHousePortals	HOUSE	House portals	house portals	POH_PORTAL_WEISS POH_PORTAL_TROLL_STRONGHOLD POH_PORTAL_KOUREND POH_PORTAL_FENKENSTRAIN POH_PORTAL_HARMONY POH_NEXUS_WEISS POH_NEXUS_HARMONY POH_NEXUS_TROLL_STRONGHOLD	8013	POH_TABLET_TELEPORTTOHOUSE	PORT
+MINIGAME_TELEPORT	useMinigameTeleport	SPELLS	Minigame Teleport	the Minigame Teleport	MINIGAME_TELEPORT	-	-	-
+HOME_TELEPORT	useHomeTeleport	SPELLS	Lumbridge Home Teleport	the Lumbridge Home Teleport	LUMBRIDGE_HOME_TELEPORT	-	-	-
+# One switch a tablet, matched to the place by its item. While a tablet's own switch is
+# unsaved it follows useTeleportTablets, the shared switch for every tablet.
+CATHERBY_TABLET	useCatherbyTablet	TABLETS	Catherby teleport tablet	Catherby teleport tablets	-	24961	LUNAR_TABLET_CATHERBY_TELEPORT	-
+CAMELOT_TABLET	useCamelotTablet	TABLETS	Camelot teleport tablet	Camelot teleport tablets	-	8010	POH_TABLET_CAMELOTTELEPORT	-
+VARROCK_TABLET	useVarrockTablet	TABLETS	Varrock teleport tablet	Varrock teleport tablets	-	8007	POH_TABLET_VARROCKTELEPORT	-
+LUMBRIDGE_TABLET	useLumbridgeTablet	TABLETS	Lumbridge teleport tablet	Lumbridge teleport tablets	-	8008	POH_TABLET_LUMBRIDGETELEPORT	-
+FALADOR_TABLET	useFaladorTablet	TABLETS	Falador teleport tablet	Falador teleport tablets	-	8009	POH_TABLET_FALADORTELEPORT	-
+ARDOUGNE_TABLET	useArdougneTablet	TABLETS	Ardougne teleport tablet	Ardougne teleport tablets	-	8011	POH_TABLET_ARDOUGNETELEPORT	-
+HOUSE_TABLET	useHouseTablet	TABLETS	Teleport to house tablet	Teleport to house tablets	-	8013	POH_TABLET_TELEPORTTOHOUSE	-
+FISHING_GUILD_TABLET	useFishingGuildTablet	TABLETS	Fishing Guild teleport tablet	Fishing Guild teleport tablets	-	24959	LUNAR_TABLET_FISHING_GUILD_TELEPORT	-
+KHAZARD_TABLET	useKhazardTablet	TABLETS	Khazard teleport tablet	Khazard teleport tablets	-	24957	LUNAR_TABLET_KHAZARD_TELEPORT	-
+BARBARIAN_TABLET	useBarbarianTablet	TABLETS	Barbarian teleport tablet	Barbarian teleport tablets	-	24955	LUNAR_TABLET_BARBARIAN_TELEPORT	-
+FENKENSTRAIN_TABLET	useFenkenstrainTablet	TABLETS	Fenkenstrain's castle teleport	Fenkenstrain's castle teleports	-	19621	TELETAB_FENK	-
+SALVE_GRAVEYARD_TABLETS	useSalveGraveyardTeleports	TABLETS	Salve graveyard teleport	Salve graveyard teleports	-	19619	TELETAB_SALVE	-
+DRAYNOR_MANOR_TABLET	useDraynorManorTablet	TABLETS	Draynor manor teleport	Draynor manor teleports	-	19615	TELETAB_DRAYNOR	-
+HARMONY_TABLET	useHarmonyTablet	TABLETS	Harmony island teleport	Harmony island teleports	-	19625	TELETAB_HARMONY	-
+KHARYRLL_TABLET	useKharyrllTablet	TABLETS	Kharyrll teleport	Kharyrll teleports	-	12779	TABLET_KHARYLL	-
+CIVITAS_TABLET	useCivitasTablet	TABLETS	Civitas illa Fortis teleport	Civitas illa Fortis teleports	-	28824	POH_TABLET_FORTISTELEPORT	-
+KOUREND_CASTLE_TABLET	useKourendCastleTablet	TABLETS	Kourend castle teleport	Kourend castle teleports	-	28790	POH_TABLET_KOURENDTELEPORT	-
+TROLLHEIM_TABLET	useTrollheimTablet	TABLETS	Trollheim teleport	Trollheim teleports	-	11747	NZONE_TELETAB_TROLLHEIM	-
+SENNTISTEN_TABLET	useSenntistenTablet	TABLETS	Senntisten teleport	Senntisten teleports	-	12782	TABLET_SENNTISTEN	-
+BRIMHAVEN_TABLET	useBrimhavenTablet	TABLETS	Brimhaven teleport tablet	Brimhaven teleport tablets	BRIMHAVEN_TABLET	-	-	-
+YANILLE_TABLET	useYanilleTablet	TABLETS	Yanille teleport tablet	Yanille teleport tablets	YANILLE_TABLET	-	-	-
+TAVERLEY_TABLET	useTaverleyTablet	TABLETS	Taverley teleport tablet	Taverley teleport tablets	TAVERLEY_TABLET	-	-	-
+HOSIDIUS_TABLET	useHosidiusTablet	TABLETS	Hosidius teleport tablet	Hosidius teleport tablets	HOSIDIUS_TABLET	-	-	-
+HOUSE_PORTALS	useHousePortals	HOUSE	House portals	house portals	POH_PORTAL_WEISS POH_PORTAL_TROLL_STRONGHOLD POH_PORTAL_TROLLHEIM POH_PORTAL_KOUREND POH_PORTAL_FENKENSTRAIN POH_PORTAL_HARMONY POH_PORTAL_LUMBRIDGE POH_PORTAL_VARROCK POH_PORTAL_SALVE_GRAVEYARD POH_PORTAL_KHARYRLL POH_PORTAL_CIVITAS POH_NEXUS_WEISS POH_NEXUS_HARMONY POH_NEXUS_TROLL_STRONGHOLD POH_NEXUS_TROLLHEIM	8013	POH_TABLET_TELEPORTTOHOUSE	PORT
 HOUSE_FAIRY_RING	useFairyRingInHouse	HOUSE	Fairy ring in your house	the fairy ring in your house	POH_FAIRY_RING	8013	POH_TABLET_TELEPORTTOHOUSE	RING
 HOUSE_JEWELLERY_BOX	useHouseJewelleryBox	HOUSE	Jewellery box in your house	the jewellery box in your house	POH_JEWELLERY_BOX_BASIC POH_JEWELLERY_BOX_FANCY POH_JEWELLERY_BOX_ORNATE	8013	POH_TABLET_TELEPORTTOHOUSE	BOX
 MOUNTED_XERICS_TALISMAN	useMountedXericsTalisman	HOUSE	Mounted Xeric's talisman	the mounted Xeric's talisman	POH_XERICS_TALISMAN	13393	XERIC_TALISMAN	POH

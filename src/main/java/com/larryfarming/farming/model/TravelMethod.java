@@ -3,6 +3,7 @@ package com.larryfarming.farming.model;
 import com.larryfarming.data.Tables;
 import java.util.*;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * A way of travelling the player can switch off in the side panel: one teleport item, a
@@ -12,10 +13,9 @@ import lombok.Getter;
  * quest cape reaches neither a fairy ring nor anywhere else. A ladder then falls to its next
  * rung, and a stop whose only rungs need the method is skipped with the switch named.
  *
- * <p>Each method covers a group of {@link Capability capabilities}, and three cover
- * teleports that are a place rather than an item: every teleport tablet, the Salve graveyard
- * tablet alone, and Spellbook Swap. Switching tablets off leaves the spells to the same
- * places.
+ * <p>Each method covers a group of {@link Capability capabilities}, except those that cover a
+ * teleport to a place rather than an item: each place's tablet, and Spellbook Swap. Switching
+ * a tablet off leaves the spell to the same place.
  *
  * <p>Networks the player walks onto (spirit trees, gliders, charter ships, minecarts) and
  * the house's own location are not methods: nothing is spent on them.
@@ -39,6 +39,7 @@ public enum TravelMethod {
     KHAREDSTS_MEMOIRS,
     PENDANT_OF_ATES,
     SAILORS_AMULET,
+    COWBELL_AMULET,
     TELEPORT_CRYSTAL,
     CHRONICLE,
     QUETZAL_WHISTLE,
@@ -46,18 +47,53 @@ public enum TravelMethod {
     ECTOPHIAL,
     BASALT,
     MOKHAIOTL_WAYSTONE,
+    SEED_OF_GROWTH,
     EXPLORERS_RING,
     ARDOUGNE_CLOAK,
+    KANDARIN_HEADGEAR,
+    RADAS_BLESSING,
+    MORYTANIA_LEGS,
     DIARY_CAPE,
     QUEST_CAPE,
     SKILL_CAPES,
     CONSTRUCTION_CAPE,
-    /** Every teleport tablet, the redirected house tab among them. The spells still count. */
-    TELEPORT_TABLETS,
-    /** The Salve graveyard tablet alone. The Arceuus spell still counts. */
-    SALVE_GRAVEYARD_TABLETS,
+    // One switch a scroll: a player may spend a kind they have plenty of and keep a scarce one.
+    TAI_BWO_SCROLL,
+    DIGSITE_SCROLL,
+    WATSON_SCROLL,
+    LUMBERYARD_SCROLL,
+    MOS_LE_HARMLESS_SCROLL,
     /** Spellbook Swap, and so every spell borrowed from another book for one cast. */
     SPELLBOOK_SWAP,
+    /** The Minigame Teleport, cast or from the Grouping tab: one cooldown for both. */
+    MINIGAME_TELEPORT,
+    /** The standard book's Lumbridge Home Teleport. */
+    HOME_TELEPORT,
+    // One switch a tablet, as for scrolls. A place's spell still counts with its tablet off.
+    CATHERBY_TABLET,
+    CAMELOT_TABLET,
+    VARROCK_TABLET,
+    LUMBRIDGE_TABLET,
+    FALADOR_TABLET,
+    ARDOUGNE_TABLET,
+    HOUSE_TABLET,
+    FISHING_GUILD_TABLET,
+    KHAZARD_TABLET,
+    BARBARIAN_TABLET,
+    FENKENSTRAIN_TABLET,
+    SALVE_GRAVEYARD_TABLETS,
+    DRAYNOR_MANOR_TABLET,
+    HARMONY_TABLET,
+    KHARYRLL_TABLET,
+    CIVITAS_TABLET,
+    KOUREND_CASTLE_TABLET,
+    TROLLHEIM_TABLET,
+    SENNTISTEN_TABLET,
+    /** The redirected house tab to Brimhaven, a carried item rather than a place's tablet. */
+    BRIMHAVEN_TABLET,
+    YANILLE_TABLET,
+    TAVERLEY_TABLET,
+    HOSIDIUS_TABLET,
     HOUSE_PORTALS,
     HOUSE_FAIRY_RING,
     HOUSE_JEWELLERY_BOX,
@@ -133,19 +169,17 @@ public enum TravelMethod {
     }
 
     /** The panel's captions over the travel squares, in the order drawn. */
+    @RequiredArgsConstructor
     public enum Group {
         JEWELLERY("Jewellery"),
         ITEMS("Other items"),
         REWARDS("Capes and diary rewards"),
-        SPELLS("Spells and tablets"),
+        SPELLS("Spells and scrolls"),
+        TABLETS("Teleport tablets"),
         HOUSE("House");
 
         @Getter
         private final String label;
-
-        Group(String label) {
-            this.label = label;
-        }
     }
 
     /** Why a route needing it is not taken: "you switched off the slayer ring". */

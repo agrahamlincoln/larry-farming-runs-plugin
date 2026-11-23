@@ -21,9 +21,9 @@ import net.runelite.api.gameval.ItemID;
  * inventory slots. The log basket, worn on a tree run that needs no cape, is asked for
  * only worn, since the slot it frees is all it adds.
  *
- * <p>The weapon slot holds the staff on a run that needs one, and the secateurs
- * otherwise. Swapping them mid-run buys nothing, so with the staff wielded the secateurs
- * ride in the inventory and the packing list names them.
+ * <p>The weapon slot holds the staff on a run that needs one. Magic secateurs work from
+ * the inventory, so owned ones are something to pack and the packing list names them; their
+ * slot here only sets them as a goal for a player without a pair.
  *
  * <p>Slots with nothing useful to say are left out.
  */
@@ -40,7 +40,10 @@ public final class Loadouts {
     /** The one sentence for an outfit owned but not all worn. */
     public static final String OUTFIT_TIP = "Wear the Farmer's outfit for 2.5% more Farming experience.";
 
-    /** The weapon and log-basket slots, which {@link #forRun} chooses between; the rest always show. */
+    /**
+     * Slots {@link #forRun} adds only on some runs: the staff when a ring needs it, the
+     * secateurs while unowned, the basket when worn. The rest always show.
+     */
     private static final Set<String> CHOSEN = Set.of("SECATEURS", "STAFF", "LOG_BASKET");
 
     /** Every slot by its key, in the table's order, which is the order the panel shows. */
@@ -102,16 +105,36 @@ public final class Loadouts {
         return GearPick.of(row.requireWidth(6).text(2), row.text(3), row.integers(4));
     }
 
+    /** The name of the worn gear this item is, such as "Max cape", or null when no slot lists it. */
+    public static String nameOf(int itemId) {
+        for (LoadoutSlot slot : SLOTS.values()) {
+            for (GearPick tier : slot.getTiers()) {
+                if (tier.getItemIds().contains(itemId)) {
+                    return tier.formHolding(itemId).getDisplayName();
+                }
+            }
+        }
+        return null;
+    }
+
     /**
      * The slots worth filling on a run, in the order the panel shows them.
      *
-     * @param staffWielded whether the run uses a fairy ring that needs a staff in hand,
-     *     which then takes the weapon slot from the secateurs
+     * @param staffWielded whether the run uses a fairy ring that needs a staff in hand
      * @param basketWorn whether the log basket takes the cape slot
+     * @param ownsSecateurs whether the player owns magic secateurs, which the packing list
+     *     then names; the slot stays only to set them as a goal. Its tip is empty, so this
+     *     must count ownership as {@code LoadoutPlanner} does, or a pair it finds would
+     *     earn a blank swap row
      */
-    public static List<LoadoutSlot> forRun(boolean staffWielded, boolean basketWorn) {
+    public static List<LoadoutSlot> forRun(boolean staffWielded, boolean basketWorn, boolean ownsSecateurs) {
         List<LoadoutSlot> slots = new ArrayList<>(SLOTS.size());
-        slots.add(SLOTS.get(staffWielded ? "STAFF" : "SECATEURS"));
+        if (staffWielded) {
+            slots.add(SLOTS.get("STAFF"));
+        }
+        if (!ownsSecateurs) {
+            slots.add(SLOTS.get("SECATEURS"));
+        }
         SLOTS.forEach((key, slot) -> {
             if (!CHOSEN.contains(key)) {
                 slots.add(basketWorn && slot.getSlot() == EquipmentSlot.CAPE ? SLOTS.get("LOG_BASKET") : slot);

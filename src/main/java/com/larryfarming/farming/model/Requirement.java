@@ -159,15 +159,7 @@ public class Requirement {
 
     /** Whether this expression, or any part of it, is exactly {@code other}. */
     public boolean contains(Requirement other) {
-        if (equals(other)) {
-            return true;
-        }
-        for (Requirement part : parts) {
-            if (part.contains(other)) {
-                return true;
-            }
-        }
-        return false;
+        return equals(other) || parts.stream().anyMatch(part -> part.contains(other));
     }
 
     /**

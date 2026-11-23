@@ -118,7 +118,9 @@ final class SiteList extends JPanel
 		{
 			Icon mark = choice.getLevel() > 0 ? new LevelMark(choice.getLevel(), boxWidth(), boxHeight())
 				: new Padlock(ColorScheme.MEDIUM_GRAY_COLOR, boxWidth(), boxHeight());
-			return marked(choice.getLabel(), box, mark, ColorScheme.MEDIUM_GRAY_COLOR);
+			JLabel locked = marked(choice.getLabel(), box, mark, ColorScheme.MEDIUM_GRAY_COLOR);
+			locked.setToolTipText(choice.getTip());
+			return locked;
 		}
 		box.setSelected(choice.isOn());
 		box.setForeground(colour(choice.isOn()));

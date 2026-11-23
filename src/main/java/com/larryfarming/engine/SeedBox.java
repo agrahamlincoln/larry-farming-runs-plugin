@@ -85,8 +85,8 @@ public final class SeedBox {
      * "checking would change nothing".
      */
     public static int tallied(PlayerState state, int itemId) {
-        // The name-matching path underneath dereferences the null name when the id is 0.
-        return state == null || itemId == 0 ? 0 : ItemCounts.countItemInStorage(state.getSeedBox(), itemId, null);
+        // An id of 0 names no item, as in ItemCounts, so no stack recorded without an id counts.
+        return state == null || itemId == 0 ? 0 : ItemCounts.countItemInStorage(state.getSeedBox(), itemId);
     }
 
     /** True when a seed box is sitting in the bank. */

@@ -22,6 +22,7 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
+import java.util.function.IntUnaryOperator;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -74,6 +75,9 @@ public class LarryPlugin extends Plugin
 	 * change only asks for a re-plan.
 	 */
 	private static final Set<Integer> WATCHED_VARBITS = watchedVarbits();
+
+	/** The varps holding a teleport cooldown's last use. */
+	private static final Set<Integer> COOLDOWN_VARPS = CapabilitySources.cooldownVarps();
 
 	/** Seed pack: fallback advisor icon. */
 	private static final int ADVISOR_FALLBACK_ICON_ITEM_ID = 22993;
@@ -131,7 +135,6 @@ public class LarryPlugin extends Plugin
 	private int[] previousEquipmentIds;
 	private int previousBankHash;
 	private int previousSeedVaultHash;
-	private int previousSeedBoxHash;
 
 	/**
 	 * Item ids by lower-case name, for every item seen in a container this session.
@@ -328,10 +331,24 @@ public class LarryPlugin extends Plugin
 	 * Drops everything that belongs to the session being left. The engine outlives a logout
 	 * or hop, and the plugin instance outlives a disable, so anything still held would be
 	 * credited to the next account or the next start.
+	 *
+	 * <p>That includes the change-detection baselines the handlers compare each event
+	 * against. Each describes the account that was playing, so one kept past a logout would
+	 * drop the next account's first change when it matched. The count of failed loads goes
+	 * too, so the next login tries afresh.
 	 */
 	private void endSession()
 	{
-		resetSessionCaches();
+		Arrays.fill(previousXp, -1);
+		previousInventorySlots = null;
+		previousEquipmentIds = null;
+		previousBankHash = 0;
+		previousSeedVaultHash = 0;
+		previousQuestStates.clear();
+		// The player state's region is transient, so the next session starts with none.
+		lastRegionId = -1;
+		lastModalCloseTick = -1;
+		loginLoadFailures = 0;
 		loginReady = false;
 		loginSnapshotPending = false;
 		depositBoxInventorySnapshot = null;
@@ -346,27 +363,6 @@ public class LarryPlugin extends Plugin
 		lastFarmTickLocation = null;
 		lastFarmRegions = new HashSet<>();
 		farmScanHold.clear();
-	}
-
-	/**
-	 * Forget the change-detection baselines the handlers compare each event against. Each
-	 * describes the account that was playing, so one kept past a logout would drop the next
-	 * account's first change when it matched. Also forgets how many loads failed, so the next
-	 * login tries afresh.
-	 */
-	private void resetSessionCaches()
-	{
-		Arrays.fill(previousXp, -1);
-		previousInventorySlots = null;
-		previousEquipmentIds = null;
-		previousBankHash = 0;
-		previousSeedVaultHash = 0;
-		previousSeedBoxHash = 0;
-		previousQuestStates.clear();
-		// The player state's region is transient, so the next session starts with none.
-		lastRegionId = -1;
-		lastModalCloseTick = -1;
-		loginLoadFailures = 0;
 	}
 
 	@Provides
@@ -449,13 +445,10 @@ public class LarryPlugin extends Plugin
 			// A real login arrives with no session established and none pending. The
 			// LOGIN_SCREEN/HOPPING arm below clears both flags, so logouts, hops and fresh
 			// starts still count.
-			if (loginReady || loginSnapshotPending)
-			{
-				return;
-			}
-			// The saved state failed to load on every attempt; stay paused until a logout or
-			// hop rather than retrying at every loading screen.
-			if (loginLoadFailures >= LOGIN_LOAD_ATTEMPTS)
+			//
+			// After the saved state failed to load on every attempt, stay paused until a
+			// logout or hop rather than retrying at every loading screen.
+			if (loginReady || loginSnapshotPending || loginLoadFailures >= LOGIN_LOAD_ATTEMPTS)
 			{
 				return;
 			}
@@ -495,14 +488,8 @@ public class LarryPlugin extends Plugin
 	private void initializeQuestStates()
 	{
 		previousQuestStates.clear();
-		for (Quest quest : Quest.values())
-		{
-			QuestState state = questState(quest);
-			if (state != null)
-			{
-				previousQuestStates.put(quest, state);
-			}
-		}
+		// With no baseline, the poll records every quest's state and reports none.
+		pollQuestStates();
 	}
 
 	/** A quest's state, or null for one that cannot be queried. */
@@ -548,10 +535,9 @@ public class LarryPlugin extends Plugin
 	 *         the caller must not open the login gate
 	 */
 	@SuppressWarnings("deprecation") // Skill.OVERALL — no gameval replacement
-	private boolean sendLoginSnapshot()
+	private boolean sendLoginSnapshot(StateEngine stateEngine, FarmingPlanner farmingPlanner)
 	{
-		StateEngine stateEngine = engine;
-		if (stateEngine == null || client.getLocalPlayer() == null || !tracksProgressOn(client.getWorldType()))
+		if (client.getLocalPlayer() == null || !tracksProgressOn(client.getWorldType()))
 		{
 			return false;
 		}
@@ -565,15 +551,14 @@ public class LarryPlugin extends Plugin
 		{
 			loginReady = false;
 			loginLoadFailures++;
-			if (loginLoadFailures < LOGIN_LOAD_ATTEMPTS)
+			loginSnapshotPending = loginLoadFailures < LOGIN_LOAD_ATTEMPTS;
+			if (loginSnapshotPending)
 			{
 				log.debug("Failed to load the saved account (attempt {}), retrying next tick", loginLoadFailures, e);
-				loginSnapshotPending = true;
 			}
 			else
 			{
-				log.warn("Failed to load the saved account; planning paused until the next " + "login, and nothing is saved", e);
-				loginSnapshotPending = false;
+				log.warn("Failed to load the saved account; planning paused until the next login, and nothing is saved", e);
 			}
 			return false;
 		}
@@ -589,18 +574,7 @@ public class LarryPlugin extends Plugin
 			skills.put(skill.getName(), new SkillState(client.getRealSkillLevel(skill), client.getSkillExperience(skill)));
 		}
 
-		List<ItemStack> inventory = new ArrayList<>();
-		ItemContainer invContainer = client.getItemContainer(InventoryID.INV);
-		if (invContainer != null)
-		{
-			inventory = readInventory(invContainer.getItems());
-		}
-
-		ItemContainer eqContainer = client.getItemContainer(InventoryID.WORN);
-		Map<EquipmentSlot, ItemStack> equipment = eqContainer != null ? readEquipment(eqContainer.getItems())
-			: new EnumMap<>(EquipmentSlot.class);
-
-		stateEngine.onLogin(skills, inventory, equipment);
+		stateEngine.onLogin(skills, readInventory(containerItems(InventoryID.INV)), readEquipment(containerItems(InventoryID.WORN)));
 
 		// Records never-started quests too: absence is not "no". A capability behind an
 		// unrecorded quest resolves unsure, which keeps offering a route the player cannot
@@ -621,24 +595,19 @@ public class LarryPlugin extends Plugin
 			// The scan writes the state directly, bypassing the engine's varbit events, so
 			// the daily-teleport ledger must be primed explicitly. Otherwise an allowance
 			// spent before this session looks untouched.
-			FarmingPlanner farmingPlanner = planner;
-			if (farmingPlanner != null)
-			{
-				farmingPlanner.primeDailyTeleportLedgerFromLogin();
-				// Any Nexus slot already sent proves its destination. A zero here may be a
-				// slot not sent yet, so this only adds.
-				farmingPlanner.nexusAttuned(PortalNexus.attunedIn(this::varbitOrZero));
-			}
+			farmingPlanner.primeDailyTeleportLedgerFromLogin();
+			// Any Nexus slot already sent proves its destination. A zero here may be a slot not
+			// sent yet, so this only adds.
+			farmingPlanner.nexusAttuned(PortalNexus.attunedIn(this::varbitOrZero));
 
 			// Live var changes are the only other source of quest stages, so read the
 			// current values for quests progressed before this session.
-			for (Map.Entry<Integer, String> entry : QuestStages.BY_VARBIT.entrySet())
+			recordQuestStages(ps, QuestStages.BY_VARBIT, client::getVarbitValue);
+			recordQuestStages(ps, QuestStages.BY_VARP, client::getVarpValue);
+			// A teleport used before this session is still cooling down.
+			for (int varpId : COOLDOWN_VARPS)
 			{
-				recordQuestStage(ps, entry.getValue(), client.getVarbitValue(entry.getKey()));
-			}
-			for (Map.Entry<Integer, String> entry : QuestStages.BY_VARP.entrySet())
-			{
-				recordQuestStage(ps, entry.getValue(), client.getVarpValue(entry.getKey()));
+				ps.getVarps().put(varpId, client.getVarpValue(varpId));
 			}
 
 			// Runes already in the pouch count from login.
@@ -655,12 +624,16 @@ public class LarryPlugin extends Plugin
 		return true;
 	}
 
-	/** A quest stage read at login; the scan stores only stages past zero. */
-	private static void recordQuestStage(PlayerState ps, String questName, int value)
+	/** Quest stages read at login from each quest's var; the scan stores only stages past zero. */
+	private static void recordQuestStages(PlayerState ps, Map<Integer, String> questsByVar, IntUnaryOperator read)
 	{
-		if (value != 0)
+		for (Map.Entry<Integer, String> entry : questsByVar.entrySet())
 		{
-			ps.getQuestProgress().put(questName, value);
+			int stage = read.applyAsInt(entry.getKey());
+			if (stage != 0)
+			{
+				ps.getQuestProgress().put(entry.getValue(), stage);
+			}
 		}
 	}
 
@@ -760,22 +733,13 @@ public class LarryPlugin extends Plugin
 		}
 
 		Skill skill = event.getSkill();
-		int ordinal = skill.ordinal();
-		int currentXp = event.getXp();
-		int xpGained = 0;
-
-		if (previousXp[ordinal] >= 0)
+		int previous = previousXp[skill.ordinal()];
+		previousXp[skill.ordinal()] = event.getXp();
+		// Only a gain over a known baseline; -1 marks none yet.
+		if (previous >= 0 && event.getXp() > previous)
 		{
-			xpGained = currentXp - previousXp[ordinal];
+			stateEngine.onStatChanged(skill.getName(), event.getXp(), event.getLevel());
 		}
-		previousXp[ordinal] = currentXp;
-
-		if (xpGained <= 0)
-		{
-			return;
-		}
-
-		stateEngine.onStatChanged(skill.getName(), currentXp, event.getLevel());
 	}
 
 	// ---------------------------------------------------------------
@@ -956,7 +920,7 @@ public class LarryPlugin extends Plugin
 			// account over the real one. Staying armed is the safe failure.
 			if ((name != null && !name.isEmpty()) || loginTickCounter >= LOGIN_READY_MAX_TICKS)
 			{
-				if (sendLoginSnapshot())
+				if (sendLoginSnapshot(stateEngine, farmingPlanner))
 				{
 					loginSnapshotPending = false;
 					loginReady = true;
@@ -989,7 +953,7 @@ public class LarryPlugin extends Plugin
 		handleRegionTracking();
 
 		// Before the re-plan, so a house scan committed this tick is planned this tick.
-		handleHouse();
+		handleHouse(farmingPlanner);
 
 		// After the region and before the re-plan, so a teleport spent this tick is already
 		// gone from the allowance the route is picked against.
@@ -1005,7 +969,7 @@ public class LarryPlugin extends Plugin
 		// Read the contract crop before the advisor box reconciles.
 		readContractCrop();
 
-		reconcileFarmingAdvisorInfoBox();
+		reconcileFarmingAdvisorInfoBox(farmingPlanner);
 
 		pollQuestStates();
 
@@ -1032,10 +996,6 @@ public class LarryPlugin extends Plugin
 	/** Quests starting or finishing this tick; the client posts no event for either. */
 	private void pollQuestStates()
 	{
-		if (previousQuestStates.isEmpty())
-		{
-			return;
-		}
 		for (Quest quest : Quest.values())
 		{
 			QuestState currentState = questState(quest);
@@ -1048,13 +1008,10 @@ public class LarryPlugin extends Plugin
 			{
 				continue;
 			}
-			if (currentState == QuestState.FINISHED)
+			if (currentState == QuestState.FINISHED
+				|| (previousState == QuestState.NOT_STARTED && currentState == QuestState.IN_PROGRESS))
 			{
-				engine.onQuestProgress(quest.getName(), QuestStatus.COMPLETED, null);
-			}
-			else if (previousState == QuestState.NOT_STARTED && currentState == QuestState.IN_PROGRESS)
-			{
-				engine.onQuestProgress(quest.getName(), QuestStatus.IN_PROGRESS, null);
+				engine.onQuestProgress(quest.getName(), toQuestStatus(currentState), null);
 			}
 		}
 	}
@@ -1177,9 +1134,8 @@ public class LarryPlugin extends Plugin
 	}
 
 	/** Show the advisor box exactly while a run is due. */
-	private void reconcileFarmingAdvisorInfoBox()
+	private void reconcileFarmingAdvisorInfoBox(FarmingPlanner farmingPlanner)
 	{
-		FarmingPlanner farmingPlanner = planner;
 		// No player state means the account is being replaced, and the advice still
 		// describes the one that is going.
 		List<FarmingRunStatus> runs = runsOf(engine.getPlayerState() != null ? farmingPlanner.getAdvice() : null);
@@ -1253,7 +1209,7 @@ public class LarryPlugin extends Plugin
 	 * Commits a scan of the player's own house on the first tick after its "Loading house"
 	 * interface closes, and notices the player leaving a house. See {@link HouseWatch}.
 	 */
-	private void handleHouse()
+	private void handleHouse(FarmingPlanner farmingPlanner)
 	{
 		if (!houseWatch.wantsRegion())
 		{
@@ -1266,8 +1222,7 @@ public class LarryPlugin extends Plugin
 		// waits on it: the interface's absence settles it, so a close event the client never
 		// fires cannot leave a load waiting.
 		HouseWatch.Scan scan = houseWatch.tick(inHouse, houseWatch.awaitsInterfaceClose() && isShown(InterfaceID.PohLoading.UNIVERSE));
-		FarmingPlanner farmingPlanner = planner;
-		if (scan == null || farmingPlanner == null)
+		if (scan == null)
 		{
 			return;
 		}
@@ -1363,10 +1318,16 @@ public class LarryPlugin extends Plugin
 			}
 		}
 
-		String quest = QuestStages.BY_VARP.get(event.getVarpId());
+		int varpId = event.getVarpId();
+		String quest = QuestStages.BY_VARP.get(varpId);
 		if (quest != null)
 		{
-			stateEngine.onQuestProgress(quest, null, client.getVarpValue(event.getVarpId()));
+			stateEngine.onQuestProgress(quest, null, client.getVarpValue(varpId));
+			read = true;
+		}
+		if (COOLDOWN_VARPS.contains(varpId))
+		{
+			stateEngine.onVarpValueChanged(varpId, client.getVarpValue(varpId));
 			read = true;
 		}
 
@@ -1418,12 +1379,6 @@ public class LarryPlugin extends Plugin
 		else if (containerId == InventoryID.SEED_VAULT)
 		{
 			readSeedVault(items, "its container change");
-		}
-		else if (containerId == InventoryID.SEED_BOX)
-		{
-			// Never observed to fire: the box is read from its Check listing in chat. If the
-			// container is ever reported, its snapshot replaces the tally.
-			readIfMoved(items, previousSeedBoxHash, h -> previousSeedBoxHash = h, engine::onSeedBoxChanged);
 		}
 	}
 
@@ -1498,7 +1453,7 @@ public class LarryPlugin extends Plugin
 			currentSlots[i] = i < items.length && items[i].getId() != -1
 				? ((long) items[i].getId() << 32) | (items[i].getQuantity() & 0xFFFFFFFFL) : -1L;
 		}
-		if (previousInventorySlots != null && Arrays.equals(previousInventorySlots, currentSlots))
+		if (Arrays.equals(previousInventorySlots, currentSlots))
 		{
 			return;
 		}
@@ -1521,7 +1476,7 @@ public class LarryPlugin extends Plugin
 			int slotIdx = EQUIPMENT_SLOT_INDICES[i];
 			currentIds[i] = slotIdx < items.length ? items[slotIdx].getId() : -1;
 		}
-		if (previousEquipmentIds != null && Arrays.equals(previousEquipmentIds, currentIds))
+		if (Arrays.equals(previousEquipmentIds, currentIds))
 		{
 			return;
 		}
@@ -1690,8 +1645,14 @@ public class LarryPlugin extends Plugin
 	 */
 	private Map<Integer, ItemStack> snapshotInventory()
 	{
-		ItemContainer container = client.getItemContainer(InventoryID.INV);
-		return container == null ? new HashMap<>() : byItem(toItemStacks(container.getItems()));
+		return byItem(toItemStacks(containerItems(InventoryID.INV)));
+	}
+
+	/** A container's items, or none when the client holds no such container. */
+	private Item[] containerItems(int containerId)
+	{
+		ItemContainer container = client.getItemContainer(containerId);
+		return container != null ? container.getItems() : new Item[0];
 	}
 
 	/** Stacks of one item summed under its id, keeping its name. */

@@ -10,14 +10,14 @@
 # player without the slot's gear is told to earn; without one, they are told to earn the
 # last tier. nice to have and must wear are yes or -; part of groups slots under one name.
 #
-# The slots come in the order the panel shows them. The weapon slot holds the staff on a
-# run that needs one and the secateurs otherwise; the log basket takes the cape slot when
-# worn.
+# The slots come in the order the panel shows them. The staff shows only on a run that needs
+# one; the log basket takes the cape slot when worn.
 
 # Wiki "Magic secateurs": herbs, allotments, bushes and more, but not seaweed or cacti. The
-# sentence names the three a farm run sees most. They raise yield from the inventory as well
-# as the hand.
-slot	SECATEURS	WEAPON	Bring your %s. They give more herbs, allotment crops and berries.	-	-	-
+# benefit names the three a farm run sees most. They raise yield from the inventory as well
+# as the hand, so owned ones go on the packing list and this slot has no tip: it shows only
+# as a goal for a player without a pair.
+slot	SECATEURS	WEAPON	-	-	-	-
 tier	SECATEURS	Magic secateurs	more herbs, allotment crops and berries	7409	FAIRY_ENCHANTED_SECATEURS
 
 # One tier, not two: the staves open a ring alike, so a ladder would ask a lunar-staff
@@ -30,12 +30,15 @@ form	STAFF	Lunar staff	fairy rings	9084	LUNAR_MOONCLAN_LIMINAL_STAFF
 tier	STAFF	Dramen or lunar staff	fairy rings	-	-
 goal	STAFF	Dramen staff	Make a dramen staff in Lost City to use fairy rings.
 
-# The max cape ids below are the variants that keep the Farming cape teleport. Any other
-# cape falls through to the Farming cape tier.
+# Only the max cape itself, inventory and worn, has the Farming cape teleport. Its variants
+# (infernal, fire, god, Ardougne and the rest) keep none of its teleports, and the Ardougne
+# max cape keeps the elite Ardougne cloak's (wiki "Max cape", Variants).
 slot	CAPE	CAPE	Wear your %s to save an inventory slot.	-	-	-
-tier	CAPE	Max cape	the Farming cape teleport	13280 13342 13329 20447 24134 13337 13331 13333 13335 20760 21285 21289 24133 21776 24232 24238 24242	SKILLCAPE_MAX SKILLCAPE_MAX_WORN SKILLCAPE_MAX_FIRECAPE SKILLCAPE_MAX_FIRECAPE_BROKEN SKILLCAPE_MAX_FIRECAPE_TROUVER SKILLCAPE_MAX_ANMA SKILLCAPE_MAX_SARADOMIN SKILLCAPE_MAX_ZAMORAK SKILLCAPE_MAX_GUTHIX SKILLCAPE_MAX_ARDY SKILLCAPE_MAX_INFERNALCAPE SKILLCAPE_MAX_INFERNALCAPE_BROKEN SKILLCAPE_MAX_INFERNALCAPE_TROUVER SKILLCAPE_MAX_SARADOMIN2 SKILLCAPE_MAX_SARADOMIN2_TROUVER SKILLCAPE_MAX_SARADOMIN2_BROKEN SKILLCAPE_MAX_GUTHIX2_BROKEN
+tier	CAPE	Max cape	the Farming cape teleport	13280 13342	SKILLCAPE_MAX SKILLCAPE_MAX_WORN
 tier	CAPE	Farming cape	unlimited teleports to the Farming Guild	9810 9811	SKILLCAPE_FARMING SKILLCAPE_FARMING_TRIMMED
-tier	CAPE	Ardougne cloak 4	unlimited teleports to the Ardougne patch	13124	ARDY_CAPE_ELITE
+form	CAPE	Ardougne cloak 4	unlimited teleports to the Ardougne patch	13124	ARDY_CAPE_ELITE
+form	CAPE	Ardougne max cape	unlimited teleports to the Ardougne patch	20760	SKILLCAPE_MAX_ARDY
+tier	CAPE	Ardougne cloak 4	unlimited teleports to the Ardougne patch	-	-
 tier	CAPE	Ardougne cloak 3	five teleports a day to the Ardougne patch	13123	ARDY_CAPE_HARD
 tier	CAPE	Ardougne cloak 2	three teleports a day to the Ardougne patch	13122	ARDY_CAPE_MEDIUM
 

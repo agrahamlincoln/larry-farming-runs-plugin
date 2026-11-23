@@ -7,6 +7,7 @@ import com.larryfarming.farming.model.*;
 import com.larryfarming.model.ItemStack;
 import com.larryfarming.model.PlayerState;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Notices a teleport spent on the way to the next stop, so the plan stops asking for it.
@@ -36,29 +37,25 @@ import java.util.*;
  */
 public final class TravelWatch {
 
-    /** A teleport lands three or four ticks after its cast. Ten allows for lag. */
-    static final int LANDING_TICKS = 10;
+    /**
+     * A teleport lands three or four ticks after its cast, a minigame teleport 22 and a home
+     * teleport up to 25. Thirty allows for lag.
+     */
+    static final int LANDING_TICKS = 30;
 
     /** Ten minutes. No stop is that far from the place its teleport lands. */
     static final int MAX_TICKS = 1000;
 
     private static final Set<Rune> ELEMENTAL = EnumSet.of(Rune.AIR, Rune.WATER, Rune.EARTH, Rune.FIRE);
 
-    /**
-     * The travel items a teleport can use up: jewellery crumbling or going uncharged on its
-     * last charge, a basalt or tablet broken. A cape, a cloak, an eternal glory or a ring of
-     * unlimited use leaves the bag only when the player puts it somewhere, never on a
-     * teleport. Nor does the ectophial: emptied, it still counts, and it refills itself on
-     * arrival.
-     */
-    private static final Set<Capability> USED_UP = EnumSet.of(
-            Capability.RING_OF_DUELING, Capability.GAMES_NECKLACE, Capability.COMBAT_BRACELET,
-            Capability.DIGSITE_PENDANT, Capability.RING_OF_WEALTH, Capability.AMULET_OF_GLORY,
-            Capability.SKILLS_NECKLACE,
-            Capability.SLAYER_RING, Capability.NECKLACE_OF_PASSAGE,
-            Capability.TELEPORT_CRYSTAL, Capability.ICY_BASALT, Capability.STONY_BASALT, Capability.BRIMHAVEN_TABLET);
+    /** Teleports used without leaving the bag: a minigame or home teleport, a scroll read from the book. */
+    private static final List<Capability> IN_PLACE = Arrays.stream(Capability.values())
+            .filter(capability -> CapabilitySources.hasCooldown(capability) || CapabilitySources.isStoredInBook(capability))
+            .collect(Collectors.toList());
 
     private Map<Integer, Integer> carriedBefore;
+    /** Each of {@link #IN_PLACE}'s {@link CapabilitySources#useMark}, as last read. */
+    private long[] usesBefore;
     private List<ItemStack> bankBefore;
     private Integer regionBefore;
 
@@ -88,6 +85,7 @@ public final class TravelWatch {
     public void clear() {
         forget();
         carriedBefore = null;
+        usesBefore = null;
         bankBefore = null;
         regionBefore = null;
     }
@@ -100,9 +98,10 @@ public final class TravelWatch {
      *     A teleport spent for one stop stays paid for the next while this is its place and
      *     the player is in or beside the region it landed in: the Falador park tree and the
      *     Falador farm are a walk apart, not two casts
+     * @param patchRegions the map regions of that stop's patches
      * @return whether {@link #taken()} or {@link #takenFor()} changed
      */
-    public boolean tick(PlayerState state, String heading, Destination landing) {
+    public boolean tick(PlayerState state, String heading, Destination landing, Set<Integer> patchRegions) {
         TravelTaken was = spent;
         String wasFor = spentFor;
         Map<Integer, Integer> carried = carried(state);
@@ -120,17 +119,30 @@ public final class TravelWatch {
                 forget();
             }
         }
-        if (carriedBefore != null && !banked) {
-            TravelTaken now = spentBetween(carriedBefore, carried);
-            if (!now.isNone()) {
-                spent = now;
-                spentFor = heading;
-                ticksSinceSpent = 0;
-                landed = jumped;
-                landedIn = jumped ? region : null;
+        TravelTaken now = carriedBefore != null && !banked ? spentBetween(carriedBefore, carried) : TravelTaken.NONE;
+        // These take nothing from the bag: a cooldown starting, or the book holding one scroll
+        // fewer, is the cast. Scrolls taken out of the book land in the bag instead.
+        long[] uses = IN_PLACE.stream().mapToLong(capability -> CapabilitySources.useMark(capability, state)).toArray();
+        for (int i = 0; usesBefore != null && i < uses.length; i++) {
+            if (uses[i] > usesBefore[i] && !cameIntoTheBag(IN_PLACE.get(i), carried)) {
+                now = TravelTaken.using(IN_PLACE.get(i));
             }
         }
+        if (!now.isNone()) {
+            spent = now;
+            spentFor = heading;
+            ticksSinceSpent = 0;
+            landed = jumped;
+            landedIn = jumped ? region : null;
+        }
+        // One cooldown serves many places (Castle Wars by Grouping, the Lunar home): only a
+        // landing beside the stop's patches was the cast for it.
+        if (landed && spent.getItems().stream().anyMatch(CapabilitySources::hasCooldown)
+                && patchRegions.stream().noneMatch(patch -> bordering(patch, landedIn))) {
+            forget();
+        }
 
+        usesBefore = uses;
         carriedBefore = carried;
         bankBefore = state.getBank();
         regionBefore = region;
@@ -214,9 +226,10 @@ public final class TravelWatch {
         if (!means.isEmpty()) {
             return TravelTaken.NONE;
         }
-        for (Capability capability : USED_UP) {
+        // A travel item a teleport can use up, marked so in the packing table.
+        for (Capability capability : Capability.values()) {
             CarryItems.Carry carry = CarryItems.forCapability(capability);
-            if (carry != null && usedUp(carry.getItemIds(), before, after)) {
+            if (carry != null && carry.isUsedUp() && usedUp(carry.getItemIds(), before, after)) {
                 return TravelTaken.using(capability);
             }
         }
@@ -256,11 +269,18 @@ public final class TravelWatch {
         return before.getOrDefault(id, 0) - after.getOrDefault(id, 0);
     }
 
+    /** Whether more of this capability's loose items are carried than last tick. */
+    private boolean cameIntoTheBag(Capability capability, Map<Integer, Integer> carried) {
+        CarryItems.Carry loose = CarryItems.forCapability(capability);
+        return loose != null && carriedBefore != null && Arrays.stream(loose.getItemIds())
+                .anyMatch(id -> carried.getOrDefault(id, 0) > carriedBefore.getOrDefault(id, 0));
+    }
+
     /** What the player has on them of every rune, tablet and travel item a route can spend. */
     private static Map<Integer, Integer> carried(PlayerState state) {
         Map<Integer, Integer> carried = new HashMap<>();
         for (int id : WATCHED) {
-            int held = ItemCounts.countCarried(state, id, null);
+            int held = ItemCounts.countCarried(state, id);
             if (held > 0) {
                 carried.put(id, held);
             }
@@ -280,13 +300,7 @@ public final class TravelWatch {
         for (Rune rune : Rune.values()) {
             ids.add(rune.getItemId());
         }
-        for (Destination destination : Destination.values()) {
-            for (TeleportMeans means : Teleports.to(destination)) {
-                if (means.isTablet()) {
-                    ids.add(means.getItemId());
-                }
-            }
-        }
+        ids.addAll(Teleports.tabletIds());
         for (Capability capability : Capability.values()) {
             CarryItems.Carry carry = CarryItems.forCapability(capability);
             if (carry != null) {

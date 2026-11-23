@@ -92,7 +92,12 @@ public final class InventorySim {
          */
         VOLCANIC_ASH,
         /** Compost potion to lift a finished bin a tier. One slot holds up to four doses. */
-        COMPOST_POTION
+        COMPOST_POTION,
+        /**
+         * Magic secateurs, which the packing list names whenever the player owns a pair.
+         * Charged even when wielded: the same safe over-count as a worn travel item.
+         */
+        MAGIC_SECATEURS
     }
 
     /**
@@ -353,18 +358,14 @@ public final class InventorySim {
      * <p>Banking late avoids detours the player does not need. The trip starts at a bank,
      * so the first leg runs as far as it can.
      *
-     * @param demands  every arrival being visited, in the order the circuit visits them
-     * @param fixtures what the player carries the whole way
+     * @param stops every arrival being visited, in the order the circuit visits them
+     * @param along what the player carries the whole way
      */
-    public static Plan plan(List<Demand> demands, Set<Fixture> fixtures) {
-        List<Demand> stops = demands == null ? Collections.emptyList() : demands;
-        int carried = fixtures == null ? 0 : fixtures.size();
-        // The seed box is charged only on a trip that plants seeds, the same condition
-        // CarryPlanner uses to list it.
-        boolean seedsBoxed = fixtures != null && fixtures.contains(Fixture.SEED_BOX) && plantsSeeds(stops);
-        if (fixtures != null && fixtures.contains(Fixture.SEED_BOX) && !seedsBoxed) {
-            carried--;
-        }
+    public static Plan plan(List<Demand> stops, Set<Fixture> along) {
+        // The seed box is charged only on a trip that plants seeds, as opposed to saplings,
+        // the same condition CarryPlanner uses to list it.
+        boolean seedsBoxed = along.contains(Fixture.SEED_BOX) && stops.stream().anyMatch(stop -> !stop.getSeeds().isEmpty());
+        int carried = along.contains(Fixture.SEED_BOX) && !seedsBoxed ? along.size() - 1 : along.size();
 
         List<Leg> legs = new ArrayList<>();
         int from = 0;
@@ -379,7 +380,8 @@ public final class InventorySim {
         boolean harvestRoomOnly = false;
         while (from < stops.size()) {
             int to = furthestThatFits(stops, from, carried, seedsBoxed);
-            if (to < from && peakOver(stops, from, from, carried, seedsBoxed) <= SLOTS) {
+            int wanted = to < from ? peakOver(stops, from, from, carried, seedsBoxed) : 0;
+            if (to < from && wanted <= SLOTS) {
                 // Tight, not impossible: one arrival over WORKING_SLOTS but within SLOTS.
                 // Taken as a leg of one rather than reported. Every path below still
                 // advances `from`, so the loop still terminates.
@@ -391,9 +393,7 @@ public final class InventorySim {
                 // Required for termination: this branch must advance `from`. The paths
                 // below all advance it too, since latestBankIn searches [from + 1, to + 1].
                 // Without this branch the loop builds legs for the same arrival forever.
-                Demand alone = stops.get(from);
-                int wanted = peakOver(stops, from, from, carried, seedsBoxed);
-                String said = alone.getAt().getDisplayName() + " alone needs " + wanted + " inventory slots.";
+                String said = stops.get(from).getAt().getDisplayName() + " alone needs " + wanted + " inventory slots.";
                 // An earlier shortfall and this one can both apply; report both.
                 legs.add(new Leg(from, bankAt, bankCost, bankPlace, broughtForward,
                         wanted, unbanked == null ? said : unbanked + " " + said, false, passableBanksIn(stops, from, from)));
@@ -489,18 +489,18 @@ public final class InventorySim {
             saplings += stops.get(i).getSaplings();
         }
 
-        Items items = Items.over(stops, to);
+        List<Integer> itemsGoneAt = itemsGoneAt(stops, to);
         Set<Crop> picked = EnumSet.noneOf(Crop.class);
         // Setting off: from the trip's starting bank on the opening leg, otherwise from the
         // bank at the leg's first arrival, reached already.
-        int peak = carried + items.heldAt(from == 0 ? -1 : from) + seedSlots(seedsLeft.size(), seedsBoxed)
+        int peak = carried + itemsHeldAt(itemsGoneAt, from == 0 ? -1 : from) + seedSlots(seedsLeft.size(), seedsBoxed)
                 + paymentsLeft.size() + saplings;
         for (int i = from; i <= to; i++) {
             Demand stop = stops.get(i);
             // Peak read after picking and before spending: the fullest moment at an arrival
             // is the harvest in hand with this stop's seed and payment still held.
             picked.addAll(stop.getProduce());
-            peak = Math.max(peak, carried + items.heldAt(i) + seedSlots(seedsLeft.size(), seedsBoxed)
+            peak = Math.max(peak, carried + itemsHeldAt(itemsGoneAt, i) + seedSlots(seedsLeft.size(), seedsBoxed)
                     + paymentsLeft.size() + saplings + picked.size());
 
             // Spent on the way out. Nothing below raises the total, so the peak is not re-read.
@@ -518,55 +518,41 @@ public final class InventorySim {
      * from the arrival before the one it reaches. A stack of tablets alone leaves the bag,
      * at the last arrival this leg's withdrawal reaches: each bank fetches only its own
      * stretch's tablets, so a later use comes out of a later bank.
+     *
+     * @return each item a leg ending at {@code to} has withdrawn by its end, as the arrival
+     *     it is gone at
      */
-    private static final class Items {
-
-        /** Each item the leg has withdrawn by its end, and the arrival it is gone at. */
-        private final List<Integer> goneAt;
-
-        private Items(List<Integer> goneAt) {
-            this.goneAt = goneAt;
-        }
-
-        /** Over a leg ending at {@code to}. */
-        static Items over(List<Demand> stops, int to) {
-            Map<Integer, Integer> firstNeeded = new HashMap<>();
-            Map<Integer, Integer> lastSpent = new HashMap<>();
-            for (int i = 0; i < stops.size(); i++) {
-                Demand stop = stops.get(i);
-                for (int item : stop.getTools()) {
-                    firstNeeded.merge(item, i, Math::min);
-                }
-                for (int item : stop.getTravel()) {
-                    firstNeeded.merge(item, Math.max(0, i - 1), Math::min);
-                }
-                // Up to the arrival after the leg, whose tablet is spent reaching the next
-                // bank. Tablets for beyond it are fetched there.
-                if (i <= to + 1) {
-                    for (int item : stop.getSpentOnTheWay()) {
-                        lastSpent.merge(item, i, Math::max);
-                    }
+    private static List<Integer> itemsGoneAt(List<Demand> stops, int to) {
+        Map<Integer, Integer> firstNeeded = new HashMap<>();
+        Map<Integer, Integer> lastSpent = new HashMap<>();
+        for (int i = 0; i < stops.size(); i++) {
+            Demand stop = stops.get(i);
+            for (int item : stop.getTools()) {
+                firstNeeded.merge(item, i, Math::min);
+            }
+            for (int item : stop.getTravel()) {
+                firstNeeded.merge(item, Math.max(0, i - 1), Math::min);
+            }
+            // Up to the arrival after the leg, whose tablet is spent reaching the next
+            // bank. Tablets for beyond it are fetched there.
+            if (i <= to + 1) {
+                for (int item : stop.getSpentOnTheWay()) {
+                    lastSpent.merge(item, i, Math::max);
                 }
             }
-            List<Integer> goneAt = new ArrayList<>();
-            for (Map.Entry<Integer, Integer> needed : firstNeeded.entrySet()) {
-                if (needed.getValue() <= to) {
-                    goneAt.add(lastSpent.getOrDefault(needed.getKey(), Integer.MAX_VALUE));
-                }
-            }
-            return new Items(goneAt);
         }
+        List<Integer> goneAt = new ArrayList<>();
+        for (Map.Entry<Integer, Integer> needed : firstNeeded.entrySet()) {
+            if (needed.getValue() <= to) {
+                goneAt.add(lastSpent.getOrDefault(needed.getKey(), Integer.MAX_VALUE));
+            }
+        }
+        return goneAt;
+    }
 
-        /** How many are in the bag while standing at this arrival, -1 for the first bank. */
-        int heldAt(int arrival) {
-            int held = 0;
-            for (int gone : goneAt) {
-                if (gone > arrival) {
-                    held++;
-                }
-            }
-            return held;
-        }
+    /** How many of those items are in the bag while standing at this arrival, -1 for the first bank. */
+    private static int itemsHeldAt(List<Integer> goneAt, int arrival) {
+        return (int) goneAt.stream().filter(gone -> gone > arrival).count();
     }
 
     /**
@@ -575,11 +561,6 @@ public final class InventorySim {
      */
     private static int seedSlots(int kinds, boolean seedsBoxed) {
         return seedsBoxed ? Math.max(0, kinds - SeedBox.KINDS_HELD) : kinds;
-    }
-
-    /** Whether any stop on the trip puts a seed in the ground, as opposed to a sapling. */
-    private static boolean plantsSeeds(List<Demand> stops) {
-        return stops.stream().anyMatch(stop -> !stop.getSeeds().isEmpty());
     }
 
     /**
@@ -616,10 +597,9 @@ public final class InventorySim {
         List<Opportunity> passed = new ArrayList<>();
         for (int i = from + 1; i <= to && i < stops.size(); i++) {
             Demand stop = stops.get(i);
-            if (!offeredHere(stop)) {
-                continue;
+            if (offeredHere(stop)) {
+                passed.add(new Opportunity(i, stop.getAt(), stop.isBankMeasured() ? stop.getBank() : null, stop.getBankPlace()));
             }
-            passed.add(new Opportunity(i, stop.getAt(), stop.isBankMeasured() ? stop.getBank() : null, stop.getBankPlace()));
         }
         return List.copyOf(passed);
     }

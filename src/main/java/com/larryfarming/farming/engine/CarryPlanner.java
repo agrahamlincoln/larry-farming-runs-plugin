@@ -1,5 +1,6 @@
 package com.larryfarming.farming.engine;
 
+import com.larryfarming.data.Tables;
 import com.larryfarming.engine.ItemCounts;
 import com.larryfarming.engine.SeedBox;
 import com.larryfarming.engine.farming.*;
@@ -48,27 +49,11 @@ public final class CarryPlanner {
      */
     private static final int MEDALLION_OF_THE_DEEP = 32386;
 
-    /**
-     * Every axe, best first; the line draws whichever one the player has.
-     *
-     * <p>Ordered by metal tier, with each Forestry two-handed felling axe right after the
-     * one-handed axe of the same metal. Within a tier the one-handed axe comes first because
-     * it leaves the shield slot free.
-     */
-    private static final int[] AXES = {
-        20011, 28226, // 3rd age
-        23673, 28220, // crystal
-        13241,        // infernal
-        6739, 28217,  // dragon
-        23279,        // gilded
-        1359, 28214,  // rune
-        1357, 28211,  // adamant
-        1355, 28208,  // mithril
-        1361, 28205,  // black
-        1353, 28202,  // steel
-        1349, 28199,  // iron
-        1351, 28196,  // bronze
-    };
+    /** The item families and game facts behind the tool lines, by name. */
+    private static final Tables.Named TOOLS = Tables.byName("/com/larryfarming/tools.tsv", 3);
+
+    /** Every axe, best first; the line draws whichever one the player has. */
+    private static final int[] AXES = TOOLS.of("axes").integers(1);
 
     /**
      * What to draw when the player has no axe: the bronze axe, not the first of
@@ -76,8 +61,8 @@ public final class CarryPlanner {
      */
     private static final int PLAIN_AXE = ItemID.BRONZE_AXE;
 
-    /** The log basket and the forestry basket, each in its open and closed form. */
-    private static final int[] LOG_BASKETS = {28140, 28142, 28143, 28145};
+    /** The log basket and the forestry basket, each in its closed and open form. */
+    private static final int[] LOG_BASKETS = TOOLS.of("logBaskets").integers(1);
 
     /**
      * The seed box, closed and open. Must match the ids {@code SeedBox} gates its contents
@@ -123,7 +108,7 @@ public final class CarryPlanner {
         if (packsBucket(plans, fertile, bins, state)) {
             // No AT_LEPRECHAUN branch: only a bucket owned as an item, carried or banked,
             // packs. One stored at the leprechaun shows only in its varbits (7915/7916).
-            boolean inTheBag = BottomlessBucket.ITEM_IDS.stream().anyMatch(id -> ItemCounts.countCarried(state, id, null) > 0);
+            boolean inTheBag = BottomlessBucket.ITEM_IDS.stream().anyMatch(id -> ItemCounts.countCarried(state, id) > 0);
             carry.add(new FarmingCarryItem(FarmingCarryItem.Kind.TOOL,
                     ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED, "Bottomless compost bucket", 0, inTheBag
                             ? FarmingCarryItem.Availability.CARRIED : FarmingCarryItem.Availability.BANKED,
@@ -135,6 +120,7 @@ public final class CarryPlanner {
 
         int clearingCoins = addTreeTools(carry, plans, cropFor, state, inputs);
         addFairyRingGear(carry, plans, state, resolver);
+        addMagicSecateurs(carry, state);
         int curePlantCasts = addCureTools(carry, plans, state, inputs);
         addDivingGear(carry, plans, state);
         addProtectionPayments(carry, plans, cropFor, state);
@@ -160,7 +146,7 @@ public final class CarryPlanner {
 
     /**
      * What it takes to reach these stops and nothing more: the travel items, runes and
-     * fares, plus the fairy-ring staff and the secateurs it pushes out of the weapon slot.
+     * fares, plus the fairy-ring staff.
      *
      * <p>A bank at a stop's arrival opens only once the player is there, so the way there
      * has to come out of an earlier bank. {@link #withoutTravel} strips the same things from
@@ -187,15 +173,8 @@ public final class CarryPlanner {
         if (line.getKind() == FarmingCarryItem.Kind.RUNES) {
             return !ownsRunePouch;
         }
-        if (line.getItemId() == RING_OF_CHAROS_ACTIVATED || line.getAvailability() == FarmingCarryItem.Availability.AT_LEPRECHAUN) {
-            return false;
-        }
-        for (int staff : STAFF_IDS) {
-            if (line.getItemId() == staff) {
-                return false;
-            }
-        }
-        return true;
+        return line.getItemId() != RING_OF_CHAROS_ACTIVATED && line.getAvailability() != FarmingCarryItem.Availability.AT_LEPRECHAUN
+                && Arrays.stream(STAFF_IDS).noneMatch(staff -> staff == line.getItemId());
     }
 
     /**
@@ -219,10 +198,8 @@ public final class CarryPlanner {
             return BottomlessBucket.ITEM_IDS;
         }
         for (int[] family : new int[][]{AXES, LOG_BASKETS, STAFF_IDS, CompostBins.POTIONS, CompostBins.EMPTY_BUCKETS}) {
-            for (int id : family) {
-                if (id == itemId) {
-                    return idsOf(family);
-                }
+            if (Arrays.stream(family).anyMatch(id -> id == itemId)) {
+                return idsOf(family);
             }
         }
         int[] travel = CarryItems.formsOf(itemId);
@@ -271,7 +248,7 @@ public final class CarryPlanner {
             if (!plan.isVisit()) {
                 continue;
             }
-            if (plan.getNeeds() != null && plan.getNeeds().contains(Capability.LOVAKENGJ_MINECART)) {
+            if (plan.getNeeds().contains(Capability.LOVAKENGJ_MINECART)) {
                 rides++;
             }
             if (plan.getRoute() == null || plan.getRoute().getFareCoins() == 0) {
@@ -316,7 +293,7 @@ public final class CarryPlanner {
 
     /** Whether this route pays a charter captain, the only fares the discounts apply to. */
     private static boolean isCharter(StopPlan plan) {
-        return plan.getNeeds() != null && plan.getNeeds().contains(Capability.CHARTER_SHIP);
+        return plan.getNeeds().contains(Capability.CHARTER_SHIP);
     }
 
     /**
@@ -361,21 +338,12 @@ public final class CarryPlanner {
     /**
      * The two ways to cure a diseased crop, and which patches take which.
      *
-     * <p>From the wiki: "Players may treat plants in diseased herb, flower, allotment, hops,
-     * hardwood tree, celastrus, belladonna, cactus, and mushroom patches with plant cure...
-     * For diseased trees, fruit trees, spirit trees and bushes, the player may use secateurs
-     * on the plant to trim the diseased branch." Hardwood trees take plant cure, so the
-     * split cannot be derived from whether the patch grows a tree.
-     *
-     * <p>Deliberately not exhaustive over {@link PatchType}. A patch the wiki sentence does
-     * not name draws no cure line, because a wrong cure is a wasted slot.
+     * <p>Deliberately not exhaustive over {@link PatchType}. A patch in neither set draws no
+     * cure line, because a wrong cure is a wasted slot.
      */
-    private static final Set<PatchType> PRUNED_WITH_SECATEURS = EnumSet.of(
-            PatchType.TREE, PatchType.FRUIT_TREE, PatchType.SPIRIT_TREE, PatchType.BUSH);
+    private static final Set<PatchType> PRUNED_WITH_SECATEURS = Set.copyOf(TOOLS.of("prunedWithSecateurs").constants(PatchType.class, 1));
 
-    private static final Set<PatchType> CURED_WITH_PLANT_CURE = EnumSet.of(
-            PatchType.HERB, PatchType.FLOWER, PatchType.ALLOTMENT, PatchType.HOPS,
-            PatchType.HARDWOOD_TREE, PatchType.CELASTRUS, PatchType.BELLADONNA, PatchType.CACTUS, PatchType.MUSHROOM);
+    private static final Set<PatchType> CURED_WITH_PLANT_CURE = Set.copyOf(TOOLS.of("curedWithPlantCure").constants(PatchType.class, 1));
 
     /** Either opens a fairy ring; the dramen staff first, as the one a player meets first. */
     private static final int[] STAFF_IDS = {Loadouts.DRAMEN_STAFF, Loadouts.LUNAR_STAFF};
@@ -387,8 +355,7 @@ public final class CarryPlanner {
      * over-asked eight earth runes a cast.
      */
     private static final int CURE_PLANT_MAGIC_LEVEL = 66;
-    private static final int EARTH_PER_CURE_PLANT = 8;
-    private static final int ASTRAL_PER_CURE_PLANT = 1;
+    private static final Map<Rune, Integer> CURE_PLANT_RUNES = Map.of(Rune.EARTH, 8, Rune.ASTRAL, 1);
 
 
     /** The gardener's fee to clear a regular, fruit or hardwood tree. */
@@ -398,16 +365,8 @@ public final class CarryPlanner {
      * The Woodcutting level to chop each lumber or hardwood tree once grown, the same as the
      * wild tree. Fruit trees chop at any level.
      */
-    private static final Map<Crop, Integer> WOODCUTTING_LEVEL = Map.of(Crop.OAK, 15, Crop.WILLOW, 30, Crop.TEAK, 35,
-            Crop.MAPLE, 45, Crop.MAHOGANY, 50, Crop.YEW, 60, Crop.CAMPHOR, 66, Crop.MAGIC, 75, Crop.IRONWOOD, 80, Crop.ROSEWOOD, 92);
-
-    /** How a grown tree comes out of its patch before the next one goes in. */
-    private enum Clearing {
-        /** Chopped down, then the stump dug up. */
-        AXE,
-        /** Cleared by the patch's gardener for {@link #GARDENER_FEE}, no logs given. */
-        GARDENER
-    }
+    private static final Map<Crop, Integer> WOODCUTTING_LEVEL = Tables.read("/com/larryfarming/woodcutting-levels.tsv", 2).stream()
+            .collect(Collectors.toMap(row -> row.constant(Crop.class, 0), row -> row.integer(1)));
 
     /** What the trees being replaced ask of the bag. */
     private static final class TreeWork {
@@ -452,10 +411,11 @@ public final class CarryPlanner {
     }
 
     /** Teleports from items worn in the cape slot. */
-    private static final Set<Capability> CAPE_SLOT_TELEPORTS = EnumSet.of(Capability.ARDOUGNE_CLOAK_1, Capability.ARDOUGNE_CLOAK_2,
-            Capability.ARDOUGNE_CLOAK_3, Capability.ARDOUGNE_CLOAK_4,
-            Capability.FARMING_CAPE, Capability.CONSTRUCTION_CAPE, Capability.FISHING_CAPE,
-            Capability.HUNTER_CAPE, Capability.QUEST_CAPE, Capability.DIARY_CAPE);
+    private static final Set<Capability> CAPE_SLOT_TELEPORTS = Set.copyOf(TOOLS.of("capeSlotTeleports").constants(Capability.class, 1));
+
+    static {
+        TOOLS.requireAllRead();
+    }
 
     /**
      * Where the log basket goes on this trip.
@@ -506,19 +466,20 @@ public final class CarryPlanner {
             if (nothingIsPlantedAt(cropFor, index)) {
                 continue;
             }
+            // Asked per patch, because one stop can cover several patches (the three Fossil
+            // Island hardwoods are one stop). A grown tree is either cleared by the gardener
+            // for a fee, no logs given, or chopped down and its stump dug up.
             for (PatchRef ref : plan.getStop().getPatches()) {
                 PatchType type = ref.type();
-                if (type == null) {
+                if (!treeStandsAt(type, ref, inputs)) {
                     continue;
                 }
-                // Asked per patch, because one stop can cover several patches (the three
-                // Fossil Island hardwoods are one stop).
-                Clearing clearing = clearingAt(type, ref, state, inputs);
-                if (clearing == Clearing.AXE) {
+                PatchPrediction seen = inputs.patchAt(ref);
+                if (gardenerClears(type, seen == null ? null : seen.getCrop(), state)) {
+                    work.coins += GARDENER_FEE;
+                } else {
                     work.axe = true;
                     work.logs |= type != PatchType.FRUIT_TREE;
-                } else if (clearing == Clearing.GARDENER) {
-                    work.coins += GARDENER_FEE;
                 }
             }
         }
@@ -526,22 +487,10 @@ public final class CarryPlanner {
     }
 
     /**
-     * How the tree in this patch comes out, or null when nothing stands to be cleared.
-     *
-     * <p>Calquat is absent: per the wiki it is cleared with a spade like a bush, even though
-     * it is classified as a tree. No run visits a redwood, celastrus or crystal tree patch.
-     */
-    private static Clearing clearingAt(PatchType type, PatchRef ref, PlayerState state, FarmingInputs inputs) {
-        if (!treeStandsAt(type, ref, inputs)) {
-            return null;
-        }
-        PatchPrediction seen = inputs.patchAt(ref);
-        return gardenerClears(type, seen == null ? null : seen.getCrop(), state) ? Clearing.GARDENER : Clearing.AXE;
-    }
-
-    /**
      * Whether a tree may stand in this patch and has to come out before the next one goes in:
-     * a tree patch not known to hold nothing to fell. A grown tree still owed its health
+     * a tree patch not known to hold nothing to fell. Calquat is absent: per the wiki it is
+     * cleared with a spade like a bush, even though it is classified as a tree. No run visits
+     * a redwood, celastrus or crystal tree patch. A grown tree still owed its health
      * check stands, as a checked one does. The row's clearing line asks the same question,
      * so the line and the bag agree.
      */
@@ -624,7 +573,7 @@ public final class CarryPlanner {
      * @param fertile whether the trip casts Fertile Soil
      */
     static boolean packsCompost(List<StopPlan> plans, boolean fertile) {
-        return usesCompost(plans) && !fertile;
+        return !fertile && plans.stream().anyMatch(FertileSoil::composts);
     }
 
     /**
@@ -634,11 +583,6 @@ public final class CarryPlanner {
      */
     static boolean packsBucket(List<StopPlan> plans, boolean fertile, CompostBins.Needs bins, PlayerState state) {
         return BottomlessBucket.toHand(state) && (packsCompost(plans, fertile) || bins.isBucket());
-    }
-
-    /** Whether any visited stop on this trip treats its patch, whatever its patch type. */
-    private static boolean usesCompost(List<StopPlan> plans) {
-        return plans.stream().anyMatch(FertileSoil::composts);
     }
 
     /**
@@ -703,7 +647,7 @@ public final class CarryPlanner {
             return sick;
         }
         // Magic secateurs prune as well as any pair, and a player who owns them already
-        // brings them: the weapon slot asks for them, or the bag does beside the staff.
+        // brings them: the packing list names them (see addMagicSecateurs).
         // The plain pair shares one leprechaun slot with magic secateurs, which ItemCounts
         // tells apart with the type varbit.
         if (prune && !ItemCounts.ownsAny(state, Loadouts.MAGIC_SECATEURS)) {
@@ -723,9 +667,8 @@ public final class CarryPlanner {
      * beside the patch, where missing runes leave the player unable to cure at all.
      */
     private static boolean hasRunesToCure(PlayerState state, int casts) {
-        return ItemCounts.countOwned(state, Rune.EARTH.getItemId(), null)
-                        >= casts * EARTH_PER_CURE_PLANT && ItemCounts.countOwned(state, Rune.ASTRAL.getItemId(), null)
-                        >= casts * ASTRAL_PER_CURE_PLANT;
+        return CURE_PLANT_RUNES.entrySet().stream()
+                .allMatch(rune -> ItemCounts.countOwned(state, rune.getKey().getItemId()) >= casts * rune.getValue());
     }
 
     /**
@@ -795,7 +738,7 @@ public final class CarryPlanner {
         }
         // The bins empty only on ash the player owns, so with bins to upgrade the bag takes
         // what is owned and Fertile Soil's last casts give supercompost.
-        int ash = bins.getAsh() > 0 ? Math.min(bins.getAsh() + fertileAsh, ItemCounts.countOwned(state, ItemID.FOSSIL_VOLCANIC_ASH, null))
+        int ash = bins.getAsh() > 0 ? Math.min(bins.getAsh() + fertileAsh, ItemCounts.countOwned(state, ItemID.FOSSIL_VOLCANIC_ASH))
                 : fertileAsh;
         if (ash > 0) {
             carry.add(item(FarmingCarryItem.Kind.TOOL, ItemID.FOSSIL_VOLCANIC_ASH, "Volcanic ash", ash, ash, state)
@@ -876,12 +819,7 @@ public final class CarryPlanner {
      * before the bank has been seen.
      */
     private static int bestOwned(PlayerState state, int[] itemIds, int none) {
-        for (int itemId : itemIds) {
-            if (ItemCounts.ownsAny(state, itemId)) {
-                return itemId;
-            }
-        }
-        return none;
+        return Arrays.stream(itemIds).filter(itemId -> ItemCounts.ownsAny(state, itemId)).findFirst().orElse(none);
     }
 
     /**
@@ -905,11 +843,6 @@ public final class CarryPlanner {
      * but a ring refuses the player without it, so the bag names it like any tool the trip
      * cannot do without. Either staff serves; the line names the one the player owns, and
      * the dramen staff when they own neither.
-     *
-     * <p>Magic secateurs, when the player owns a pair, whether or not the staff is already
-     * on them: the staff holds the weapon slot either way. They raise yield from the
-     * inventory, so they ride there. Without the staff the loadout plan puts them in the
-     * weapon slot instead, never both.
      */
     private static void addFairyRingGear(List<FarmingCarryItem> carry, List<StopPlan> plans, PlayerState state, CapabilityResolver resolver) {
         if (!staffWielded(plans, state, resolver)) {
@@ -920,6 +853,13 @@ public final class CarryPlanner {
             String name = staff == Loadouts.LUNAR_STAFF ? "Lunar staff" : "Dramen staff";
             carry.add(tool(staff, name, state, STAFF_IDS).withNote("Wield it to use fairy rings."));
         }
+    }
+
+    /**
+     * Magic secateurs, when the player owns a pair. They raise yield from the inventory as
+     * well as the hand, so they are something to pack like any tool, worn or not.
+     */
+    private static void addMagicSecateurs(List<FarmingCarryItem> carry, PlayerState state) {
         if (ItemCounts.ownsAny(state, Loadouts.MAGIC_SECATEURS)) {
             carry.add(tool(Loadouts.MAGIC_SECATEURS, "Magic secateurs", state).withNote("More herbs, allotment crops and berries."));
         }
@@ -969,10 +909,9 @@ public final class CarryPlanner {
     private static void addSeeds(List<FarmingCarryItem> carry, List<SeedAllocation.Tally> planting, PlayerState state) {
         for (SeedAllocation.Tally tally : planting) {
             CropData data = CropData.forCrop(tally.getCrop());
-            if (data == null) {
-                continue;
+            if (data != null) {
+                carry.add(seedLine(data, tally.getCount(), state));
             }
-            carry.add(seedLine(data, tally.getCount(), state));
         }
     }
 
@@ -992,10 +931,7 @@ public final class CarryPlanner {
         // Furthest-along first, so the line is named and drawn for the furthest stage they
         // hold any of.
         int[] stages = {data.getSaplingItemId(), data.getWateredSeedlingItemId(), data.getSeedlingItemId()};
-        int potted = 0;
-        for (int stage : stages) {
-            potted += ItemCounts.countOwned(state, stage, null);
-        }
+        int potted = Arrays.stream(stages).map(stage -> ItemCounts.countOwned(state, stage)).sum();
         String pottedName = ItemCounts.ownsAny(state, stages[0]) ? data.getSaplingName() : data.getSeedlingName();
         String name;
         if (potted >= count) {
@@ -1010,8 +946,8 @@ public final class CarryPlanner {
         // A watered seedling grows into a sapling in the bag with no errand, so it counts as
         // ready. A bare seed needs potting and an unwatered seedling needs water, and both
         // are done before setting off. With neither owned there is nothing to pot.
-        int ready = ItemCounts.countOwned(state, stages[0], null) + ItemCounts.countOwned(state, stages[1], null);
-        int toPot = ItemCounts.countOwned(state, seed, null) + ItemCounts.countOwned(state, stages[2], null);
+        int ready = ItemCounts.countOwned(state, stages[0]) + ItemCounts.countOwned(state, stages[1]);
+        int toPot = ItemCounts.countOwned(state, seed) + ItemCounts.countOwned(state, stages[2]);
         return ready < count && toPot > 0 ? line.withNote(FarmingCarryItem.POT_SEEDS_FIRST) : line;
     }
 
@@ -1050,10 +986,7 @@ public final class CarryPlanner {
                 needed.merge(crop, data.getSeedsPerPatch() * open, Integer::sum);
             }
         }
-
-        for (Map.Entry<Crop, Integer> entry : needed.entrySet()) {
-            carry.add(seedLine(CropData.forCrop(entry.getKey()), entry.getValue(), state));
-        }
+        needed.forEach((crop, count) -> carry.add(seedLine(CropData.forCrop(crop), count, state)));
     }
 
     /**
@@ -1066,14 +999,13 @@ public final class CarryPlanner {
      */
     private static void addTravel(List<FarmingCarryItem> carry, List<StopPlan> plans,
             PlayerState state, int curePlantCasts, int fertileCasts) {
-        Map<Integer, FarmingCarryItem> byItem = new LinkedHashMap<>();
+        List<TravelLine> travelLines = new ArrayList<>();
         Map<Integer, Integer> tabletsNeeded = new LinkedHashMap<>();
         Map<Integer, String> tabletNames = new LinkedHashMap<>();
         Map<Rune, Integer> runesNeeded = new EnumMap<>(Rune.class);
         // Cure Plant runes merge here with the teleport runes, so each rune gets one line.
         if (curePlantCasts > 0) {
-            runesNeeded.merge(Rune.EARTH, curePlantCasts * EARTH_PER_CURE_PLANT, Integer::sum);
-            runesNeeded.merge(Rune.ASTRAL, curePlantCasts * ASTRAL_PER_CURE_PLANT, Integer::sum);
+            CURE_PLANT_RUNES.forEach((rune, n) -> runesNeeded.merge(rune, curePlantCasts * n, Integer::sum));
         }
         // Places already paid for, so several stops at one of them cost one trip.
         Set<Arrival> arrivedAt = EnumSet.noneOf(Arrival.class);
@@ -1087,13 +1019,9 @@ public final class CarryPlanner {
             boolean firstTimeHere = arrivedAt.add(plan.getStop().getArrival());
 
             for (Capability capability : plan.getNeeds()) {
-                CarryItems.Carry carryItem = CarryItems.forCapability(capability);
+                CarryItems.Carry carryItem = CarryItems.forCapability(CapabilitySources.packedAs(capability, state));
                 if (carryItem != null) {
-                    // One line per item for the whole trip. Every charge tier counts towards
-                    // it, since each tier is a different item id. computeIfAbsent avoids
-                    // rescanning every container at each later stop.
-                    byItem.computeIfAbsent(carryItem.getItemId(), id -> item(FarmingCarryItem.Kind.TRAVEL, id,
-                                    carryItem.getName(), 0, 1, state, carryItem.getItemIds()));
+                    addTravelItem(travelLines, carryItem, state);
                     continue;
                 }
                 // A spell capability with no item, such as the respawn teleport: runes,
@@ -1121,22 +1049,72 @@ public final class CarryPlanner {
         if (fertileCasts > 0) {
             FertileSoil.runesPerCast().forEach((rune, n) -> runesNeeded.merge(rune, fertileCasts * n, Integer::sum));
         }
-        carry.addAll(byItem.values());
+        travelLines.forEach(line -> carry.add(line.item(state)));
 
-        for (Map.Entry<Integer, Integer> tablet : tabletsNeeded.entrySet()) {
-            int itemId = tablet.getKey();
-            carry.add(item(FarmingCarryItem.Kind.TRAVEL, itemId, tabletNames.get(itemId), tablet.getValue(), tablet.getValue(), state));
+        tabletsNeeded.forEach((itemId, count) ->
+                carry.add(item(FarmingCarryItem.Kind.TRAVEL, itemId, tabletNames.get(itemId), count, count, state)));
+        runesNeeded.forEach((rune, count) ->
+                carry.add(item(FarmingCarryItem.Kind.RUNES, rune.getItemId(), rune.getDisplayName(), count, count, state)));
+    }
+
+    /**
+     * Adds a travel item to the trip, one line per item however many stops use it. Every
+     * charge tier counts towards a line, since each tier is a different item id.
+     *
+     * <p>Carries that one owned item covers share a line, which then accepts only the ids
+     * they share: a max cape covers the Farming and the Construction cape alike, and the
+     * elite Ardougne cloak covers the easy one's teleport.
+     */
+    private static void addTravelItem(List<TravelLine> lines, CarryItems.Carry carry, PlayerState state) {
+        int[] ids = carry.getItemIds();
+        for (TravelLine line : lines) {
+            int[] shared = Arrays.stream(line.accepted).filter(id -> Arrays.stream(ids).anyMatch(other -> other == id)).toArray();
+            // Two lines already filled from the player's own pockets stay apart: folding them
+            // onto a banked shared item would send the player to the bank for nothing.
+            boolean bothCarried = carriedAny(state, line.accepted) && carriedAny(state, ids);
+            if (bestHeld(state, shared) != 0 && (carriedAny(state, shared) || !bothCarried)) {
+                line.accepted = shared;
+                line.folded |= line.carry.getItemId() != carry.getItemId();
+                return;
+            }
+            if (line.carry.getItemId() == carry.getItemId()) {
+                return;
+            }
+        }
+        lines.add(new TravelLine(carry));
+    }
+
+    /** A travel line: the carry that opened it and the ids still able to fill it. */
+    private static final class TravelLine {
+        final CarryItems.Carry carry;
+        int[] accepted;
+        /** Whether another carry shares the line, which the item the player holds then names. */
+        boolean folded;
+
+        TravelLine(CarryItems.Carry carry) {
+            this.carry = carry;
+            this.accepted = carry.getItemIds();
         }
 
-        for (Map.Entry<Rune, Integer> rune : runesNeeded.entrySet()) {
-            int itemId = rune.getKey().getItemId();
-            carry.add(item(FarmingCarryItem.Kind.RUNES, itemId, rune.getKey().getDisplayName(), rune.getValue(), rune.getValue(), state));
+        FarmingCarryItem item(PlayerState state) {
+            if (!folded) {
+                return CarryPlanner.item(FarmingCarryItem.Kind.TRAVEL, carry.getItemId(), carry.getName(), 0, 1, state, accepted);
+            }
+            int held = bestHeld(state, accepted);
+            String name = Loadouts.nameOf(held);
+            return CarryPlanner.item(FarmingCarryItem.Kind.TRAVEL, held, name != null ? name : carry.getName(), 0, 1, state, accepted);
         }
+    }
+
+    /** The first of these on the player, else the first they own, else 0. */
+    private static int bestHeld(PlayerState state, int[] itemIds) {
+        return Arrays.stream(itemIds).filter(itemId -> ItemCounts.countCarried(state, itemId) > 0).findFirst()
+                .orElseGet(() -> bestOwned(state, itemIds, 0));
     }
 
     /** True when any of these ids is on the player right now. */
     private static boolean carriedAny(PlayerState state, int... itemIds) {
-        return Arrays.stream(itemIds).anyMatch(itemId -> ItemCounts.countCarried(state, itemId, null) > 0);
+        return Arrays.stream(itemIds).anyMatch(itemId -> ItemCounts.countCarried(state, itemId) > 0);
     }
 
     /**
@@ -1167,9 +1145,9 @@ public final class CarryPlanner {
         int stored = 0;
         int owned = 0;
         for (int itemId : ids) {
-            carried += ItemCounts.countCarried(state, itemId, null);
+            carried += ItemCounts.countCarried(state, itemId);
             stored += ItemCounts.countInLeprechaunStorage(state, itemId);
-            owned += ItemCounts.countOwned(state, itemId, null);
+            owned += ItemCounts.countOwned(state, itemId);
         }
         FarmingCarryItem.Availability availability;
         if (carried >= needed) {

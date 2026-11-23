@@ -31,22 +31,6 @@ public final class RunScheduler {
     private RunScheduler() {
     }
 
-    /**
-     * How long a gap between one patch and the next still counts as the same trip.
-     *
-     * <p>Generous, because real runs have long gaps: a quetzal out to Ortus Farm, a bank
-     * detour for a seed. It only needs to notice that the player has <em>stopped</em>, so
-     * a run with an extra left undone releases the tab once they have.
-     */
-    private static final long ONE_TRIP_SECONDS = 20 * 60L;
-
-    /**
-     * The longest a trip is taken to last. A trip runs from its first patch while the player
-     * keeps working patches, but standing beside one keeps re-reading it, so without a ceiling
-     * an afternoon at the Farming Guild would stretch one trip back to the run before.
-     */
-    private static final long LONGEST_TRIP_SECONDS = 2 * 60 * 60L;
-
     // Whether checking the patch's health completes a contract for it, rather than picking
     // the produce: PatchType.isHealthCheckRequired. A contract for a crop with a health
     // check completes on the check, so a jangerberry bush finishes its contract before its
@@ -75,8 +59,6 @@ public final class RunScheduler {
         // One resolver per book, cached across the schedule: a run written for another book
         // is measured on both, and building a resolver is the expensive half.
         Map<Spellbook, CapabilityResolver> resolvers = RunVariants.newResolverCache();
-        // Once for every run: a trip spans whichever runs the player is doing.
-        long tripStart = tripStartedAt(given, nowEpochSec);
         List<FarmingRunStatus> statuses = new ArrayList<>();
         // One variant of each run. The herb run is in the catalogue once per spellbook, and
         // RunVariants picks between them on reachable patches.
@@ -90,7 +72,7 @@ public final class RunScheduler {
             // Scoring the variant already planned it, so reuse those plans, and the resolver
             // they were planned with.
             CapabilityResolver resolver = resolvers.computeIfAbsent(choice.getPlanFor(), given::resolverOn);
-            statuses.add(statusOf(choice.getRun(), state, given, choice.getPlans(), resolver, nowEpochSec, tripStart));
+            statuses.add(statusOf(choice.getRun(), state, given, choice.getPlans(), resolver, nowEpochSec));
         }
         FarmingPreferences prefs = given.getPreferences();
         statuses.sort(Comparator.comparingInt(status -> rankOf(status, prefs)));
@@ -118,12 +100,13 @@ public final class RunScheduler {
     }
 
     private static FarmingRunStatus statusOf(FarmingRun run, PlayerState state,
-            FarmingInputs inputs, List<StopPlan> plans, CapabilityResolver resolver, long nowEpochSec, long tripStart) {
-        UnlockGate gate = RunAvailability.gateOf(run, inputs.getPreferences());
+            FarmingInputs inputs, List<StopPlan> plans, CapabilityResolver resolver, long nowEpochSec) {
+        FarmingPreferences prefs = inputs.getPreferences();
+        UnlockGate gate = RunAvailability.gateOf(run, prefs);
         if (RunAvailability.of(gate, state) == CapabilityState.LACK) {
             return build(run, RunStatus.LOCKED, RunAvailability.shortfall(gate, state), 0L);
         }
-        if (run.getId() == RunId.HERB && herbRunsWaitForTheLevel(inputs.getPreferences(), state)) {
+        if (run.getId() == RunId.HERB && herbRunsWaitForTheLevel(prefs, state)) {
             return build(run, RunStatus.PENDING, "from " + Preset.HERB_RUN_LEVEL + " Farming", 0L);
         }
         if (run.getId() == RunId.CONTRACT) {
@@ -137,17 +120,17 @@ public final class RunScheduler {
             }
             // A contract waiting on a crop outside the herb patch leaves that patch owed a
             // filler herb, and the contract's stop is the only one that visits it.
-            Tally tally = walkPatches(run, plans, inputs, state, nowEpochSec, false, tripStart);
+            Tally tally = walkPatches(run, plans, inputs, state, nowEpochSec, false);
             return tally.actionable == 0 ? contract : build(run, RunStatus.DUE,
                     HERB_PATCH_WORK + dueDetail(tally), 0L);
         }
 
-        String noRoute = noRouteDetail(run, plans, inputs.getPreferences(), state, resolver);
+        String noRoute = noRouteDetail(run, plans, prefs, state, resolver);
         if (noRoute != null) {
             return build(run, RunStatus.LOCKED, noRoute, 0L);
         }
 
-        Tally tally = walkPatches(run, plans, inputs, state, nowEpochSec, false, tripStart);
+        Tally tally = walkPatches(run, plans, inputs, state, nowEpochSec, false);
 
         if (tally.seen == 0 && tally.unseen == 0) {
             // Nothing observed, and no unseen patch the player could plant. Nothing seen
@@ -156,7 +139,7 @@ public final class RunScheduler {
             return build(run, RunStatus.UNSEEN, UNSEEN_DETAIL, 0L);
         }
 
-        Tally extras = walkPatches(run, plans, inputs, state, nowEpochSec, true, tripStart);
+        Tally extras = walkPatches(run, plans, inputs, state, nowEpochSec, true);
         // A route proper never seen is nothing to be halfway round, however fresh an extra.
         boolean unfinished = tally.seen > 0 && tripUnfinished(tally, extras, nowEpochSec);
 
@@ -169,12 +152,12 @@ public final class RunScheduler {
         // on it. The rule asks this of the run, not of each crop, because a planting worked
         // back from its finish estimate can read as older than the trip, and one such crop
         // would end the run with patches still due. Stock packed for the run counts the same.
-        boolean waits = inputs.getPreferences().waitsForEveryPatch();
+        boolean waits = prefs.waitsForEveryPatch();
         boolean urgent = tally.needsHelp + tally.needsClearing > 0;
         boolean holding = tally.growing > 0 && tally.plantedThisTrip == 0 && !packedFor(run, inputs);
         // Short of a sapling for every patch, the fruit trees wait for more, unless a tree
         // is diseased or dead.
-        String saplings = saplingsShort(run, tally, inputs.getPreferences(), state);
+        String saplings = saplingsShort(run, tally, prefs, state);
         if (saplings != null && !urgent) {
             return build(run, RunStatus.PENDING, saplings, 0L, unfinished, false);
         }
@@ -201,12 +184,8 @@ public final class RunScheduler {
         if (run.getSeedPatchType() == null || packed.isEmpty()) {
             return false;
         }
-        for (Crop crop : CropData.plantableIn(run.getSeedPatchType())) {
-            if (!Collections.disjoint(packed, CropData.forCrop(crop).getPlantingForms())) {
-                return true;
-            }
-        }
-        return false;
+        return CropData.plantableIn(run.getSeedPatchType()).stream()
+                .anyMatch(crop -> !Collections.disjoint(packed, CropData.forCrop(crop).getPlantingForms()));
     }
 
     /** Whether the player's herb runs wait for {@link Preset#HERB_RUN_LEVEL} Farming. */
@@ -348,10 +327,10 @@ public final class RunScheduler {
      * walkthrough, which reads a fresh sighting of a growing patch as the player being partway
      * round, so the runs list and the walkthrough agree on when a trip ends. Whether a crop
      * went in on this trip is a different question, answered from the whole trip's span by
-     * {@link #tripStartedAt}.
+     * {@code FarmingTracker.tripStartedAt}.
      */
     static boolean seenThisTrip(long observedAtEpochSec, long nowEpochSec) {
-        return observedAtEpochSec > 0 && nowEpochSec - observedAtEpochSec <= ONE_TRIP_SECONDS;
+        return observedAtEpochSec > 0 && nowEpochSec - observedAtEpochSec <= FarmingTracker.ONE_TRIP_SECONDS;
     }
 
     /**
@@ -394,15 +373,12 @@ public final class RunScheduler {
         if (produce == null) {
             return build(run, RunStatus.UNSEEN, "contract not checked yet", 0L);
         }
-        if (produce == 0) {
-            return build(run, RunStatus.DUE, "get a contract from Guildmaster Jane", 0L);
-        }
-        // Set when the contract's finishing act is done, not when the crop matures: it goes
-        // 0 to 1 as the last snape grass leaves the ground. Only the walk to Jane is left.
-        // The act depends on the crop: see completedByCheck.
-        Integer complete = state.getVarbits().get(CapabilitySources.CONTRACT_COMPLETE_VARBIT);
-        if (complete != null && complete != 0) {
-            return build(run, RunStatus.DUE, "hand the contract to Guildmaster Jane", 0L);
+        // The complete flag is set when the contract's finishing act is done, not when the
+        // crop matures: it goes 0 to 1 as the last snape grass leaves the ground. Only the
+        // walk to Jane is left. The act depends on the crop: see completedByCheck.
+        if (nextContractCropUnknown(state)) {
+            return build(run, RunStatus.DUE, produce == 0 ? "get a contract from Guildmaster Jane"
+                    : "hand the contract to Guildmaster Jane", 0L);
         }
 
         Crop crop = inputs.getContractCrop();
@@ -477,8 +453,7 @@ public final class RunScheduler {
                 // Not possessive: crop names mix singular and plural ("jangerberries's").
                 return dueAtThePatch(run, completedByCheck ? "check the health of your " + name : "harvest your " + name);
             }
-            long done = patch.getDoneEstimateEpochSec();
-            soonest = earlier(done, soonest);
+            soonest = earlier(patch.getDoneEstimateEpochSec(), soonest);
         }
 
         // Curing first: a diseased patch dies on the next growth tick, and a dead one
@@ -553,7 +528,7 @@ public final class RunScheduler {
         long latestReady;
         /** The most recent time any of these patches was actually observed. */
         long lastSeen;
-        /** When the player's trip began, from {@link #tripStartedAt}; zero for none. */
+        /** When the player's trip began, as the tracker latched it; zero for none. */
         long tripStart;
     }
 
@@ -573,23 +548,20 @@ public final class RunScheduler {
      *               side only.
      */
     private static Tally walkPatches(FarmingRun run, List<StopPlan> plans,
-            FarmingInputs inputs, PlayerState state, long nowEpochSec, boolean extras, long tripStart) {
+            FarmingInputs inputs, PlayerState state, long nowEpochSec, boolean extras) {
+        FarmingPreferences prefs = inputs.getPreferences();
         Tally tally = new Tally();
-        tally.tripStart = tripStart;
+        // One trip spans whichever runs the player is doing.
+        tally.tripStart = inputs.getTripStartedAt();
         for (StopPlan plan : plans) {
-            if (!plan.isVisit()) {
-                continue;
-            }
             RunStop stop = plan.getStop();
-            if (stop.isOptional() != extras) {
+            // Visited stops on this pass's side only. A silenced stop is a patch the player
+            // switched off, not an empty patch.
+            if (!plan.isVisit() || stop.isOptional() != extras || PlantingGate.silences(run, stop, prefs)) {
                 continue;
             }
-            // A silenced stop is a patch the player switched off, not an empty patch.
-            if (PlantingGate.silences(run, stop, inputs.getPreferences())) {
-                continue;
-            }
-            boolean seedless = definitelyOutOfSeeds(run, stop, state, inputs.getPreferences());
-            walkPatches(stop, inputs, state, nowEpochSec, seedless, () -> knowsAseedFor(run, stop, state, inputs.getPreferences()), tally);
+            boolean seedless = definitelyOutOfSeeds(run, stop, state, prefs);
+            walkPatches(stop, inputs, state, nowEpochSec, seedless, () -> knowsAseedFor(run, stop, state, prefs), tally);
         }
         return tally;
     }
@@ -653,12 +625,7 @@ public final class RunScheduler {
             return false;
         }
         int needed = CropData.seedsPerPatch(type);
-        for (Crop crop : ladderAt(run, stop, type, state, prefs)) {
-            if (SeedSelector.knownToHold(crop, state, needed)) {
-                return true;
-            }
-        }
-        return false;
+        return ladderAt(run, stop, type, state, prefs).stream().anyMatch(crop -> SeedSelector.knownToHold(crop, state, needed));
     }
 
     /**
@@ -816,71 +783,33 @@ public final class RunScheduler {
         return prediction.getObservedAtEpochSec() >= tripStart && plantedAt + stage >= tripStart;
     }
 
-    /**
-     * When the trip the player is on began, or zero when they are on none: the earliest
-     * sighting in the run of patch sightings that reaches back from now with no gap longer
-     * than {@link #ONE_TRIP_SECONDS}. A trip lasts as long as the player keeps working
-     * patches, however long that is, and ends once they stop.
-     */
-    static long tripStartedAt(FarmingInputs inputs, long nowEpochSec) {
-        // A player standing near patches re-stamps them every few minutes, so the chain alone
-        // could reach back to an earlier run hours ago. No farm run lasts longer than this.
-        long earliest = nowEpochSec - LONGEST_TRIP_SECONDS;
-        List<Long> sightings = new ArrayList<>();
-        for (FarmingWorldMap.PatchDef patch : FarmingWorldMap.allPatches()) {
-            PatchPrediction seen = inputs.patchAt(PatchRef.of(patch.getRegionId(), patch.getVarbitId(), patch.displayName()));
-            if (seen != null && seen.getObservedAtEpochSec() > 0 && seen.getObservedAtEpochSec() <= nowEpochSec) {
-                sightings.add(seen.getObservedAtEpochSec());
-            }
-        }
-        sightings.sort(Comparator.reverseOrder());
-        long start = 0;
-        long previous = nowEpochSec;
-        for (long at : sightings) {
-            if (previous - at > ONE_TRIP_SECONDS) {
-                break;
-            }
-            start = at;
-            previous = at;
-        }
-        return start > 0 ? Math.max(start, earliest) : 0;
-    }
-
     private static String dueDetail(Tally tally) {
         List<String> parts = new ArrayList<>();
         // Counts without "patches": the row is one short line, and a longer one is cut off.
-        if (tally.ready > 0) {
-            parts.add(tally.ready + " ready");
-        }
-        if (tally.needsHelp > 0) {
-            parts.add(tally.needsHelp + " diseased");
-        }
+        addCount(parts, tally.ready, "ready");
+        addCount(parts, tally.needsHelp, "diseased");
         // Its own clause: "diseased" over a dead crop reads as something a plant cure fixes.
-        if (tally.needsClearing > 0) {
-            parts.add(tally.needsClearing + " dead");
-        }
+        addCount(parts, tally.needsClearing, "dead");
         // A seedless patch is also an empty one. Counting it twice cuts off the line, so the
         // count names only the empty patches the player can fill.
-        int plantable = tally.empty - tally.seedless - tally.picked - tally.checked;
-        if (plantable > 0) {
-            parts.add(plantable + " empty");
-        }
-        if (tally.picked > 0) {
-            parts.add(tally.picked + " picked");
-        }
-        if (tally.checked > 0) {
-            parts.add(tally.checked + " checked");
-        }
+        addCount(parts, tally.empty - tally.seedless - tally.picked - tally.checked, "empty");
+        addCount(parts, tally.picked, "picked");
+        addCount(parts, tally.checked, "checked");
         // Apart from "empty": the emptiness is assumed until the player passes the patch.
-        if (tally.unseen > 0) {
-            parts.add(tally.unseen + " unseen");
-        }
+        addCount(parts, tally.unseen, "unseen");
         // Said last: it explains why the run is smaller than it looks, and is no reason to go.
         // "Plant", not "seed": seaweed grows from spores.
         if (tally.seedless > 0) {
             parts.add(NOTHING_TO_PLANT);
         }
         return String.join(", ", parts);
+    }
+
+    /** Adds "3 ready" for a positive count, and nothing for none. */
+    private static void addCount(List<String> parts, int count, String label) {
+        if (count > 0) {
+            parts.add(count + " " + label);
+        }
     }
 
     /** The earlier of two dates, where zero is no date. */

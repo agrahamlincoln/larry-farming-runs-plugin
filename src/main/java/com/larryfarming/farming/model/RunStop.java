@@ -237,6 +237,11 @@ public class RunStop {
         return optionalReason != null;
     }
 
+    /** Whether a player in this region stands at one of this stop's patches. */
+    public boolean isIn(Integer regionId) {
+        return regionId != null && patches.stream().anyMatch(ref -> ref.getRegionId() == regionId);
+    }
+
     public static Builder builder(PatchRef... patches) {
         return new Builder(patches);
     }

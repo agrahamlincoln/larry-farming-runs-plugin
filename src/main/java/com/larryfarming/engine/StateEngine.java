@@ -4,6 +4,8 @@ import com.larryfarming.engine.farming.*;
 import com.larryfarming.model.*;
 import com.larryfarming.persistence.StatePersistence;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
  * <p>Client thread only.
  */
 @Slf4j
+@RequiredArgsConstructor
 public class StateEngine {
 
     private final StatePersistence persistence;
@@ -31,20 +34,15 @@ public class StateEngine {
     @Getter
     private PlayerState playerState;
 
-    /** Hears account loads, varbit changes and flushes; null when nothing listens. */
+    /**
+     * Hears account loads, varbit changes and flushes; null when nothing listens. The one
+     * listener is set before the first load.
+     */
+    @Setter
     private EngineListener listener;
 
     /** An event changed the state since the last flush. */
     private boolean dirty;
-
-    public StateEngine(StatePersistence persistence) {
-        this.persistence = persistence;
-    }
-
-    /** Install the one listener, or null to remove it. Set before the first load. */
-    public void setListener(EngineListener listener) {
-        this.listener = listener;
-    }
 
     /**
      * Load the current RS profile's saved state, replacing whatever the engine held.
@@ -63,7 +61,10 @@ public class StateEngine {
         playerState = persistence.loadPlayerState();
 
         int[] farmTickOffset = persistence.loadFarmingTickOffset();
-        farmingTracker.loadPersisted(persistence.loadFarmingPatches(), farmTickOffset[0], farmTickOffset[1], farmTickOffset[2]);
+        farmingTracker.loadPersisted(persistence.loadFarmingPatches(), farmTickOffset[0], farmTickOffset[1],
+                farmTickOffset[2]);
+        long[] trip = persistence.loadFarmingTrip();
+        farmingTracker.loadTrip(trip[0], trip[1]);
 
         announce();
     }
@@ -200,6 +201,11 @@ public class StateEngine {
         afterEvent();
     }
 
+    /** A varp the planner reads whole, such as a teleport cooldown's last use. */
+    public void onVarpValueChanged(int varpId, int value) {
+        change(() -> playerState.getVarps().put(varpId, value));
+    }
+
     /**
      * Fold live patch varbit values for one farming region into the tracker. Called per
      * game tick while the player stands in a tracked region, because the transmit varbits
@@ -212,6 +218,7 @@ public class StateEngine {
                               boolean allowOffsetLearning, long nowEpochSec) {
         if (farmingTracker.observeRegion(region, varbitValues, allowOffsetLearning, nowEpochSec)) {
             persistence.saveFarmingPatches(farmingTracker.exportForPersist());
+            persistence.saveFarmingTrip(farmingTracker.getTripStartEpochSec(), farmingTracker.getTripLastEpochSec());
         }
         if (farmingTracker.consumeOffsetDirty()) {
             persistence.saveFarmingTickOffset(farmingTracker.getTickOffsetSeconds(), farmingTracker.getTickOffsetPrecisionMins(),
@@ -255,6 +262,11 @@ public class StateEngine {
     /** Save the player state now. Call at logout and shutdown. */
     public void forceSave() {
         persistence.forceSave(playerState);
+        // A sighting of unchanged patches moves the trip on without a save, so a hop would
+        // otherwise read back a trip up to five minutes stale.
+        if (playerState != null) {
+            persistence.saveFarmingTrip(farmingTracker.getTripStartEpochSec(), farmingTracker.getTripLastEpochSec());
+        }
     }
 
     private void afterEvent() {

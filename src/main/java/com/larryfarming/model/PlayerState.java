@@ -58,6 +58,8 @@ public class PlayerState {
     /** Field-level init because Gson bypasses the constructor.
      *  Concurrent: written on the client thread, read on the EDT. */
     private Map<Integer, Integer> varbits = new ConcurrentHashMap<>();
+    /** The varps read whole, keyed apart from the varbits, whose ids overlap theirs. */
+    private Map<Integer, Integer> varps = new ConcurrentHashMap<>();
     /** Rune pouch contents (rune item ID → quantity), read from the pouch varbits.
      *  Pouched runes leave the inventory item array, so rune counts add them back from here.
      *  Concurrent: written on the client thread, read on the EDT. */
@@ -106,6 +108,11 @@ public class PlayerState {
         // so a loaded save can leave this null.
         if (varbits == null) { varbits = new ConcurrentHashMap<>(); }
         return varbits;
+    }
+
+    public Map<Integer, Integer> getVarps() {
+        if (varps == null) { varps = new ConcurrentHashMap<>(); }
+        return varps;
     }
 
     /** Rune pouch contents (rune item ID → quantity). Never null. */

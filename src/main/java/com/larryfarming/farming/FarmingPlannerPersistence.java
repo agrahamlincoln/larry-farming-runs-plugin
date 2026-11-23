@@ -9,6 +9,7 @@ import com.larryfarming.persistence.ConfigStore;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import lombok.RequiredArgsConstructor;
 
 /**
  * What the farm-run planner saves: per RS profile, the farming contract, the day's spent
@@ -18,6 +19,7 @@ import java.util.function.Consumer;
  *
  * <p>Keys sit in the plugin's config group beside the account state and the settings.
  */
+@RequiredArgsConstructor
 public class FarmingPlannerPersistence {
 
     private static final String CONFIG_GROUP = LarryConfig.GROUP;
@@ -47,10 +49,6 @@ public class FarmingPlannerPersistence {
     public static final String HOUSE_OPEN = "farmingHouseOpen";
 
     private final ConfigStore store;
-
-    public FarmingPlannerPersistence(ConfigStore store) {
-        this.store = store;
-    }
 
     /** This RS profile's value for {@code key}, or null when unset. */
     private String get(String key) {
@@ -117,13 +115,9 @@ public class FarmingPlannerPersistence {
      * saved yet" and rolls over to today's allowance.
      */
     public DailyTeleportLedgerState loadDailyTeleportLedger() {
-        String dayStored = get(KEY_DAILY_TELEPORT_DAY);
-        long day;
-        try {
-            day = dayStored != null ? Long.parseLong(dayStored) : Long.MIN_VALUE;
-        } catch (NumberFormatException ex) {
-            day = Long.MIN_VALUE;
-        }
+        // A day is never before the epoch, so a stamp read as -1 is unset or malformed.
+        long stamp = parseStamp(get(KEY_DAILY_TELEPORT_DAY));
+        long day = stamp >= 0L ? stamp : Long.MIN_VALUE;
         Map<Capability, Integer> used = new EnumMap<>(Capability.class);
         for (Capability capability : Capability.values()) {
             // A malformed entry is skipped.

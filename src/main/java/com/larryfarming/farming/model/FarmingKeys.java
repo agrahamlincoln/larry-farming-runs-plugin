@@ -56,6 +56,13 @@ public final class FarmingKeys {
     // The compost thresholds hold whole numbers.
     public static final String MAKE_COMPOST_BELOW = "makeCompostBelow";
     public static final String STOP_COMPOST_AT = "stopCompostAt";
+    /** The longest run after a teleport a route may ask for, in whole seconds. */
+    public static final String LONGEST_RUN_SECONDS = "longestRunSeconds";
+    /**
+     * The shared switch for every teleport tablet. A tablet whose own switch is unsaved follows
+     * it, so a player who turned tablets off keeps them off.
+     */
+    public static final String TELEPORT_TABLETS = "useTeleportTablets";
 
     /** The favourite herb's value when there is none. */
     public static final String NO_FAVOURITE = "none";
@@ -129,7 +136,7 @@ public final class FarmingKeys {
         Set<String> all = new HashSet<>(CROPS.values());
         all.addAll(List.of(PICK_FRUIT_IN_PASSING, FAVOURITE_HERB, BEST_SEEDS_EVERYWHERE, HERB_RUN_FIRST, WAIT_FOR_EVERY_PATCH,
                 FRUIT_TREES_WAIT_FOR_SAPLINGS, REPLANT_GROWN_TREES, HERB_RUNS_WAIT_FOR_LEVEL, COMPOST_WITH_FERTILE_SOIL,
-                MAKE_COMPOST_BELOW, STOP_COMPOST_AT));
+                MAKE_COMPOST_BELOW, STOP_COMPOST_AT, LONGEST_RUN_SECONDS, TELEPORT_TABLETS));
         for (TravelMethod method : TravelMethod.values()) {
             all.add(method.getKey());
         }
@@ -140,7 +147,7 @@ public final class FarmingKeys {
                 all.add(pick.getCompostKey());
             }
         }
-        for (HouseItem item : HouseItem.values()) {
+        for (HouseItem item : HouseItem.all()) {
             all.add(item.getKey());
         }
         return Collections.unmodifiableSet(all);

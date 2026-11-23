@@ -2,11 +2,14 @@ package com.larryfarming.farming.detection;
 
 import com.larryfarming.engine.ItemCounts;
 import com.larryfarming.farming.catalogue.CarryItems;
+import com.larryfarming.farming.catalogue.Teleports;
 import com.larryfarming.farming.engine.DailyTeleportLedger;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import java.util.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.With;
 
 /**
@@ -18,7 +21,12 @@ import lombok.With;
  * absent (a house interior neither seen nor declared) or left
  * {@link CapabilityState#UNKNOWN}. An unknown route is still offered, but never preferred
  * over a certain one.
+ *
+ * <p>The {@code with} copies call the all-arguments constructor, which takes every field in
+ * declaration order. They return this resolver only for an identical value, so the
+ * derivations below keep their own {@code equals} checks for an equal one.
  */
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class CapabilityResolver {
 
     /** Decides which teleport spells are castable without a swap. Defaults to Standard. */
@@ -63,6 +71,15 @@ public final class CapabilityResolver {
     @With(AccessLevel.PRIVATE)
     private final TravelTaken taken;
 
+    /** The longest walk a route may ask for, in tiles. See {@link #limitingWalks}. */
+    @With(AccessLevel.PRIVATE)
+    @Getter
+    private final int longestWalk;
+
+    /** Cooldown teleports an earlier stop on the trip uses. See {@link #claiming}. */
+    @With(AccessLevel.PRIVATE)
+    private final Set<Capability> claimed;
+
     /** The book this resolver plans for: the one the trip will be walked on. */
     public Spellbook getBook() {
         return onBook;
@@ -75,26 +92,8 @@ public final class CapabilityResolver {
      * absent; without a house, every house capability does.
      */
     public CapabilityResolver(Spellbook onBook, DailyTeleportLedger dailyLedger, long nowEpochSec, PatchSight sight, HouseSight house) {
-        this(onBook, dailyLedger, nowEpochSec, sight, house, true, Set.of(), Set.of(), TravelTaken.NONE);
-    }
-
-    /**
-     * Every field in declaration order, which the {@code with} copies call. The Lombok copies
-     * return this resolver only for an identical value, so the derivations below keep their
-     * own {@code equals} checks for an equal one.
-     */
-    private CapabilityResolver(Spellbook onBook, DailyTeleportLedger dailyLedger,
-            long nowEpochSec, PatchSight sight, HouseSight house, boolean readsPosition,
-            Set<TravelMethod> switchedOff, Set<Capability> houseDeclared, TravelTaken taken) {
-        this.onBook = onBook != null ? onBook : Spellbook.STANDARD;
-        this.dailyLedger = dailyLedger;
-        this.nowEpochSec = nowEpochSec;
-        this.sight = sight != null ? sight : PatchSight.blind();
-        this.house = house != null ? house : HouseSight.unseen();
-        this.readsPosition = readsPosition;
-        this.switchedOff = switchedOff;
-        this.houseDeclared = houseDeclared;
-        this.taken = taken;
+        this(onBook != null ? onBook : Spellbook.STANDARD, dailyLedger, nowEpochSec, sight != null ? sight : PatchSight.blind(),
+                house != null ? house : HouseSight.unseen(), true, Set.of(), Set.of(), TravelTaken.NONE, Integer.MAX_VALUE, Set.of());
     }
 
     /**
@@ -133,6 +132,19 @@ public final class CapabilityResolver {
         Set<Capability> wanted = declared == null || declared.isEmpty() ? Set.of()
                 : Collections.unmodifiableSet(EnumSet.copyOf(declared));
         return wanted.equals(houseDeclared) ? this : withHouseDeclared(wanted);
+    }
+
+    /**
+     * The same resolver, with these cooldown teleports spent by an earlier stop on the trip:
+     * a cooldown outlasts any trip, so each is used once.
+     */
+    public CapabilityResolver claiming(Set<Capability> spent) {
+        return withClaimed(Set.copyOf(spent));
+    }
+
+    /** The same resolver, offering no route that walks further than this many tiles. */
+    public CapabilityResolver limitingWalks(int tiles) {
+        return tiles == longestWalk ? this : withLongestWalk(tiles);
     }
 
     /**
@@ -201,15 +213,17 @@ public final class CapabilityResolver {
     }
 
     /**
-     * The switch that refuses this place's tablet, or null while the tablet is allowed:
-     * tablets are on, and so is this place's own tablet where it has a switch of its own.
+     * The switch that refuses this place's tablet, or null while the tablet is allowed. Each
+     * tablet's switch draws that tablet, so the item names it. The house's furniture draws
+     * the house tab too, so only a tablet switch counts.
      */
     private TravelMethod tabletsOff(Destination destination) {
-        if (switchedOff.contains(TravelMethod.TELEPORT_TABLETS)) {
-            return TravelMethod.TELEPORT_TABLETS;
-        }
-        if (destination == Destination.SALVE_GRAVEYARD && switchedOff.contains(TravelMethod.SALVE_GRAVEYARD_TABLETS)) {
-            return TravelMethod.SALVE_GRAVEYARD_TABLETS;
+        for (TeleportMeans means : Teleports.to(destination)) {
+            for (TravelMethod method : switchedOff) {
+                if (means.isTablet() && method.getGroup() == TravelMethod.Group.TABLETS && method.getIconItemId() == means.getItemId()) {
+                    return method;
+                }
+            }
         }
         return null;
     }
@@ -237,6 +251,13 @@ public final class CapabilityResolver {
         if (readsPosition && taken.used(capability)) {
             return CapabilityVerdict.have(CapabilityVerdict.Source.DETECTED,
                     "you have used your " + capability.getDisplayName() + " on the way");
+        }
+        if (claimed.contains(capability)) {
+            return CapabilityVerdict.lack(CapabilityVerdict.Source.DETECTED,
+                    "an earlier stop on this trip uses your " + capability.getDisplayName());
+        }
+        if (CapabilitySources.cooldownEndsAt(capability, state) > nowEpochSec) {
+            return CapabilityVerdict.lack(CapabilityVerdict.Source.DETECTED, capability.getDisplayName() + " is cooling down");
         }
         CapabilityVerdict verdict = resolveOwnership(capability, state);
         if (verdict.getState() != CapabilityState.HAVE) {
@@ -294,14 +315,9 @@ public final class CapabilityResolver {
             }
             held = Capability.bestHeldTier(capability.getTierFamily(), owned);
         }
-        if (held == null || !held.isRationedDaily()) {
-            return null;
-        }
-        if (dailyLedger.isExhausted(held, nowEpochSec)) {
-            return CapabilityVerdict.lack(CapabilityVerdict.Source.DETECTED,
-                    "you have used today's " + held.getDisplayName() + " teleports");
-        }
-        return null;
+        return held != null && held.isRationedDaily() && dailyLedger.isExhausted(held, nowEpochSec)
+                ? CapabilityVerdict.lack(CapabilityVerdict.Source.DETECTED, "you have used today's " + held.getDisplayName() + " teleports")
+                : null;
     }
 
     /**
@@ -445,12 +461,7 @@ public final class CapabilityResolver {
     /** The first part of an "or" in the state asked for. */
     private Requirement firstMatching(Requirement requirement, PlayerState state,
             Map<PatchRef, CapabilityState> reachedPatches, CapabilityState wanted) {
-        for (Requirement part : requirement.getParts()) {
-            if (evaluate(part, state, reachedPatches) == wanted) {
-                return part;
-            }
-        }
-        return null;
+        return requirement.getParts().stream().filter(part -> evaluate(part, state, reachedPatches) == wanted).findFirst().orElse(null);
     }
 
     /**
@@ -638,14 +649,7 @@ public final class CapabilityResolver {
 
     /** Whether this "and" asks, directly, for a capability the player lacks. */
     private boolean asksForALack(Requirement way, PlayerState state) {
-        if (way.getKind() != Requirement.Kind.ALL) {
-            return false;
-        }
-        for (Requirement part : way.getParts()) {
-            if (part.getKind() == Requirement.Kind.CAPABILITY && resolve(part.getCapability(), state).getState() == CapabilityState.LACK) {
-                return true;
-            }
-        }
-        return false;
+        return way.getKind() == Requirement.Kind.ALL && way.getParts().stream().anyMatch(part ->
+                part.getKind() == Requirement.Kind.CAPABILITY && resolve(part.getCapability(), state).getState() == CapabilityState.LACK);
     }
 }

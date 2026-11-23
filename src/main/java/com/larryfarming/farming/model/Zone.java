@@ -1,6 +1,7 @@
 package com.larryfarming.farming.model;
 
 import java.util.*;
+import lombok.Getter;
 
 /**
  * Somewhere the player can be standing, as the game reports it: a named place over a set
@@ -54,6 +55,11 @@ public enum Zone {
      */
     GNOME_STRONGHOLD("the Tree Gnome Stronghold", 9781, 9782, 9525);
 
+    /**
+     * Player-facing, written to sit mid-sentence with its article: "you are already at the
+     * Tree Gnome Stronghold".
+     */
+    @Getter
     private final String displayName;
     private final Set<Integer> regionIds;
 
@@ -67,14 +73,6 @@ public enum Zone {
             ids.add(regionId);
         }
         this.regionIds = Collections.unmodifiableSet(ids);
-    }
-
-    /**
-     * Player-facing, written to sit mid-sentence with its article: "you are already at the
-     * Tree Gnome Stronghold".
-     */
-    public String getDisplayName() {
-        return displayName;
     }
 
     /**

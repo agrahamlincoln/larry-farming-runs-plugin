@@ -19,14 +19,18 @@ import java.util.Set;
 public enum HouseFeature {
 
     PORTAL_WEISS,
-    /**
-     * The Troll Stronghold portal. Not the Trollheim portal
-     * ({@code POH_PORTAL_*_TROLLHEIM}), which lands on the mountain far from the patch.
-     */
+    /** The Troll Stronghold portal. Not the Trollheim portal, {@link #PORTAL_TROLLHEIM}. */
     PORTAL_TROLL_STRONGHOLD,
+    /** Lands on the mountain east of the Troll Stronghold, where the Trollheim Teleport does. */
+    PORTAL_TROLLHEIM,
     PORTAL_KOUREND,
     PORTAL_FENKENSTRAIN,
     PORTAL_HARMONY,
+    PORTAL_LUMBRIDGE,
+    PORTAL_VARROCK,
+    PORTAL_SALVE_GRAVEYARD,
+    PORTAL_KHARYRLL,
+    PORTAL_CIVITAS,
     /**
      * A Portal Nexus of any tier. It proves the Nexus stands, not what it is attuned to,
      * which the slot varbits answer ({@link PortalNexus}).

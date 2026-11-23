@@ -19,7 +19,7 @@ AUBURNVALE	Auburnvale	NONE
 LLETYA	Lletya	FAR
 
 # Kandarin and the gnome lands
-GNOME_STRONGHOLD	the Tree Gnome Stronghold	SHORT_WALK
+GNOME_STRONGHOLD	the Tree Gnome Stronghold	AT_ARRIVAL
 TREE_GNOME_VILLAGE	Tree Gnome Village	NONE
 ARDOUGNE_MONASTERY	Ardougne Monastery	FAR
 ARDOUGNE_FARM	Ardougne	FAR
@@ -31,18 +31,18 @@ TAI_BWO_WANNAI	Tai Bwo Wannai	NONE
 
 # Asgarnia
 TAVERLEY	Taverley	NONE
-FALADOR_PARK	Falador Park	SHORT_WALK
-FALADOR_FARM	Falador	FAR
+FALADOR_PARK	Falador Park	AT_ARRIVAL
+FALADOR_FARM	Falador	SHORT_WALK
 
 # Misthalin
 DRAYNOR_MANOR	Draynor Manor	NONE
 LUMBRIDGE	Lumbridge	SHORT_WALK
-VARROCK_PARK	Varrock	FAR
+VARROCK_PARK	Varrock	SHORT_WALK
 AL_KHARID	Al Kharid	FAR
 
 # Morytania
 MORT_MYRE	the Mort Myre mushrooms	FAR
-CANIFIS	Canifis	FAR
+CANIFIS	Canifis	SHORT_WALK
 HARMONY_ISLAND	Harmony Island	NONE
 
 # Fossil Island

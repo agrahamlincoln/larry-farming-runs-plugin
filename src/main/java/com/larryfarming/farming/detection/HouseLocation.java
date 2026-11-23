@@ -1,6 +1,5 @@
 package com.larryfarming.farming.detection;
 
-import com.larryfarming.farming.model.Capability;
 import java.util.Map;
 
 /**
@@ -27,24 +26,15 @@ public final class HouseLocation {
     /** What the varbit reads for a player who owns no house. */
     public static final int NO_HOUSE = 0;
 
-    /** The varbit's value for each town a chain asks about. */
-    private static final Map<Capability, Integer> TOWN_VALUES = Map.of(Capability.POH_IN_TAVERLEY, 2, Capability.POH_IN_BRIMHAVEN, 5,
-            Capability.POH_IN_HOSIDIUS, 8);
-
     /**
-     * Whether the house is in the town this capability names.
+     * Whether the house is in the town the varbit reads as {@code town}.
      *
      * @return true when the house is there, false when it is anywhere else or there is no
      *     house, and null only when the varbit has not been read
-     * @throws IllegalArgumentException when the capability names no house town
      */
-    public static Boolean isHouseIn(Capability location, Map<Integer, Integer> varbits) {
-        Integer wanted = TOWN_VALUES.get(location);
-        if (wanted == null) {
-            throw new IllegalArgumentException(location + " is not a house location");
-        }
+    public static Boolean isHouseIn(int town, Map<Integer, Integer> varbits) {
         Integer value = reading(varbits);
-        return value == null ? null : value.intValue() == wanted;
+        return value == null ? null : value == town;
     }
 
     /** Whether the player owns a house at all, or null when the varbit has not been read. */

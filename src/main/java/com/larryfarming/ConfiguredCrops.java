@@ -58,7 +58,10 @@ final class ConfiguredCrops
 		Set<TravelMethod> off = EnumSet.noneOf(TravelMethod.class);
 		for (TravelMethod method : TravelMethod.values())
 		{
-			if (!read(saved, method.getKey(), defaults.uses(method)))
+			// The shared tablet switch, while saved off, holds every tablet off, the Salve graveyard
+			// tablet's saved switch included, until the player switches a tablet.
+			boolean shared = method.getGroup() != TravelMethod.Group.TABLETS || read(saved, FarmingKeys.TELEPORT_TABLETS, true);
+			if (!shared || !read(saved, method.getKey(), defaults.uses(method)))
 			{
 				off.add(method);
 			}
@@ -72,7 +75,7 @@ final class ConfiguredCrops
 			}
 		}
 		Set<Capability> declared = EnumSet.noneOf(Capability.class);
-		for (HouseItem item : HouseItem.values())
+		for (HouseItem item : HouseItem.all())
 		{
 			if (read(saved, item.getKey(), defaults.declares(item)))
 			{
@@ -125,7 +128,8 @@ final class ConfiguredCrops
 			.herbRunsWaitForLevel(read(saved, FarmingKeys.HERB_RUNS_WAIT_FOR_LEVEL, defaults.herbRunsWaitForLevel()))
 			.compostsWithFertileSoil(read(saved, FarmingKeys.COMPOST_WITH_FERTILE_SOIL, defaults.compostsWithFertileSoil()))
 			.makeCompostBelow(readNumber(saved, FarmingKeys.MAKE_COMPOST_BELOW, defaults.makeCompostBelow()))
-			.stopCompostAt(readNumber(saved, FarmingKeys.STOP_COMPOST_AT, defaults.stopCompostAt())).build();
+			.stopCompostAt(readNumber(saved, FarmingKeys.STOP_COMPOST_AT, defaults.stopCompostAt()))
+			.longestRunSeconds(readNumber(saved, FarmingKeys.LONGEST_RUN_SECONDS, defaults.longestRunSeconds())).build();
 	}
 
 	/** A saved whole number, or the default when it is unsaved or not a number. */
@@ -155,6 +159,8 @@ final class ConfiguredCrops
 			return 0;
 		}
 		Map<String, String> current = valuesOf(from(store));
+		// The preferences hold no value of their own for the shared tablet switch.
+		current.put(FarmingKeys.TELEPORT_TABLETS, String.valueOf(sharedTabletsOn(store)));
 		int written = 0;
 		for (Map.Entry<String, String> setting : values.entrySet())
 		{
@@ -179,11 +185,13 @@ final class ConfiguredCrops
 		{
 			values.put(method.getKey(), String.valueOf(prefs.uses(method)));
 		}
+		// Each tablet's own switch says what it holds, so the shared tablet switch is written on.
+		values.put(FarmingKeys.TELEPORT_TABLETS, "true");
 		for (String site : FarmingKeys.SITES)
 		{
 			values.put(site, String.valueOf(prefs.visits(site)));
 		}
-		for (HouseItem item : HouseItem.values())
+		for (HouseItem item : HouseItem.all())
 		{
 			values.put(item.getKey(), String.valueOf(prefs.declares(item)));
 		}
@@ -208,7 +216,14 @@ final class ConfiguredCrops
 		values.put(FarmingKeys.COMPOST_WITH_FERTILE_SOIL, String.valueOf(prefs.compostsWithFertileSoil()));
 		values.put(FarmingKeys.MAKE_COMPOST_BELOW, String.valueOf(prefs.makeCompostBelow()));
 		values.put(FarmingKeys.STOP_COMPOST_AT, String.valueOf(prefs.stopCompostAt()));
+		values.put(FarmingKeys.LONGEST_RUN_SECONDS, String.valueOf(prefs.longestRunSeconds()));
 		return values;
+	}
+
+	/** Whether the shared tablet switch is on; unsaved, it is. */
+	private static boolean sharedTabletsOn(ConfigStore store)
+	{
+		return read(key -> store.getConfiguration(LarryConfig.GROUP, key), FarmingKeys.TELEPORT_TABLETS, true);
 	}
 
 	private static boolean read(UnaryOperator<String> saved, String key, boolean unsaved)
@@ -250,6 +265,18 @@ final class ConfiguredCrops
 		else if (prefs.favouriteHerb() != null && key.equals(FarmingKeys.CROPS.get(prefs.favouriteHerb())) && !Boolean.parseBoolean(value))
 		{
 			writes.put(FarmingKeys.FAVOURITE_HERB, FarmingKeys.NO_FAVOURITE);
+		}
+		if (!sharedTabletsOn(store))
+		{
+			// The first write turns the shared tablet switch on and saves what each tablet reads now as its own switch.
+			for (TravelMethod tablet : TravelMethod.values())
+			{
+				if (tablet.getGroup() == TravelMethod.Group.TABLETS)
+				{
+					writes.put(tablet.getKey(), String.valueOf(prefs.uses(tablet)));
+				}
+			}
+			writes.put(FarmingKeys.TELEPORT_TABLETS, "true");
 		}
 		writes.put(key, value);
 		for (Map.Entry<String, String> write : writes.entrySet())

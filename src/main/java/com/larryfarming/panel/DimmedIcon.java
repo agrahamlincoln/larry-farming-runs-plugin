@@ -2,6 +2,8 @@ package com.larryfarming.panel;
 
 import java.awt.*;
 import javax.swing.Icon;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * An icon drawn faint, as an unticked setting square draws its sprite.
@@ -9,20 +11,12 @@ import javax.swing.Icon;
  * <p>Wraps rather than copies, so an item sprite that loads after the row is built still
  * paints through it.
  */
+@RequiredArgsConstructor
 final class DimmedIcon implements Icon
 {
-	private final Icon icon;
-
-	DimmedIcon(Icon icon)
-	{
-		this.icon = icon;
-	}
-
 	/** The icon drawn faint. */
-	Icon getIcon()
-	{
-		return icon;
-	}
+	@Getter
+	private final Icon icon;
 
 	@Override
 	public void paintIcon(Component c, Graphics g, int x, int y)

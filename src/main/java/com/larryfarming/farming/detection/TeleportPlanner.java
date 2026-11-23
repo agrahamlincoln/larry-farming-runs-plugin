@@ -58,16 +58,9 @@ public final class TeleportPlanner {
     public static Choice best(Destination destination, PlayerState state, Spellbook onBook,
             boolean readsPosition, TravelMethod tabletsOff) {
         boolean tablets = tabletsOff == null;
-        if (state == null) {
-            return new Choice(null, CapabilityState.UNKNOWN, "not sure how you would reach " + destination.getDisplayName());
-        }
-
-        // Already there: no means, so the bag asks for no runes or tablet. This removes a
-        // consumable from the bag, so it must fire only on a position the game reported;
-        // Zone.covers reads an unknown region as a no.
-        Zone zone = destination.getZone();
-        if (readsPosition && zone != null && zone.covers(state.getRegionId())) {
-            return new Choice(null, CapabilityState.HAVE, "you are already at " + zone.getDisplayName());
+        Choice settled = settledWithoutMeans(destination, state, readsPosition);
+        if (settled != null) {
+            return settled;
         }
 
         TeleportMeans unconfirmed = null;
@@ -119,17 +112,29 @@ public final class TeleportPlanner {
         return new Choice(null, CapabilityState.LACK, shortfall(destination, state, onBook, tabletsOff));
     }
 
+    /**
+     * The answer that needs no teleport, or null when one must be found: unsure with no
+     * state, and already there when the player stands in the place's zone.
+     *
+     * <p>Already there names no means, so the bag asks for no runes or tablet. That removes a
+     * consumable from the bag, so it fires only on a position the game reported;
+     * {@code Zone.covers} reads an unknown region as a no.
+     */
+    private static Choice settledWithoutMeans(Destination destination, PlayerState state, boolean readsPosition) {
+        if (state == null) {
+            return new Choice(null, CapabilityState.UNKNOWN, "not sure how you would reach " + destination.getDisplayName());
+        }
+        Zone zone = destination.getZone();
+        return readsPosition && zone != null && zone.covers(state.getRegionId())
+                ? new Choice(null, CapabilityState.HAVE, "you are already at " + zone.getDisplayName()) : null;
+    }
+
     private static boolean owns(TeleportMeans tablet, PlayerState state) {
-        return ItemCounts.countOwned(state, tablet.getItemId(), null) > 0;
+        return ItemCounts.ownsAny(state, tablet.getItemId());
     }
 
     private static boolean hasSpellOn(Destination destination, Spellbook onBook) {
-        for (TeleportMeans means : Teleports.to(destination)) {
-            if (means.isSpell() && means.getSpellbook() == onBook) {
-                return true;
-            }
-        }
-        return false;
+        return Teleports.to(destination).stream().anyMatch(means -> means.isSpell() && means.getSpellbook() == onBook);
     }
 
     /**
@@ -145,12 +150,9 @@ public final class TeleportPlanner {
      * @param onBook the book the swap is cast from, which must be the swap's own
      */
     public static Choice bySwap(Destination destination, PlayerState state, Spellbook onBook, boolean readsPosition) {
-        if (state == null) {
-            return new Choice(null, CapabilityState.UNKNOWN, "not sure how you would reach " + destination.getDisplayName());
-        }
-        Zone zone = destination.getZone();
-        if (readsPosition && zone != null && zone.covers(state.getRegionId())) {
-            return new Choice(null, CapabilityState.HAVE, "you are already at " + zone.getDisplayName());
+        Choice settled = settledWithoutMeans(destination, state, readsPosition);
+        if (settled != null) {
+            return settled;
         }
         TeleportMeans swap = Teleports.bySwap(destination);
         if (swap == null) {
@@ -220,7 +222,7 @@ public final class TeleportPlanner {
     private static Rune shortOf(TeleportMeans means, PlayerState state) {
         for (Map.Entry<Rune, Integer> cost : means.getRunes().entrySet()) {
             Rune rune = cost.getKey();
-            if (ItemCounts.countOwned(state, rune.getItemId(), null) < cost.getValue()) {
+            if (ItemCounts.countOwned(state, rune.getItemId()) < cost.getValue()) {
                 return rune;
             }
         }
@@ -232,15 +234,8 @@ public final class TeleportPlanner {
      * casting it: its level and quest are met. False with no state to read.
      */
     public static boolean wantsOnlyRunes(Destination destination, PlayerState state, Spellbook onBook) {
-        if (state == null) {
-            return false;
-        }
-        for (TeleportMeans means : Teleports.to(destination)) {
-            if (means.isSpell() && means.getSpellbook() == onBook && locked(means, state) == null && shortOf(means, state) != null) {
-                return true;
-            }
-        }
-        return false;
+        return state != null && Teleports.to(destination).stream().anyMatch(means -> means.isSpell()
+                && means.getSpellbook() == onBook && locked(means, state) == null && shortOf(means, state) != null);
     }
 
     /**
@@ -251,16 +246,8 @@ public final class TeleportPlanner {
      * @param tablets false when the player refuses this place's tablet
      */
     public static boolean isOpenToGet(Destination destination, PlayerState state, Spellbook onBook, boolean tablets) {
-        if (state == null) {
-            return true;
-        }
-        for (TeleportMeans means : Teleports.to(destination)) {
-            boolean offered = means.isTablet() ? tablets : means.isSpell() && means.getSpellbook() == onBook;
-            if (offered && !questBarred(means, state)) {
-                return true;
-            }
-        }
-        return false;
+        return state == null || Teleports.to(destination).stream().anyMatch(means ->
+                (means.isTablet() ? tablets : means.isSpell() && means.getSpellbook() == onBook) && !questBarred(means, state));
     }
 
     /**

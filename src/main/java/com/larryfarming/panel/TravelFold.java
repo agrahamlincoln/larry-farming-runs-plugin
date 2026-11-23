@@ -51,12 +51,16 @@ class TravelFold extends Fold
 		}
 		// The header's text and colour are set in place: a one-line label cannot flicker.
 		warn(advice.isFairyRingBlocked(), BLOCKED);
-		if (!guard.shouldRebuild(Arrays.asList(groups, icons)))
+		if (!guard.shouldRebuild(Arrays.asList(groups, icons, advice.getLongestRun())))
 		{
 			return;
 		}
 
 		content().removeAll();
+		if (advice.getLongestRun() != null)
+		{
+			content().add(SettingRow.of(advice.getLongestRun(), send));
+		}
 		for (FarmingSettingGroup group : groups)
 		{
 			int gapAbove = content().getComponentCount() == 0 ? 0 : 6;

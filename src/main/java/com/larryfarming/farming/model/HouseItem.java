@@ -2,42 +2,24 @@ package com.larryfarming.farming.model;
 
 import com.larryfarming.data.Tables;
 import java.util.*;
+import java.util.stream.Collectors;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 
 /**
  * Something in the player's own house that a farm run can travel by, which the player may
  * declare built before Larry has seen it.
  *
- * <p>Declared in the order the settings draw them, which never changes: the portal chamber,
- * then the Portal Nexus, then the garden, then the teleport jewellery.
- *
- * <p>Each item's group, label, config key and capability come from the house items table.
+ * <p>The house items table holds one row per item, in the order the settings draw them: a
+ * fixed order that toggles and status never change. The portal chamber comes first, then the
+ * Portal Nexus, then the garden, then the teleport jewellery.
  */
-@Getter
-public enum HouseItem {
-    WEISS_PORTAL,
-    TROLL_STRONGHOLD_PORTAL,
-    KOUREND_PORTAL,
-    FENKENSTRAIN_PORTAL,
-    HARMONY_PORTAL,
-    WEISS_IN_NEXUS,
-    TROLL_STRONGHOLD_IN_NEXUS,
-    HARMONY_IN_NEXUS,
-    SPIRIT_TREE,
-    FAIRY_RING,
-    // Drawn in two columns, left to right: the boxes down the left, the mounts down the right.
-    BASIC_JEWELLERY_BOX,
-    MOUNTED_XERICS_TALISMAN,
-    FANCY_JEWELLERY_BOX,
-    MOUNTED_DIGSITE_PENDANT,
-    ORNATE_JEWELLERY_BOX,
-    MOUNTED_GLORY;
-
-    static {
-        Rows.TABLE.requireAll(values());
-    }
-
+@Value
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class HouseItem {
     /** Where in the house an item stands, as the settings caption it. */
     @Getter
     @RequiredArgsConstructor
@@ -50,41 +32,27 @@ public enum HouseItem {
         private final String label;
     }
 
-    private static final Map<Capability, HouseItem> BY_CAPABILITY = byCapability();
+    private static final List<HouseItem> ALL = Tables.read("/com/larryfarming/house-items.tsv", 4).stream()
+            .map(row -> new HouseItem(row.constant(Group.class, 0), row.text(1), row.text(2), row.constant(Capability.class, 3)))
+            .collect(Collectors.toUnmodifiableList());
 
-    private final Group group;
+    private static final Map<Capability, HouseItem> BY_CAPABILITY = ALL.stream()
+            .collect(Collectors.toUnmodifiableMap(HouseItem::getCapability, item -> item));
+
+    Group group;
     /** Short enough for two columns at sidebar width, beside its group's caption. */
-    private final String label;
+    String label;
     /**
      * The config key that holds the declaration, true while the player says it is built. A
      * declaration counts only until Larry has seen the item. Players' saved settings sit
      * under these keys.
      */
-    private final String key;
-    private final Capability capability;
+    String key;
+    Capability capability;
 
-    HouseItem() {
-        Tables.Row row = Rows.TABLE.of(name());
-        this.group = row.constant(Group.class, 1);
-        this.label = row.text(2);
-        this.key = row.text(3);
-        this.capability = row.constant(Capability.class, 4);
-    }
-
-    /**
-     * The house items table, held apart so the constructors can read it; see
-     * {@link Tables#byName}.
-     */
-    private static final class Rows {
-        static final Tables.Named TABLE = Tables.byName("/com/larryfarming/house-items.tsv", 5);
-    }
-
-    private static Map<Capability, HouseItem> byCapability() {
-        Map<Capability, HouseItem> map = new EnumMap<>(Capability.class);
-        for (HouseItem item : values()) {
-            map.put(item.capability, item);
-        }
-        return Collections.unmodifiableMap(map);
+    /** Every house item, in the order the settings draw them. */
+    public static List<HouseItem> all() {
+        return ALL;
     }
 
     /** The item this capability is, or null for a capability no house item answers. */

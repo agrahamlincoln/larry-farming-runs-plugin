@@ -87,8 +87,7 @@ public final class RunSettings {
         }
         Set<Crop> fixed = switchableFixedCrops(variants);
         if (fixed.size() == 1) {
-            Crop only = fixed.iterator().next();
-            return oneCrop(id, only, prefs, level, sites);
+            return oneCrop(id, fixed.iterator().next(), prefs, level, sites);
         }
         if (fixed.size() > 1) {
             return severalCrops(id, fixed, prefs, level, sites);
@@ -144,10 +143,7 @@ public final class RunSettings {
         }
         // The inventory's own tags. Only herbs and saplings draw one in the bag, but here each
         // extra stands beside the herbs and wants a name.
-        List<FarmingSettingChoice> extras = new ArrayList<>();
-        for (Crop crop : switchableFixedCrops(variants)) {
-            extras.add(toggle(crop, prefs, level, CropData.forCrop(crop).getStoredTag()));
-        }
+        List<FarmingSettingChoice> extras = storedTagToggles(switchableFixedCrops(variants), prefs, level);
         // Each drawn only where it does something: the level wait below the level it waits
         // for, and the spell for a player who could cast it.
         List<FarmingSettingChoice> switches = new ArrayList<>(2);
@@ -227,13 +223,15 @@ public final class RunSettings {
     /**
      * A checkbox per site the run may drop, in the registry's fixed order. A site the
      * account cannot reach yet is locked: its own gate is shut, as Harmony is before the
-     * elite Morytania diary, or the place itself is, as Weiss is before its fire.
+     * elite Morytania diary, or the place itself is, as Weiss is before its fire. A locked
+     * site's tip says what opens it, since a padlock alone leaves the player guessing.
      */
     private static List<FarmingSettingChoice> sites(RunId id, FarmingPreferences prefs, PlayerState state, PatchSight sight) {
         List<FarmingSettingChoice> sites = new ArrayList<>();
         for (FarmingCatalogue.SiteSwitch site : FarmingCatalogue.siteSwitches(id)) {
+            String why = whyShut(site.getStop(), state, sight);
             sites.add(new FarmingSettingChoice(site.getKey(), site.getLabel(), 0, null, 0,
-                    prefs.visits(site.getKey()), false, shutTo(site.getStop(), state, sight)));
+                    prefs.visits(site.getKey()), false, why != null).withTip(why));
         }
         return sites;
     }
@@ -246,7 +244,7 @@ public final class RunSettings {
         Set<String> shut = new HashSet<>();
         for (RunId id : RunId.values()) {
             for (FarmingCatalogue.SiteSwitch site : FarmingCatalogue.siteSwitches(id)) {
-                if (shutTo(site.getStop(), state, sight)) {
+                if (whyShut(site.getStop(), state, sight) != null) {
                     shut.add(site.getKey());
                 }
             }
@@ -255,18 +253,23 @@ public final class RunSettings {
     }
 
     /**
-     * Whether this account certainly cannot work the stop yet. An unread answer leaves it
-     * open, so a login still being read locks nothing.
+     * What keeps this account from working the stop, as one sentence for a player ("Needs the
+     * elite Morytania diary"), or null when it certainly can or it is not yet known. An unread
+     * answer leaves it open, so a login still being read locks nothing.
      */
-    private static boolean shutTo(RunStop stop, PlayerState state, PatchSight sight) {
+    private static String whyShut(RunStop stop, PlayerState state, PatchSight sight) {
         if (state == null) {
-            return false;
+            return null;
         }
         if (RunAvailability.of(stop.getGate(), state) == CapabilityState.LACK) {
-            return true;
+            return StopRowWriter.capitalise(RunAvailability.shortfall(stop.getGate(), state));
         }
         Capability access = stop.getAccessGate();
-        return access != null && CapabilitySources.resolve(access, state, sight).getState() == CapabilityState.LACK;
+        if (access == null) {
+            return null;
+        }
+        CapabilityVerdict verdict = CapabilitySources.resolve(access, state, sight);
+        return verdict.getState() == CapabilityState.LACK ? StopRowWriter.capitalise(verdict.getBecause()) : null;
     }
 
     /** No favourite, then every herb the grid ticks, in the grid's order. */
@@ -285,6 +288,16 @@ public final class RunSettings {
         return new FarmingSettingPick(FarmingKeys.BEST_SEEDS_EVERYWHERE, "Best seeds in", FarmingSettingPick.Shape.CHIPS, List.of(
                         new FarmingSettingPick.Option("false", "Bonus patches", "The few patches with the biggest yield bonus"),
                         new FarmingSettingPick.Option("true", "All", null)), String.valueOf(prefs.plantsBestSeedsEverywhere()), null);
+    }
+
+    /** The longest run after a teleport a route may ask for, a slider stop a second. */
+    public static FarmingSettingPick longestRun(FarmingPreferences prefs) {
+        List<FarmingSettingPick.Option> steps = new ArrayList<>();
+        for (int seconds = FarmingPreferences.RUN_LEAST_SECONDS; seconds <= FarmingPreferences.RUN_MOST_SECONDS; seconds++) {
+            steps.add(new FarmingSettingPick.Option(String.valueOf(seconds), seconds + " s", null));
+        }
+        return new FarmingSettingPick(FarmingKeys.LONGEST_RUN_SECONDS, "Longest run", FarmingSettingPick.Shape.SLIDER, steps,
+                String.valueOf(prefs.longestRunSeconds()), "Longest run from a teleport to a patch, running");
     }
 
     /** Which run leads when several are due: the preset's first run, hardwood, or herbs. */
@@ -328,7 +341,7 @@ public final class RunSettings {
      */
     private static FarmingRunSettings oneCrop(RunId id, Crop crop, FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites) {
         if (sites.isEmpty()) {
-            return runSwitch(id, toggle(crop, prefs, level, null));
+            return settings(id, FarmingRunSettings.Shape.SWITCH, List.of(), null).runSwitch(toggle(crop, prefs, level, null)).build();
         }
         return seeds(id, List.of(toggle(crop, crop.getItemId(), prefs, level, null)), sites).build();
     }
@@ -340,15 +353,16 @@ public final class RunSettings {
      */
     private static FarmingRunSettings severalCrops(RunId id, Set<Crop> crops,
             FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites) {
-        List<FarmingSettingChoice> choices = new ArrayList<>(crops.size());
-        for (Crop crop : crops) {
-            choices.add(toggle(crop, prefs, level, CropData.forCrop(crop).getStoredTag()));
-        }
-        return seeds(id, choices, sites).choicesCaption("Plant one of").build();
+        return seeds(id, storedTagToggles(crops, prefs, level), sites).choicesCaption("Plant one of").build();
     }
 
-    private static FarmingRunSettings runSwitch(RunId id, FarmingSettingChoice choice) {
-        return settings(id, FarmingRunSettings.Shape.SWITCH, List.of(), null).runSwitch(choice).build();
+    /** A tick per crop, drawn as its seed with the inventory's tag. */
+    private static List<FarmingSettingChoice> storedTagToggles(Collection<Crop> crops, FarmingPreferences prefs, int level) {
+        List<FarmingSettingChoice> toggles = new ArrayList<>(crops.size());
+        for (Crop crop : crops) {
+            toggles.add(toggle(crop, prefs, level, CropData.forCrop(crop).getStoredTag()));
+        }
+        return toggles;
     }
 
     private static FarmingRunSettings.FarmingRunSettingsBuilder seeds(RunId id,
@@ -440,11 +454,28 @@ public final class RunSettings {
     }
 
     private static FarmingSettingChoice travelSquare(TravelMethod method, FarmingPreferences prefs, PlayerState state, HouseSight house) {
-        int sprite = method == TravelMethod.SPELLBOOK_SWAP ? Teleports.SPELLBOOK_SWAP.getSpriteId() : 0;
+        int sprite = method == TravelMethod.SPELLBOOK_SWAP ? Teleports.SPELLBOOK_SWAP.getSpriteId()
+                : method.getCapabilities().isEmpty() ? 0 : Teleports.iconFor(method.getCapabilities().get(0));
         boolean missing = !owns(method, state, house, prefs.houseDeclared());
         return new FarmingSettingChoice(method.getKey(), method.getLabel(),
                 sprite > 0 ? 0 : itemFor(method), method.getTag(), 0, prefs.uses(method), missing, false, sprite,
-                missing && isSeenAbsent(method, house) ? notBuilt(method) : null, false, null);
+                missing ? missingNote(method, state, house, prefs.houseDeclared()) : null, false, null);
+    }
+
+    /**
+     * Why a missing square is missing, where "None seen yet" would mislead: furniture the house
+     * was seen without, or a diary reward whose tier is not earned. A player holding Explorer's
+     * ring 1 owns the ring, but no route can use it.
+     */
+    private static String missingNote(TravelMethod method, PlayerState state, HouseSight house, Set<Capability> houseDeclared) {
+        if (isSeenAbsent(method, house)) {
+            return method.getCapabilities().size() == 1 ? "Not built" : "None built";
+        }
+        Capability first = method.getCapabilities().isEmpty() ? null : method.getCapabilities().get(0);
+        if (first == null || DiaryRewards.earnedBy(first) == null) {
+            return null;
+        }
+        return StopRowWriter.capitalise(CapabilitySources.resolve(first, state, PatchSight.blind(), house, houseDeclared).getBecause());
     }
 
     /**
@@ -456,10 +487,6 @@ public final class RunSettings {
                 .allMatch(capability -> CapabilitySources.houseSighting(capability, house) == HouseSighting.ABSENT);
     }
 
-    private static String notBuilt(TravelMethod method) {
-        return method.getCapabilities().size() == 1 ? "Not built" : "None built";
-    }
-
     /** The item a method's square draws: its icon item, otherwise its first capability's. */
     private static int itemFor(TravelMethod method) {
         int icon = method.getIconItemId();
@@ -467,8 +494,8 @@ public final class RunSettings {
     }
 
     /**
-     * Whether the player has anything this method uses: one of its items, any teleport
-     * tablet, the Salve graveyard tablet, or Spellbook Swap's level and quest. An unread
+     * Whether the player has anything this method uses: one of its items, the one tablet it
+     * switches, or Spellbook Swap's level and quest. An unread
      * answer counts as owned, so an unopened bank never greys a square. A house item counts
      * as owned while declared and not seen otherwise.
      */
@@ -476,30 +503,15 @@ public final class RunSettings {
         if (state == null) {
             return true;
         }
-        switch (method) {
-            // The square draws the one tablet it switches.
-            case SALVE_GRAVEYARD_TABLETS:
-                return state.getBankLastSeen() == null || ItemCounts.ownsAny(state, method.getIconItemId());
-            case TELEPORT_TABLETS:
-                return state.getBankLastSeen() == null || ownsAnyTablet(state) || ownsAnyOf(method, state, house, houseDeclared);
-            case SPELLBOOK_SWAP:
-                return canSwap(state);
-            default:
-                return ownsAnyOf(method, state, house, houseDeclared);
+        if (method == TravelMethod.SPELLBOOK_SWAP) {
+            return canSwap(state);
         }
-    }
-
-    private static boolean ownsAnyOf(TravelMethod method, PlayerState state, HouseSight house, Set<Capability> houseDeclared) {
-        for (Capability capability : method.getCapabilities()) {
-            if (CapabilitySources.resolve(capability, state, PatchSight.blind(), house, houseDeclared).getState() != CapabilityState.LACK) {
-                return true;
-            }
+        // A place's tablet square draws the one tablet it switches.
+        if (method.getGroup() == TravelMethod.Group.TABLETS && method.getIconItemId() > 0) {
+            return state.getBankLastSeen() == null || ItemCounts.ownsAny(state, method.getIconItemId());
         }
-        return false;
-    }
-
-    private static boolean ownsAnyTablet(PlayerState state) {
-        return Arrays.stream(TABLETS).anyMatch(tablet -> ItemCounts.ownsAny(state, tablet));
+        return method.getCapabilities().stream().anyMatch(capability ->
+                CapabilitySources.resolve(capability, state, PatchSight.blind(), house, houseDeclared).getState() != CapabilityState.LACK);
     }
 
     /**
@@ -527,7 +539,7 @@ public final class RunSettings {
     public static FarmingHouse house(FarmingPreferences prefs, PlayerState state, HouseSight house) {
         Map<HouseItem.Group, List<FarmingSettingChoice>> rows = new EnumMap<>(HouseItem.Group.class);
         boolean nexusUnseen = false;
-        for (HouseItem item : HouseItem.values()) {
+        for (HouseItem item : HouseItem.all()) {
             Capability capability = item.getCapability();
             HouseSighting sighting = CapabilitySources.houseSighting(capability, house);
             boolean built = sighting == HouseSighting.BUILT;
@@ -551,18 +563,4 @@ public final class RunSettings {
         return new FarmingHouse(sight, List.copyOf(groups));
     }
 
-    /** Every teleport tablet the catalogue names, for whether the player owns any. */
-    private static final int[] TABLETS = tablets();
-
-    private static int[] tablets() {
-        Set<Integer> ids = new LinkedHashSet<>();
-        for (Destination destination : Destination.values()) {
-            for (TeleportMeans means : Teleports.to(destination)) {
-                if (means.isTablet()) {
-                    ids.add(means.getItemId());
-                }
-            }
-        }
-        return ids.stream().mapToInt(Integer::intValue).toArray();
-    }
 }

@@ -7,19 +7,25 @@
 # progress	capability	quest	progress value that opens it	what it opens
 # questItem	capability	what the quest gives	description (behind its gate row)
 # varbit	capability	varbit	VarbitID name	value it reaches	why yes	why no
-# balloon	capability	varbit	VarbitID name	station
+# scroll	capability	book varbit	VarbitID name	quest or -	description (ids from carry-items.tsv)
 # spell	capability	Magic level	quest or -	spell name
 # skill	capability	skill	level	description
-# houseIn	capability	town
+# houseIn	capability	town	value varbit 2187 (POH_HOUSE_LOCATION) reads for it
 # open	capability	why everyone has it
 # diary	capability	area	tier	why yes	why no	why unsure (the tier's completion flag)
+# house	capability	HouseFeature	what	floor phrase	Construction level	quest or -	skill or -	level or -
+# nexus	capability	Nexus key	where	floor phrase	Construction level	quest	skill	level
 #
-# Two kinds are facts rather than rules:
+# Three kinds are facts rather than rules:
 # gate	capability	quest	how far along	(an item only that quest hands out or makes work)
 # cape	capability	skill	(a Cape of Accomplishment, sold only at 99)
+# cooldown	capability	varp	VarPlayerID name	minutes
+#
+# One kind is answered from the patch it names in stops.tsv's patchFor rows:
+# spiritTree	capability	Farming level to plant it	where
 #
 # Capabilities that need more than one of these (diary rewards, the Lancalliums books,
-# respawn points, fairy rings, house and patch items) are answered in code.
+# respawn points, fairy rings and the Weiss herb patch) are answered in code.
 
 # Skill capes. The Quest point and Achievement diary capes are read from the cape, not the
 # quests or diaries behind them: both must be bought afterwards.
@@ -49,6 +55,7 @@ carried	CHRONICLE	a Chronicle
 carried	NECKLACE_OF_PASSAGE	a necklace of passage
 carried	SLAYER_RING	a slayer ring
 carried	RING_OF_THE_ELEMENTS	a charged ring of the elements
+carried	COWBELL_AMULET	a charged cowbell amulet
 carried	SAILORS_AMULET	a charged sailors' amulet
 
 # Consumable teleports. Both basalts are craftable only after Making Friends with My Arm, so
@@ -102,17 +109,23 @@ varbit	BARE_HAND_PLANTING	9609	BRUT_FARMING_PLANTING	2	you can plant seeds bare-
 # Quest-gated networks. The wiki also names a one-time boat to Varlamore with Regulus Cento,
 # but that ride is part of finishing Children of the Sun and has no separate flag.
 quest	VARLAMORE_FAIRY_RINGS	Children of the Sun	the Varlamore fairy rings
-quest	VARLAMORE_ACCESS	Children of the Sun	reaching Varlamore
+quest	VARLAMORE_ACCESS	Children of the Sun	the way to Varlamore
 # Started, not finished: Arianwyn leads the player into Lletya partway through, at quest
 # counter (varplayer 517) value 2.
 progress	LLETYA_ACCESS	Mourning's End Part I	2	Lletya
 # One flag per balloon station, which already implies Enlightened Journey and its
 # Firemaking level. Enlightened Journey opens only the Entrana-Taverley route; the rest are
 # unlocked by flying to them.
-balloon	BALLOON_STATION_TAVERLEY	2868	ZEP_MULTI_PICCARD	Taverley
-balloon	BALLOON_STATION_CASTLE_WARS	2869	ZEP_MULTI_CAST	Castle Wars
-balloon	BALLOON_STATION_GRAND_TREE	2870	ZEP_MULTI_GNO	the Grand Tree
-balloon	BALLOON_STATION_VARROCK	2872	ZEP_MULTI_VARR	Varrock
+varbit	BALLOON_STATION_TAVERLEY	2868	ZEP_MULTI_PICCARD	1	you have unlocked the balloon station at Taverley	you have not unlocked the balloon station at Taverley
+varbit	BALLOON_STATION_CASTLE_WARS	2869	ZEP_MULTI_CAST	1	you have unlocked the balloon station at Castle Wars	you have not unlocked the balloon station at Castle Wars
+varbit	BALLOON_STATION_GRAND_TREE	2870	ZEP_MULTI_GNO	1	you have unlocked the balloon station at the Grand Tree	you have not unlocked the balloon station at the Grand Tree
+varbit	BALLOON_STATION_VARROCK	2872	ZEP_MULTI_VARR	1	you have unlocked the balloon station at Varrock	you have not unlocked the balloon station at Varrock
+# A grown spirit tree is seen in its patch. The Farming Guild's patch is in the north wing,
+# so it needs 85 Farming where the others need 83.
+spiritTree	SPIRIT_TREE_GROWN_BRIMHAVEN	83	Brimhaven
+spiritTree	SPIRIT_TREE_GROWN_FARMING_GUILD	85	Farming Guild
+spiritTree	SPIRIT_TREE_GROWN_PORT_SARIM	83	Port Sarim
+spiritTree	SPIRIT_TREE_GROWN_HOSIDIUS	83	Hosidius
 # The elite Lumbridge & Draynor diary lifts the fairy rings' staff requirement (wiki "Fairy
 # ring"). No quest does. An unread diary flag stays unsure, so the carry list keeps the
 # staff.
@@ -121,6 +134,9 @@ diary	STAFFLESS_FAIRY_RINGS	Lumbridge	Elite	your elite Lumbridge & Draynor diary
 # which the house portal follows; the spell and the tablet offer the Grand Exchange
 # whichever landing is chosen.
 diary	VARROCK_DIARY_MEDIUM	Varrock	Medium	your medium Varrock diary lets the Varrock teleport land at the Grand Exchange	the Varrock teleport lands at the Grand Exchange only after the medium Varrock diary	not sure whether you have the medium Varrock diary
+# Completion flag: varbit 4493. With 73 Agility it moves stony basalt's landing, and the
+# house's Troll Stronghold portal's, from the stronghold entrance to its roof.
+diary	FREMENNIK_DIARY_HARD	Fremennik	Hard	your hard Fremennik diary lets stony basalt land on the Troll Stronghold roof	stony basalt lands on the Troll Stronghold roof only after the hard Fremennik diary	not sure whether you have the hard Fremennik diary
 quest	GNOME_GLIDER	The Grand Tree	the gnome gliders
 quest	CANAL_BARGE	Bone Voyage	the barge to Fossil Island
 # Started, not finished: Brother Tranquility ferries anyone who has begun the quest. The
@@ -129,7 +145,7 @@ progress	HARMONY_ISLAND_ACCESS	The Great Brain Robbery	10	Harmony Island
 
 # Whether a patch is the player's to work at all. The Troll Stronghold roof patch is My
 # Arm's Big Adventure's reward; Eadgar's Ruse only opens a teleport.
-quest	MORYTANIA_ACCESS	Priest in Peril	entering Morytania
+quest	MORYTANIA_ACCESS	Priest in Peril	the way into Morytania
 quest	TROLL_STRONGHOLD_HERB_PATCH	My Arm's Big Adventure	the Troll Stronghold herb patch
 quest	LOCUS_OASIS_PATCH	The Ribbiting Tale of a Lily Pad Labour Dispute	the Locus Oasis hardwood patches
 # The counter reaches 6 when the player hands Floopa the bandage, which opens the island.
@@ -150,18 +166,55 @@ open	MOUNTAIN_GUIDE	the mountain guide walks anyone who asks
 # its flag alone answers it.
 carried	QUETZAL_WHISTLE	a quetzal whistle
 carried	BRIMHAVEN_TABLET	a Brimhaven teleport tablet
+carried	YANILLE_TABLET	a Yanille teleport tablet
+carried	TAVERLEY_TABLET	a Taverley teleport tablet
+carried	HOSIDIUS_TABLET	a Hosidius teleport tablet
+carried	SEED_OF_GROWTH	a seed of growth
+carried	MASTER_SCROLL_BOOK	a master scroll book
+# Teleport scrolls: the scroll owned, or the master scroll book owned with one stored, which
+# its varbit counts. The counts are the player's, not the book's: a banked book is packed.
+scroll	TAI_BWO_SCROLL	5679	BOOKOFSCROLLS_TAIBWO	Tai Bwo Wannai Trio	a Tai Bwo Wannai teleport scroll
+scroll	DIGSITE_SCROLL	5673	BOOKOFSCROLLS_DIGSITE	-	a Digsite teleport scroll
+scroll	WATSON_SCROLL	8253	BOOKOFSCROLLS_WATSON_LOWBITS	-	a Watson teleport scroll
+scroll	MOS_LE_HARMLESS_SCROLL	5681	BOOKOFSCROLLS_MOSLES	Cabin Fever	a Mos le'harmless teleport scroll
+scroll	LUMBERYARD_SCROLL	5682	BOOKOFSCROLLS_LUMBERYARD	-	a Lumberyard teleport scroll
 quest	RENU	Twilight's Promise	riding Renu
 varbit	QUETZAL_SITE_KASTORI	17757	QUETZAL_KASTORI	1	the Kastori landing site is built	the Kastori landing site has not been built
+varbit	QUETZAL_SITE_COLOSSAL_WYRM	9956	QUETZAL_COLOSSALWYRM	1	the Colossal Wyrm landing site is built	the Colossal Wyrm landing site has not been built
+varbit	QUETZAL_SITE_OUTER_FORTIS	9957	QUETZAL_OUTERFORTIS	1	the Outer Fortis landing site is built	the Outer Fortis landing site has not been built
 
 # Spells with no fixed destination; teleports.tsv answers the rest. These answer "could this
 # player ever cast it". The spell's book is enforced apart from this.
 spell	RESPAWN_TELEPORT	34	-	Respawn Teleport
 spell	FERTILE_SOIL	83	Lunar Diplomacy	Fertile Soil
+# A minigame teleport is open to everyone, and a home teleport to every standard-book caster;
+# each waits out a cooldown, kept in a varp as the minute of its last use: the minigame
+# teleport 20 minutes, the home teleport 30.
+open	MINIGAME_TELEPORT	every account can use the minigame teleports
+cooldown	MINIGAME_TELEPORT	888	SLUG2_REGIONUID	20
+spell	LUMBRIDGE_HOME_TELEPORT	0	-	Lumbridge Home Teleport
+cooldown	LUMBRIDGE_HOME_TELEPORT	892	AIDE_TELE_TIMER	30
+# The Tithe Farm teleport needs one entry to the farm, which takes 34 Farming; the Rat Pits
+# teleport, Ratcatchers. The game's minigame teleport script checks exactly these.
+varbit	TITHE_FARM_TELEPORT	4909	ZEAH_TITHE_MINIGAME_UNLOCKED	1	you have entered the Tithe Farm	you have never entered the Tithe Farm
+quest	RAT_PITS_TELEPORT	Ratcatchers	the Rat Pits teleport
 
 # Skill-gated shortcuts.
 skill	FOSSIL_ISLAND_ZIPLINE	AGILITY	74	the zipline
 skill	FOSSIL_ISLAND_HOLE	AGILITY	70	the hole to the hardwood patches
 skill	TAVERLEY_CLIMBING_ROCKS	AGILITY	66	the climbing rocks into Taverley
+# Two climbs lie between the Trollheim Teleport's landing and the Troll Stronghold: 43
+# Agility, then 41, so 43 opens both. The rocks to the stronghold roof also need My Arm's Big
+# Adventure, which the patch needs anyway, and no diary.
+skill	TROLLHEIM_CLIMBS	AGILITY	43	the climbs down from Trollheim
+skill	TROLL_STRONGHOLD_ROCKS	AGILITY	73	the rocks up to the Troll Stronghold roof
+# The rocks from the Barbarian Outpost into the Gnome Stronghold ask for 37 Agility and The
+# Grand Tree finished (wiki "Tree Gnome Stronghold"), so they are two capabilities.
+skill	GNOME_STRONGHOLD_ROCKS	AGILITY	37	the rocks into the Gnome Stronghold
+quest	GNOME_STRONGHOLD_ROCKS_UNLOCKED	The Grand Tree	the rocks into the Gnome Stronghold
+# The stepping stones need 36 and the broken wall after them 24.
+skill	NEMUS_STEPPING_STONES	AGILITY	36	the stepping stones east of Nemus Retreat
+skill	NEMUS_BROKEN_WALL	AGILITY	24	the broken wall south of Nemus Retreat
 
 # The spirit tree network needs no Farming level: eight of its destinations are permanent
 # trees. The Stronghold's tree is the one departure with a second quest, the gliders'
@@ -171,6 +224,42 @@ quest	SPIRIT_TREE_STRONGHOLD	The Grand Tree	the Gnome Stronghold spirit tree
 
 # Where the house is: the one fact about it readable from anywhere, which decides where every
 # redirected route lands.
-houseIn	POH_IN_HOSIDIUS	Hosidius
-houseIn	POH_IN_BRIMHAVEN	Brimhaven
-houseIn	POH_IN_TAVERLEY	Taverley
+houseIn	POH_IN_HOSIDIUS	Hosidius	8
+houseIn	POH_IN_BRIMHAVEN	Brimhaven	5
+houseIn	POH_IN_YANILLE	Yanille	6
+houseIn	POH_IN_TAVERLEY	Taverley	2
+houseIn	POH_IN_RIMMINGTON	Rimmington	1
+
+# What the player's house holds, answered from the last scan of it (house) or from the Portal
+# Nexus (nexus, by its enum 1377 key), behind the levels and quests below which it cannot be
+# built. Levels are base levels: the Nexus refuses a boosted Magic level, but the portal
+# chamber accepts one, so a chamber portal names no Magic level. Chamber portals all need 50
+# Construction; the Troll Stronghold portal is directed with salts and basalt, so it asks for
+# no Magic level. The Nexus room needs 72 Construction, and the Nexus the teleport's own
+# Magic level on top. The talisman and the pendant hang in the Nexus room, the glory in the
+# quest hall, and the boxes stand in the achievement gallery.
+house	POH_PORTAL_WEISS	PORTAL_WEISS	a Weiss portal	a Weiss portal	50	Making Friends with My Arm	-	-
+house	POH_PORTAL_TROLL_STRONGHOLD	PORTAL_TROLL_STRONGHOLD	a Troll Stronghold portal	a Troll Stronghold portal	50	Making Friends with My Arm	-	-
+house	POH_PORTAL_TROLLHEIM	PORTAL_TROLLHEIM	a Trollheim portal	a Trollheim portal	50	Eadgar's Ruse	-	-
+house	POH_PORTAL_KOUREND	PORTAL_KOUREND	a Kourend portal	a Kourend portal	50	Client of Kourend	-	-
+house	POH_PORTAL_FENKENSTRAIN	PORTAL_FENKENSTRAIN	a Fenkenstrain's Castle portal	a Fenkenstrain's Castle portal	50	Priest in Peril	-	-
+house	POH_PORTAL_HARMONY	PORTAL_HARMONY	a Harmony Island portal	a Harmony Island portal	50	The Great Brain Robbery	-	-
+house	POH_PORTAL_LUMBRIDGE	PORTAL_LUMBRIDGE	a Lumbridge portal	a Lumbridge portal	50	-	-	-
+house	POH_PORTAL_VARROCK	PORTAL_VARROCK	a Varrock portal	a Varrock portal	50	-	-	-
+house	POH_PORTAL_SALVE_GRAVEYARD	PORTAL_SALVE_GRAVEYARD	a Salve Graveyard portal	a Salve Graveyard portal	50	Priest in Peril	-	-
+# Directing the Kharyrll portal needs Desert Treasure I; using it needs only Priest in Peril,
+# which the Morytania stops' access gate asks for.
+house	POH_PORTAL_KHARYRLL	PORTAL_KHARYRLL	a Kharyrll portal	a Kharyrll portal	50	Desert Treasure I	-	-
+house	POH_PORTAL_CIVITAS	PORTAL_CIVITAS	a Civitas illa Fortis portal	a Civitas illa Fortis portal	50	Twilight's Promise	-	-
+nexus	POH_NEXUS_WEISS	19	Weiss	Weiss in your Portal Nexus	72	Making Friends with My Arm	MAGIC	66
+nexus	POH_NEXUS_TROLL_STRONGHOLD	15	the Troll Stronghold	the Troll Stronghold in your Portal Nexus	72	Making Friends with My Arm	MAGIC	66
+nexus	POH_NEXUS_TROLLHEIM	32	Trollheim	Trollheim in your Portal Nexus	72	Eadgar's Ruse	MAGIC	61
+nexus	POH_NEXUS_HARMONY	27	Harmony Island	Harmony Island in your Portal Nexus	72	The Great Brain Robbery	MAGIC	65
+house	POH_SPIRIT_TREE	SPIRIT_TREE	a spirit tree	a spirit tree in your house	75	-	FARMING	83
+house	POH_FAIRY_RING	FAIRY_RING	a fairy ring	a fairy ring in your house	85	-	-	-
+house	POH_XERICS_TALISMAN	XERICS_TALISMAN	a mounted Xeric's talisman	a mounted Xeric's talisman in your house	72	-	-	-
+house	POH_DIGSITE_PENDANT	DIGSITE_PENDANT	a mounted digsite pendant	a mounted digsite pendant in your house	82	-	-	-
+house	POH_GLORY	GLORY	a mounted amulet of glory	a mounted amulet of glory in your house	47	-	-	-
+house	POH_JEWELLERY_BOX_BASIC	JEWELLERY_BOX_BASIC	a basic jewellery box	a basic jewellery box in your house	81	-	-	-
+house	POH_JEWELLERY_BOX_FANCY	JEWELLERY_BOX_FANCY	a fancy jewellery box	a fancy jewellery box in your house	86	-	-	-
+house	POH_JEWELLERY_BOX_ORNATE	JEWELLERY_BOX_ORNATE	an ornate jewellery box	an ornate jewellery box in your house	91	-	-	-

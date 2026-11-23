@@ -3,6 +3,7 @@ package com.larryfarming.farming.engine;
 import com.larryfarming.engine.*;
 import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.catalogue.CropData;
+import com.larryfarming.farming.catalogue.Loadouts;
 import com.larryfarming.farming.detection.CapabilityResolver;
 import com.larryfarming.farming.detection.CapabilityState;
 import com.larryfarming.farming.model.*;
@@ -235,6 +236,9 @@ final class InventoryDemands {
         }
         if (ItemCounts.ownsAny(state, SeedBox.BOX_ITEM_IDS)) {
             carried.add(InventorySim.Fixture.SEED_BOX);
+        }
+        if (ItemCounts.ownsAny(state, Loadouts.MAGIC_SECATEURS)) {
+            carried.add(InventorySim.Fixture.MAGIC_SECATEURS);
         }
         // The ash and the potion are errands, not owned savings. Each is charged on the same
         // condition CarryPlanner uses to list it, and one ash stack serves the bins and

@@ -53,7 +53,7 @@ public final class DailyTeleportLedger {
      * rather than adding to it.
      *
      * <p>Feed this a varbit from
-     * {@link com.larryfarming.farming.detection.CapabilitySources#dailyUsesCapabilitiesByVarbit()},
+     * {@link com.larryfarming.farming.detection.DiaryRewards#USES_SPENT_BY_VARBIT},
      * which counts upward from zero as uses are spent.
      */
     public void observeUsesSpent(Capability capability, int spent, long nowEpochSec) {

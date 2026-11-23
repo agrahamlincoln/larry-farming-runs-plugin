@@ -5,9 +5,11 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 import javax.swing.*;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
+import net.runelite.client.util.ColorUtil;
 
 /**
  * The side panel's RUNS section: one row per run with its status, and under each row the
@@ -19,8 +21,7 @@ import net.runelite.client.ui.FontManager;
 class RunsListView extends JPanel
 {
 	/** A run switched off: the light text faded, as an unticked square fades its sprite. */
-	static final Color COLOR_OFF = new Color(ColorScheme.LIGHT_GRAY_COLOR.getRed(), ColorScheme.LIGHT_GRAY_COLOR.getGreen(),
-		ColorScheme.LIGHT_GRAY_COLOR.getBlue(), 90);
+	static final Color COLOR_OFF = ColorUtil.colorWithAlpha(ColorScheme.LIGHT_GRAY_COLOR, 90);
 	/** An opened run and its settings share this, so they read as one block. */
 	private static final Color COLOR_OPEN = ColorScheme.DARKER_GRAY_COLOR;
 	/** {@code RunStatus} names, as the runs list carries them. */
@@ -100,10 +101,10 @@ class RunsListView extends JPanel
 		dropRows();
 		Map<String, FarmingRunSettings> settingsFor = settingsByRun(advice);
 		List<FarmingRunStatus> off = PanelText.listOf(advice.getSwitchedOff());
-		boolean divider = false;
-		for (FarmingRunStatus run : rowsOf(advice.getRuns(), off, advice.getRunOrder()))
+		List<FarmingRunStatus> rows = rowsOf(advice.getRuns(), off, advice.getRunOrder());
+		for (FarmingRunStatus run : rows)
 		{
-			if (divider)
+			if (container.getComponentCount() > 0)
 			{
 				container.add(PanelColors.divider());
 			}
@@ -120,9 +121,8 @@ class RunsListView extends JPanel
 			{
 				container.add(opened);
 			}
-			divider = true;
 		}
-		setVisible(!PanelText.listOf(advice.getRuns()).isEmpty() || !off.isEmpty());
+		setVisible(!rows.isEmpty());
 	}
 
 	/** Copies each run row's detail text and paused line from the newest advice onto the existing ones. */
@@ -162,24 +162,16 @@ class RunsListView extends JPanel
 	 */
 	static void addSignature(List<Object> signature, FarmingAdvice advice)
 	{
-		List<List<String>> runs = new ArrayList<>();
-		for (FarmingRunStatus run : PanelText.listOf(advice.getRuns()))
-		{
-			runs.add(Arrays.asList(run.getRunId(), run.getStatus()));
-		}
-		signature.add(runs);
+		signature.add(PanelText.listOf(advice.getRuns()).stream().map(run -> Arrays.asList(run.getRunId(), run.getStatus()))
+			.collect(Collectors.toList()));
 		// Trip membership decides each row's colour and weight.
 		signature.add(advice.getTripRuns());
 		signature.add(advice.getRunOrder());
 		// A setting the player changes moves the re-planned advice here, which rebuilds the
 		// blocks with the confirmed state. An off row's detail is fixed text, not a
 		// countdown, and showDetails never reaches it, so it goes in whole.
-		List<List<String>> off = new ArrayList<>();
-		for (FarmingRunStatus run : PanelText.listOf(advice.getSwitchedOff()))
-		{
-			off.add(Arrays.asList(run.getRunId(), run.getDetail()));
-		}
-		signature.add(off);
+		signature.add(PanelText.listOf(advice.getSwitchedOff()).stream().map(run -> Arrays.asList(run.getRunId(), run.getDetail()))
+			.collect(Collectors.toList()));
 		for (FarmingRunSettings run : PanelText.listOf(advice.getRunSettings()))
 		{
 			signature.add(run.toBuilder().paused(withoutNumbers(run.getPaused())).stocked(withoutNumbers(run.getStocked())).build());
@@ -219,19 +211,14 @@ class RunsListView extends JPanel
 
 		GridBagConstraints gbc = PanelText.marginConstraints();
 
-		JLabel icon = null;
-		if (icons != null && run.getIconItemId() > 0)
+		// Greyscale only for a run that cannot be done; faint for one switched off.
+		ImageIcon sprite = icons == null || run.getIconItemId() <= 0 ? null : icons.getInventoryIcon(run.getIconItemId(), !impossible);
+		JLabel icon = FarmingPanel.marginLabel(sprite != null && switchedOff ? new DimmedIcon(sprite) : sprite);
+		if (icon != null)
 		{
-			// Greyscale only for a run that cannot be done; faint for one switched off.
-			ImageIcon sprite = icons.getInventoryIcon(run.getIconItemId(), !impossible);
-			if (sprite != null)
-			{
-				icon = new JLabel(switchedOff ? new DimmedIcon(sprite) : sprite);
-				icon.setBorder(BorderFactory.createEmptyBorder(1, 0, 0, 5));
-				gbc.gridheight = GridBagConstraints.REMAINDER;
-				row.add(icon, gbc);
-				gbc.gridheight = 1;
-			}
+			gbc.gridheight = GridBagConstraints.REMAINDER;
+			row.add(icon, gbc);
+			gbc.gridheight = 1;
 		}
 
 		JPanel text = PanelText.stack();
@@ -426,18 +413,9 @@ class RunsListView extends JPanel
 		// As wide as the row above it, even when nothing in it stretches: a block of only a
 		// grid and a checkbox otherwise stops at their width and leaves a strip of the
 		// list's colour beside it.
-		JPanel block = new JPanel()
-		{
-			@Override
-			public Dimension getMaximumSize()
-			{
-				return new Dimension(Short.MAX_VALUE, getPreferredSize().height);
-			}
-		};
-		block.setLayout(new BoxLayout(block, BoxLayout.Y_AXIS));
+		JPanel block = PanelText.stack(new StretchPanel());
 		block.setOpaque(true);
 		block.setBackground(COLOR_OPEN);
-		block.setAlignmentX(LEFT_ALIGNMENT);
 		// Indented to the row's own inset. The row's text column sits too far right for a
 		// four-wide grid to fit the sidebar.
 		block.setBorder(BorderFactory.createEmptyBorder(0, 6, 7, 4));

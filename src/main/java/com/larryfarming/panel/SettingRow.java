@@ -36,13 +36,17 @@ final class SettingRow
 	}
 
 	/**
-	 * A row for a setting of several values, drawn as its shape asks: chips or a dropdown.
-	 * Built from scratch, for a block that is rebuilt whole.
+	 * A row for a setting of several values, drawn as its shape asks: chips, a dropdown or a
+	 * slider. Built from scratch, for a block that is rebuilt whole.
 	 *
 	 * @param send receives the setting's key and the picked value
 	 */
 	static JPanel of(FarmingSettingPick pick, BiConsumer<String, String> send)
 	{
+		if (pick.getShape() == FarmingSettingPick.Shape.SLIDER)
+		{
+			return of(pick.getLabel(), new PickSlider(pick, send));
+		}
 		if (pick.getShape() == FarmingSettingPick.Shape.DROPDOWN)
 		{
 			PickDropdown dropdown = new PickDropdown(send);

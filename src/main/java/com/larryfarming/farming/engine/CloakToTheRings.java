@@ -72,7 +72,7 @@ final class CloakToTheRings {
         }
         for (int index : group) {
             StopPlan plan = plans.get(index);
-            if (plan.isVisit() && reachedByCloak(plan) && mayEnterByCloak(resolver, state)) {
+            if (plan.isVisit() && reachedByCloak(plan) && resolver.evaluate(CLOAK_TO_A_RING, state, Map.of()) != CapabilityState.LACK) {
                 return FROM_THE_BUSHES;
             }
             if (plan.isVisit() && plan.getStop().getArrival() == Arrival.MORT_MYRE) {
@@ -130,10 +130,6 @@ final class CloakToTheRings {
         return plan.getStop().getArrival() == Arrival.ARDOUGNE_MONASTERY && option != null
                 && !option.getRequires().contains(FarmingCatalogue.toAfairyRing()) && option.getRequires().leafCapabilities()
                         .contains(Capability.ARDOUGNE_CLOAK_1);
-    }
-
-    private static boolean mayEnterByCloak(CapabilityResolver resolver, PlayerState state) {
-        return resolver.evaluate(CLOAK_TO_A_RING, state, Map.of()) != CapabilityState.LACK;
     }
 
     /** Whether a visit's route enters the fairy ring network. */

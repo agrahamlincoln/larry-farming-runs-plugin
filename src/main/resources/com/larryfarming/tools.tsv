@@ -1,0 +1,27 @@
+# What a run packs beyond its seeds and its travel items: the item families one packing line
+# accepts, and the game facts that decide which tool a patch calls for. One row per name.
+#
+# An item row lists its ids with RuneLite's ItemID constant for each in the column after, in
+# the same order. A row of patch types or capabilities has no ItemID names.
+#
+# name	values	ItemID names
+
+# Every axe, best first: by metal tier, with each Forestry two-handed felling axe right after
+# the one-handed axe of the same metal. The one-handed axe leads its tier because it leaves the
+# shield slot free.
+axes	20011 28226 23673 28220 13241 6739 28217 23279 1359 28214 1357 28211 1355 28208 1361 28205 1353 28202 1349 28199 1351 28196	_3A_AXE _3A_AXE_2H CRYSTAL_AXE CRYSTAL_AXE_2H INFERNAL_AXE DRAGON_AXE DRAGON_AXE_2H TRAIL_GILDED_AXE RUNE_AXE RUNE_AXE_2H ADAMANT_AXE ADAMANT_AXE_2H MITHRIL_AXE MITHRIL_AXE_2H BLACK_AXE BLACK_AXE_2H STEEL_AXE STEEL_AXE_2H IRON_AXE IRON_AXE_2H BRONZE_AXE BRONZE_AXE_2H
+
+# The log basket and the forestry basket, each in its closed and open form.
+logBaskets	28140 28142 28143 28145	LOG_BASKET_CLOSED LOG_BASKET_OPEN FORESTRY_BASKET_CLOSED FORESTRY_BASKET_OPEN
+
+# The two ways to cure a diseased crop, and which patches take which. From the wiki: "Players
+# may treat plants in diseased herb, flower, allotment, hops, hardwood tree, celastrus,
+# belladonna, cactus, and mushroom patches with plant cure... For diseased trees, fruit trees,
+# spirit trees and bushes, the player may use secateurs on the plant to trim the diseased
+# branch." Hardwood trees take plant cure, so the split is not whether the patch grows a tree.
+# A patch type the sentence does not name is in neither row and draws no cure line.
+prunedWithSecateurs	TREE FRUIT_TREE SPIRIT_TREE BUSH	-
+curedWithPlantCure	HERB FLOWER ALLOTMENT HOPS HARDWOOD_TREE CELASTRUS BELLADONNA CACTUS MUSHROOM	-
+
+# Teleports from items worn in the cape slot, which a worn log basket would take.
+capeSlotTeleports	ARDOUGNE_CLOAK_1 ARDOUGNE_CLOAK_2 ARDOUGNE_CLOAK_3 ARDOUGNE_CLOAK_4 FARMING_CAPE CONSTRUCTION_CAPE FISHING_CAPE HUNTER_CAPE QUEST_CAPE DIARY_CAPE	-

@@ -82,7 +82,7 @@ public final class SeedSelector {
      *     Must come from {@link #rotationStock} on the same preferences; a stock
      *     built from another pair reads as empty
      */
-    static SeedPlan select(FarmingPreferences prefs, PlayerState state, int goodPatches, int badPatches, Stock stock) {
+    static SeedPlan select(FarmingPreferences prefs, int goodPatches, int badPatches, Stock stock) {
         List<Crop> window = herbWindow(prefs);
         // A bag that covers the run draws on the carried half alone.
         List<Map<Crop, Integer>> sources = stock.carriedCovers(goodPatches + badPatches) ? List.of(stock.carried) : stock.carriedFirst();
@@ -301,7 +301,7 @@ public final class SeedSelector {
     private static int formsHeld(PlayerState state, CropData data, boolean carriedOnly) {
         int stock = 0;
         for (int itemId : data.getPlantingForms()) {
-            stock += carriedOnly ? ItemCounts.countCarried(state, itemId, null) : ItemCounts.countOwned(state, itemId, null);
+            stock += carriedOnly ? ItemCounts.countCarried(state, itemId) : ItemCounts.countOwned(state, itemId);
         }
         return stock;
     }

@@ -11,8 +11,14 @@ ARDOUGNE_CLOAK_4	Ardougne cloak 4	VARBIT	0	ARDOUGNE_CLOAK	4
 EXPLORERS_RING_2	Explorer's ring 2	VARBIT	3	EXPLORERS_RING	2
 EXPLORERS_RING_3	Explorer's ring 3	VARBIT	0	EXPLORERS_RING	3
 EXPLORERS_RING_4	Explorer's ring 4	VARBIT	0	EXPLORERS_RING	4
+KANDARIN_HEADGEAR_3	Kandarin headgear 3	VARBIT	1	KANDARIN_HEADGEAR	3
+KANDARIN_HEADGEAR_4	Kandarin headgear 4	VARBIT	0	KANDARIN_HEADGEAR	4
+MORYTANIA_LEGS_4	Morytania legs 4	VARBIT	0	MORYTANIA_LEGS	4
+RADAS_BLESSING_1	Rada's blessing 1	VARBIT	3	RADAS_BLESSING	1
+RADAS_BLESSING_3	Rada's blessing 3	VARBIT	0	RADAS_BLESSING	3
 DIARY_CAPE	Achievement diary cape	ITEM	0	NONE	0
 VARROCK_DIARY_MEDIUM	Medium Varrock diary	VARBIT	0	NONE	0
+FREMENNIK_DIARY_HARD	Hard Fremennik diary	VARBIT	0	NONE	0
 FARMING_CAPE	Farming cape	ITEM	0	NONE	0
 CONSTRUCTION_CAPE	Construction cape	ITEM	0	NONE	0
 HUNTER_CAPE	Hunter cape	ITEM	0	NONE	0
@@ -25,6 +31,7 @@ RING_OF_DUELING	Ring of dueling	ITEM	0	NONE	0
 RING_OF_WEALTH	Ring of wealth	ITEM	0	NONE	0
 AMULET_OF_GLORY	Amulet of glory	ITEM	0	NONE	0
 RING_OF_THE_ELEMENTS	Ring of the elements	ITEM	0	NONE	0
+COWBELL_AMULET	Cowbell amulet	ITEM	0	NONE	0
 SLAYER_RING	Slayer ring	ITEM	0	NONE	0
 ROYAL_SEED_POD	Royal seed pod	ITEM	0	NONE	0
 XERICS_TALISMAN	Xeric's talisman	ITEM	0	NONE	0
@@ -38,8 +45,22 @@ ICY_BASALT	Icy basalt	ITEM	0	NONE	0
 STONY_BASALT	Stony basalt	ITEM	0	NONE	0
 MOKHAIOTL_WAYSTONE	Mokhaiotl waystone	ITEM	0	NONE	0
 BRIMHAVEN_TABLET	Brimhaven teleport tablet	ITEM	0	NONE	0
+YANILLE_TABLET	Yanille teleport tablet	ITEM	0	NONE	0
+TAVERLEY_TABLET	Taverley teleport tablet	ITEM	0	NONE	0
+HOSIDIUS_TABLET	Hosidius teleport tablet	ITEM	0	NONE	0
+TAI_BWO_SCROLL	Tai Bwo Wannai teleport scroll	ITEM	0	NONE	0
+DIGSITE_SCROLL	Digsite teleport scroll	ITEM	0	NONE	0
+WATSON_SCROLL	Watson teleport scroll	ITEM	0	NONE	0
+MOS_LE_HARMLESS_SCROLL	Mos le'harmless teleport scroll	ITEM	0	NONE	0
+LUMBERYARD_SCROLL	Lumberyard teleport scroll	ITEM	0	NONE	0
+MASTER_SCROLL_BOOK	Master scroll book	ITEM	0	NONE	0
+SEED_OF_GROWTH	Seed of growth	ITEM	0	NONE	0
 RESPAWN_TELEPORT	Respawn Teleport	VARBIT	0	NONE	0
 FERTILE_SOIL	Fertile Soil	VARBIT	0	NONE	0
+MINIGAME_TELEPORT	Minigame Teleport	VARBIT	0	NONE	0
+TITHE_FARM_TELEPORT	Tithe Farm teleport	VARBIT	0	NONE	0
+RAT_PITS_TELEPORT	Rat Pits teleport	VARBIT	0	NONE	0
+LUMBRIDGE_HOME_TELEPORT	Lumbridge Home Teleport	VARBIT	0	NONE	0
 RESPAWN_AVAILABLE_CAMELOT	Camelot respawn point	VARBIT	0	NONE	0
 RESPAWN_AVAILABLE_FALADOR	Falador respawn point	VARBIT	0	NONE	0
 FAIRY_RINGS	Fairy rings	VARBIT	0	NONE	0
@@ -56,27 +77,44 @@ CHARTER_SHIP	Charter ship	VARBIT	0	NONE	0
 QUETZAL_WHISTLE	Quetzal whistle	ITEM	0	NONE	0
 RENU	Renu, your quetzal	VARBIT	0	NONE	0
 QUETZAL_SITE_KASTORI	Kastori quetzal landing site	VARBIT	0	NONE	0
+QUETZAL_SITE_COLOSSAL_WYRM	Colossal Wyrm quetzal landing site	VARBIT	0	NONE	0
+QUETZAL_SITE_OUTER_FORTIS	Outer Fortis quetzal landing site	VARBIT	0	NONE	0
 MOUNTAIN_GUIDE	Mountain guide	VARBIT	0	NONE	0
 CANAL_BARGE	Canal barge to Fossil Island	VARBIT	0	NONE	0
 HARMONY_ISLAND_ACCESS	Access to Harmony Island	VARBIT	0	NONE	0
 FOSSIL_ISLAND_ZIPLINE	Fossil Island zipline	SKILL	0	NONE	0
 FOSSIL_ISLAND_HOLE	Fossil Island hole	SKILL	0	NONE	0
 TAVERLEY_CLIMBING_ROCKS	Taverley climbing rocks	SKILL	0	NONE	0
+TROLLHEIM_CLIMBS	Trollheim climbing rocks	SKILL	0	NONE	0
+TROLL_STRONGHOLD_ROCKS	Troll Stronghold rocks	SKILL	0	NONE	0
+GNOME_STRONGHOLD_ROCKS	Gnome Stronghold rocks	SKILL	0	NONE	0
+GNOME_STRONGHOLD_ROCKS_UNLOCKED	Gnome Stronghold rocks unlocked	VARBIT	0	NONE	0
+NEMUS_STEPPING_STONES	Nemus Retreat stepping stones	SKILL	0	NONE	0
+NEMUS_BROKEN_WALL	Nemus Retreat broken wall	SKILL	0	NONE	0
 PENDANT_OF_ATES	Pendant of Ates	ITEM	0	NONE	0
 ATES_STATUE_KASTORI	Kastori statue activated	VARBIT	0	NONE	0
 ATES_STATUE_NEMUS_RETREAT	Nemus Retreat statue activated	VARBIT	0	NONE	0
 SAILORS_AMULET	Sailors' amulet	ITEM	0	NONE	0
 POH_IN_HOSIDIUS	House in Hosidius	VARBIT	0	NONE	0
 POH_IN_BRIMHAVEN	House in Brimhaven	VARBIT	0	NONE	0
+POH_IN_YANILLE	House in Yanille	VARBIT	0	NONE	0
 POH_IN_TAVERLEY	House in Taverley	VARBIT	0	NONE	0
+POH_IN_RIMMINGTON	House in Rimmington	VARBIT	0	NONE	0
 POH_PORTAL_WEISS	House portal to Weiss	SEEN	0	NONE	0
 POH_PORTAL_TROLL_STRONGHOLD	House portal to the Troll Stronghold	SEEN	0	NONE	0
+POH_PORTAL_TROLLHEIM	House portal to Trollheim	SEEN	0	NONE	0
 POH_PORTAL_KOUREND	House portal to Kourend	SEEN	0	NONE	0
 POH_PORTAL_FENKENSTRAIN	House portal to Fenkenstrain's Castle	SEEN	0	NONE	0
 POH_PORTAL_HARMONY	House portal to Harmony Island	SEEN	0	NONE	0
+POH_PORTAL_LUMBRIDGE	House portal to Lumbridge	SEEN	0	NONE	0
+POH_PORTAL_VARROCK	House portal to Varrock	SEEN	0	NONE	0
+POH_PORTAL_SALVE_GRAVEYARD	House portal to Salve Graveyard	SEEN	0	NONE	0
+POH_PORTAL_KHARYRLL	House portal to Kharyrll	SEEN	0	NONE	0
+POH_PORTAL_CIVITAS	House portal to Civitas illa Fortis	SEEN	0	NONE	0
 POH_NEXUS_WEISS	Weiss attuned in your Portal Nexus	SEEN	0	NONE	0
 POH_NEXUS_HARMONY	Harmony Island attuned in your Portal Nexus	SEEN	0	NONE	0
 POH_NEXUS_TROLL_STRONGHOLD	Troll Stronghold attuned in your Portal Nexus	SEEN	0	NONE	0
+POH_NEXUS_TROLLHEIM	Trollheim attuned in your Portal Nexus	SEEN	0	NONE	0
 POH_SPIRIT_TREE	Spirit tree in your house	SEEN	0	NONE	0
 POH_FAIRY_RING	Fairy ring in your house	SEEN	0	NONE	0
 POH_XERICS_TALISMAN	Mounted Xeric's talisman in your house	SEEN	0	NONE	0
@@ -91,6 +129,7 @@ SPIRIT_TREE_STRONGHOLD	Gnome Stronghold spirit tree	VARBIT	0	NONE	0
 SPIRIT_TREE_GROWN_BRIMHAVEN	Grown spirit tree in Brimhaven	VARBIT	0	NONE	0
 SPIRIT_TREE_GROWN_FARMING_GUILD	Grown spirit tree in the Farming Guild	VARBIT	0	NONE	0
 SPIRIT_TREE_GROWN_PORT_SARIM	Grown spirit tree in Port Sarim	VARBIT	0	NONE	0
+SPIRIT_TREE_GROWN_HOSIDIUS	Grown spirit tree in Hosidius	VARBIT	0	NONE	0
 LLETYA_ACCESS	Access to Lletya	VARBIT	0	NONE	0
 MORYTANIA_ACCESS	Access to Morytania	VARBIT	0	NONE	0
 TROLL_STRONGHOLD_HERB_PATCH	Troll Stronghold herb patch	VARBIT	0	NONE	0

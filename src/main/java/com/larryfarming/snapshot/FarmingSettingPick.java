@@ -4,8 +4,8 @@ import java.util.List;
 import lombok.Value;
 
 /**
- * One setting in the side panel that takes one of several values: a row of chips, or a
- * dropdown when the values are too many for one row.
+ * One setting in the side panel that takes one of several values: a row of chips, a
+ * dropdown when the values are too many for one row, or a slider over a range of numbers.
  *
  * <p>Carries the config key and each option's value, so the panel never decides what a
  * pick means: picking an option writes its value to the key.
@@ -18,7 +18,9 @@ public class FarmingSettingPick {
         /** Every option on one row, the picked one outlined. */
         CHIPS,
         /** A dropdown, for a list too long for one row. */
-        DROPDOWN
+        DROPDOWN,
+        /** A slider over the options in order, for a range of numbers. */
+        SLIDER
     }
 
     /** One value the setting can take. */
@@ -48,6 +50,6 @@ public class FarmingSettingPick {
     /** The value in force, one of the options' values. */
     String selected;
 
-    /** A tooltip for the dropdown, or null. Chips carry their own. */
+    /** A tooltip for the dropdown or slider, or null. Chips carry their own. */
     String hint;
 }

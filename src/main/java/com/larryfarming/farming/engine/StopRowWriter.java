@@ -5,6 +5,7 @@ import static com.larryfarming.farming.engine.CropNames.inSentence;
 
 import com.larryfarming.engine.farming.*;
 import com.larryfarming.farming.catalogue.*;
+import com.larryfarming.farming.detection.CapabilitySources;
 import com.larryfarming.farming.detection.CapabilityState;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
@@ -83,10 +84,7 @@ final class StopRowWriter {
         boolean optional = anyWork ? workedAreExtras : everyStopIsAnExtra;
 
         List<FarmingPlantAdvice> plants = new ArrayList<>(patchesPerCrop.size());
-        for (Map.Entry<Crop, Integer> planted : patchesPerCrop.entrySet()) {
-            Crop crop = planted.getKey();
-            plants.add(new FarmingPlantAdvice(displayNameOf(crop), crop.getItemId(), planted.getValue()));
-        }
+        patchesPerCrop.forEach((crop, patches) -> plants.add(new FarmingPlantAdvice(displayNameOf(crop), crop.getItemId(), patches)));
 
         Map<PatchRef, Crop> felling = plants.isEmpty() ? Collections.emptyMap() : treesMakingWay(group, plans, plantedIn, inputs);
         Map<PatchRef, Crop> diggingUp = visiting ? plantsComingOut(group, plans, cropFor, inputs, state) : Collections.emptyMap();
@@ -144,18 +142,13 @@ final class StopRowWriter {
                 // The lead's clock, matching the rest of the heading.
                 .readyAtEpochSec(lead.getReadyAtEpochSec()).uncertain(uncertain).optional(optional)
                 .optionalReason(optional && lead.getStop().getOptionalReason() != null ? lead.getStop().getOptionalReason() : "")
-                .plants(plants).setAside(setAside).travelItemId(travelItemOf(travel)).travelSpriteId(travelSpriteOf(travel))
+                .plants(plants).setAside(setAside).travelItemId(travelItemOf(travel, state)).travelSpriteId(travelSpriteOf(travel))
                 .landing(landingOf(travel)).note(note).assumption(visiting ? assumptionAt(group, plans, inputs) : "").build();
     }
 
     /** Whether a stop being visited here is an errand rather than patch work. */
     private static boolean anErrandIsBeingRun(List<Integer> group, List<StopPlan> plans) {
-        for (StopPlan plan : visitsIn(group, plans)) {
-            if (plan.getStop().isErrand()) {
-                return true;
-            }
-        }
-        return false;
+        return visitsIn(group, plans).stream().anyMatch(plan -> plan.getStop().isErrand());
     }
 
     /** The stops at this arrival the player is visiting, in the arrival's order. */
@@ -185,18 +178,8 @@ final class StopRowWriter {
      */
     private static boolean theWorkLineAlreadySaysIt(List<Work> waiting, Collection<Crop> planting, FarmingInputs inputs) {
         Crop contracted = inputs.getContractCrop();
-        if (contracted == null || !inputs.contractIsAboutThePatch()) {
-            return false;
-        }
-        if (planting.contains(contracted)) {
-            return true;
-        }
-        for (Work work : waiting) {
-            if (work.crop == contracted) {
-                return true;
-            }
-        }
-        return false;
+        return contracted != null && inputs.contractIsAboutThePatch()
+                && (planting.contains(contracted) || waiting.stream().anyMatch(work -> work.crop == contracted));
     }
 
     /**
@@ -588,10 +571,7 @@ final class StopRowWriter {
             return "";
         }
         PatchPrediction seen = inputs.patchAt(lead.getStop().primaryPatch());
-        if (seen == null || seen.getCrop() == null) {
-            return "";
-        }
-        return inSentence(seen.getCrop());
+        return seen == null || seen.getCrop() == null ? "" : inSentence(seen.getCrop());
     }
 
     /**
@@ -723,10 +703,8 @@ final class StopRowWriter {
      */
     static StopPlan routeForVisit(List<Integer> visit, List<StopPlan> plans, StopPlan lead, RunPlanner planner, PlayerState state,
             Map<PatchRef, CapabilityState> reached, boolean mayStandHere, RunPlanner.Start start) {
-        if (!lead.isVisit()) {
-            return null;
-        }
-        return visitsIn(visit, plans).size() < 2 ? null : planner.planArrival(lead.getStop(), state, reached, mayStandHere, start);
+        return !lead.isVisit() || visitsIn(visit, plans).size() < 2 ? null
+                : planner.planArrival(lead.getStop(), state, reached, mayStandHere, start);
     }
 
     /**
@@ -786,7 +764,7 @@ final class StopRowWriter {
      * a rung is often an item plus something invisible (a cloak and a diary tier), and the
      * player clicks the item.
      */
-    private static int travelItemOf(StopPlan plan) {
+    private static int travelItemOf(StopPlan plan, PlayerState state) {
         if (!plan.isVisit()) {
             return 0;
         }
@@ -795,7 +773,8 @@ final class StopRowWriter {
             return means.getItemId();
         }
         for (Capability capability : plan.getNeeds()) {
-            int itemId = CarryItems.iconFor(capability);
+            // A scroll read from the book is clicked on the book.
+            int itemId = CarryItems.iconFor(state == null ? capability : CapabilitySources.packedAs(capability, state));
             if (itemId > 0) {
                 return itemId;
             }
@@ -805,8 +784,15 @@ final class StopRowWriter {
 
     /** The spell icon this stop's route is cast from, or 0 when it is not a spell. */
     private static int travelSpriteOf(StopPlan plan) {
-        TeleportMeans means = plan.isVisit() ? plan.getTeleport() : null;
-        return means != null && means.isSpell() ? means.getSpriteId() : 0;
+        if (!plan.isVisit()) {
+            return 0;
+        }
+        TeleportMeans means = plan.getTeleport();
+        if (means != null && means.isSpell()) {
+            return means.getSpriteId();
+        }
+        // A spell with no destination, such as Minigame Teleport, is a need of the route.
+        return plan.getNeeds().stream().mapToInt(Teleports::iconFor).filter(icon -> icon > 0).findFirst().orElse(0);
     }
 
     /** The place this route's teleport lands at, or null for a route written as an item. */
@@ -818,7 +804,7 @@ final class StopRowWriter {
     // --- Plumbing ------------------------------------------------------------
 
     /** A mid-sentence clause, such as the runs list's contract detail, made to open a line. */
-    private static String capitalise(String sentence) {
+    static String capitalise(String sentence) {
         return sentence == null || sentence.isEmpty() ? "" : Character.toUpperCase(sentence.charAt(0)) + sentence.substring(1);
     }
 

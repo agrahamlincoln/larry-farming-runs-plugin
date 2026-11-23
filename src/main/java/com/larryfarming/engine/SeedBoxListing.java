@@ -2,6 +2,7 @@ package com.larryfarming.engine;
 
 import com.larryfarming.model.ItemStack;
 import java.util.*;
+import lombok.Getter;
 
 /**
  * A Check listing part way through arriving.
@@ -13,10 +14,11 @@ import java.util.*;
  * <p><b>The entry wording is not self-identifying.</b> The game prints "2 x Guam seed." in
  * places unrelated to farming, so an entry counts only after the header has been seen.
  */
+@Getter
 public final class SeedBoxListing {
 
+    /** The seeds read so far, in the order the box listed them. */
     private final List<ItemStack> seeds = new ArrayList<>();
-    private int lines;
 
     /**
      * How many entry lines this listing has printed, named or not.
@@ -24,14 +26,7 @@ public final class SeedBoxListing {
      * <p>Can exceed the size of {@link #getSeeds} when a name is unknown. A listing whose
      * names we could not place is not an empty box and must not be committed as one.
      */
-    public int getLines() {
-        return lines;
-    }
-
-    /** The seeds read so far, in the order the box listed them. */
-    public List<ItemStack> getSeeds() {
-        return seeds;
-    }
+    private int lines;
 
     /**
      * Folds one message into this listing.

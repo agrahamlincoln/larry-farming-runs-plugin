@@ -3,12 +3,15 @@ package com.larryfarming.farming;
 import com.larryfarming.engine.StateEngine;
 import com.larryfarming.engine.EngineListener;
 import com.larryfarming.engine.farming.*;
+import com.larryfarming.farming.catalogue.FarmingCatalogue;
 import com.larryfarming.farming.detection.*;
 import com.larryfarming.farming.engine.*;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.*;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
@@ -31,6 +34,7 @@ import java.util.stream.Collectors;
  * <p>Client thread only, apart from {@link #getAdvice()}, which reads a volatile field.
  */
 @Slf4j
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class FarmingPlanner implements EngineListener {
 
     /** Builds the advice from the player state and planner inputs. */
@@ -40,7 +44,7 @@ public class FarmingPlanner implements EngineListener {
     }
 
     /** The daily-teleport varbits the game reports, keyed for lookup on every varbit change. */
-    private static final Map<Integer, Capability> DAILY_TELEPORT_VARBITS = CapabilitySources.dailyUsesCapabilitiesByVarbit();
+    private static final Map<Integer, Capability> DAILY_TELEPORT_VARBITS = DiaryRewards.USES_SPENT_BY_VARBIT;
 
     /**
      * A run this close is not worth a dedicated wake-up rebuild; the next event will
@@ -125,13 +129,6 @@ public class FarmingPlanner implements EngineListener {
     /** Moves forward by one each time {@link #advice} changes, and never goes back. */
     @Getter
     private long adviceVersion;
-
-
-    private FarmingPlanner(StateEngine engine, FarmingPlannerPersistence persistence, Advisor advisor) {
-        this.engine = engine;
-        this.persistence = persistence;
-        this.advisor = advisor;
-    }
 
     /**
      * A planner listening to {@code engine} and hiding the patches its settings switch off.
@@ -459,7 +456,8 @@ public class FarmingPlanner implements EngineListener {
     public void watchTravel() {
         PlayerState state = engine.getPlayerState();
         FarmingStopAdvice heading = headingStop(advice);
-        if (state == null || !travelWatch.tick(state, nameOf(heading), landingOf(heading))) {
+        Set<Integer> patchRegions = heading == null ? Set.of() : FarmingCatalogue.regionsAt(Arrival.valueOf(heading.getArrival()));
+        if (state == null || !travelWatch.tick(state, nameOf(heading), landingOf(heading), patchRegions)) {
             return;
         }
         dirty = true;
@@ -614,27 +612,30 @@ public class FarmingPlanner implements EngineListener {
                 .withOfferedBanksHidden(offeredBanksHidden)
                 .withPackedThisTrip(tripRecord.getPacked())
                 .withTravelTaken(travelWatch.taken())
+                .withTripStartedAt(tracker.tripStartedAt(nowSec))
                 .withAhead(visits(advice).stream().map(FarmingStopAdvice::getArrival).collect(Collectors.toList()));
     }
 
     /**
      * When to look at the farming runs again, from the advice just built: the soonest
-     * moment any waiting run comes ready, or zero when nothing is waiting on a clock.
+     * moment any waiting run comes ready or a teleport comes off its cooldown, which may
+     * open a shorter route, or zero when nothing is waiting on a clock.
      */
     void armWake(FarmingAdvice built, long nowEpochSec) {
         wakeAtEpochSec = 0L;
-        if (built == null || built.getRuns() == null) {
-            return;
+        List<Long> times = new ArrayList<>();
+        PlayerState state = engine.getPlayerState();
+        for (Capability capability : Capability.values()) {
+            times.add(state == null ? 0L : CapabilitySources.cooldownEndsAt(capability, state));
         }
-        for (FarmingRunStatus run : built.getRuns()) {
-            long readyAt = run.getReadyAtEpochSec();
+        if (built != null && built.getRuns() != null) {
+            built.getRuns().forEach(run -> times.add(run.getReadyAtEpochSec()));
+        }
+        for (long at : times) {
             // Skip anything all but arrived. A patch whose estimate has been overtaken keeps
             // reporting itself due imminently, and waking on it would rebuild every second.
-            if (readyAt <= nowEpochSec + WAKE_FLOOR_SECONDS) {
-                continue;
-            }
-            if (wakeAtEpochSec == 0L || readyAt < wakeAtEpochSec) {
-                wakeAtEpochSec = readyAt;
+            if (at > nowEpochSec + WAKE_FLOOR_SECONDS && (wakeAtEpochSec == 0L || at < wakeAtEpochSec)) {
+                wakeAtEpochSec = at;
             }
         }
     }

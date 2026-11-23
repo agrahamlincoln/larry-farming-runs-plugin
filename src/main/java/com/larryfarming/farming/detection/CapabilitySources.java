@@ -9,11 +9,13 @@ import com.larryfarming.farming.model.Capability;
 import com.larryfarming.farming.model.Spellbook;
 import com.larryfarming.model.*;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import net.runelite.api.gameval.ItemID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import net.runelite.api.gameval.VarbitID;
 
@@ -54,8 +56,8 @@ public final class CapabilitySources {
 
     /**
      * What {@link #SPELLBOOK_VARBIT} reads on each book. Being on a book proves its unlock
-     * (Lunar Diplomacy for Lunar, Sins of the Father for Arceuus), so a caller gating a spell
-     * on the book needs no separate quest check.
+     * (Lunar Diplomacy for Lunar; Arceuus needs no quest), so a caller gating a spell on the
+     * book needs no separate quest check.
      */
     public static final int STANDARD_SPELLBOOK = 0;
     public static final int LUNAR_SPELLBOOK = 2;
@@ -96,22 +98,17 @@ public final class CapabilitySources {
             VarbitID.KOUREND_SPAWN, "Kourend Castle");
 
     /** What opens each respawn town, separate from whether it is the chosen one. */
-    private static final Map<String, Detector> RESPAWN_UNLOCKS = respawnUnlocks();
-
-    private static Map<String, Detector> respawnUnlocks() {
-        Map<String, Detector> unlocks = new LinkedHashMap<>();
-        unlocks.put("Falador", quest("Recruitment Drive", "respawning at Falador"));
-        unlocks.put("Camelot", state -> {
-            Integer done = state.getVarbits().get(KNIGHT_WAVES_VARBIT);
-            if (done != null) {
-                return done >= KNIGHT_WAVES_DONE ? CapabilityVerdict.have(Source.DETECTED,
-                                "you have finished the Knight Waves Training Grounds") : CapabilityVerdict.lack(Source.DETECTED,
-                                "the Knight Waves Training Grounds unlocks respawning at Camelot");
-            }
-            return quest("King's Ransom", "respawning at Camelot").detect(state);
-        });
-        return Collections.unmodifiableMap(unlocks);
-    }
+    private static final Map<String, Detector> RESPAWN_UNLOCKS = Map.of(
+            "Falador", quest("Recruitment Drive", "respawning at Falador"),
+            "Camelot", state -> {
+                Integer done = state.getVarbits().get(KNIGHT_WAVES_VARBIT);
+                if (done != null) {
+                    return done >= KNIGHT_WAVES_DONE ? CapabilityVerdict.have(Source.DETECTED,
+                                    "you have finished the Knight Waves Training Grounds") : CapabilityVerdict.lack(Source.DETECTED,
+                                    "the Knight Waves Training Grounds unlocks respawning at Camelot");
+                }
+                return quest("King's Ransom", "respawning at Camelot").detect(state);
+            });
 
     /**
      * Whether the account could choose this respawn town, ignoring the one it is on.
@@ -176,7 +173,7 @@ public final class CapabilitySources {
      * 99 ({@code cape}). The first cell names the kind, which fixes the columns after it.
      *
      * <p>Declared above {@link #LOGIN_SCAN_VARBIT_IDS}, which scans the flags its varbit and
-     * balloon rows read.
+     * scroll rows read.
      */
     private static final List<Tables.Row> TABLE = Tables.read("/com/larryfarming/capability-rules.tsv");
 
@@ -189,9 +186,9 @@ public final class CapabilitySources {
 
     private static int[] loginScanVarbitIds() {
         // The table's flags: Ates statues, quetzal landing sites, balloon stations, the
-        // bare-handed planting lesson.
+        // bare-handed planting lesson, the master scroll book's counts.
         IntStream flags = TABLE.stream()
-                .filter(row -> row.text(0).equals("varbit") || row.text(0).equals("balloon"))
+                .filter(row -> row.text(0).equals("varbit") || row.text(0).equals("scroll"))
                 .mapToInt(row -> row.integer(2));
         int[] own = {
             HouseLocation.HOUSE_LOCATION_VARBIT,
@@ -229,15 +226,100 @@ public final class CapabilitySources {
     /** Capes of Accomplishment, sold only to a player with 99 in the skill. */
     private static final Map<Capability, Skill> SKILL_CAPES = new EnumMap<>(Capability.class);
 
+    /**
+     * The capabilities built in the player's house, answered from what was seen there.
+     *
+     * @see HouseRule#detect for the order the answers are given in
+     */
+    private static final Map<Capability, HouseRule> HOUSE_RULES = new EnumMap<>(Capability.class);
+
+    /**
+     * Each teleport whose use starts a cooldown: the varp holding its last use, in minutes
+     * since the epoch, and the cooldown's length in minutes.
+     */
+    private static final Map<Capability, int[]> COOLDOWNS = new EnumMap<>(Capability.class);
+
+    /** The varbit counting each kind of teleport scroll the master scroll book holds. */
+    private static final Map<Capability, Integer> STORED_IN_BOOK = new EnumMap<>(Capability.class);
+
     static {
         for (Tables.Row row : TABLE) {
-            if (row.text(0).equals("gate")) {
+            if (row.text(0).equals("scroll")) {
+                STORED_IN_BOOK.put(row.constant(Capability.class, 1), row.integer(2));
+            } else if (row.text(0).equals("cooldown")) {
+                COOLDOWNS.put(row.requireWidth(5).constant(Capability.class, 1), new int[] {row.integer(2), row.integer(4)});
+            } else if (row.text(0).equals("gate")) {
                 QUEST_GATES.put(row.requireWidth(4).constant(Capability.class, 1),
                         new QuestGate(row.text(2), row.constant(QuestStatus.class, 3)));
             } else if (row.text(0).equals("cape")) {
                 SKILL_CAPES.put(row.requireWidth(3).constant(Capability.class, 1), row.constant(Skill.class, 2));
+            } else if (row.text(0).equals("house") || row.text(0).equals("nexus")) {
+                Floor floor = new Floor(row.requireWidth(9).text(4)).skill(Skill.CONSTRUCTION, row.integer(5)).quest(row.optionalText(6));
+                Skill skill = row.optionalConstant(Skill.class, 7);
+                if (skill != null) {
+                    floor.skill(skill, row.integer(8));
+                }
+                HOUSE_RULES.put(row.constant(Capability.class, 1), row.text(0).equals("house")
+                        ? built(row.constant(HouseFeature.class, 2), row.text(3), floor) : attuned(row.integer(2), row.text(3), floor));
             }
         }
+    }
+
+    /**
+     * When this teleport's cooldown ends, in epoch seconds: 0 for a teleport with none, or
+     * one whose varp has not been read.
+     */
+    public static long cooldownEndsAt(Capability capability, PlayerState state) {
+        int[] cooldown = COOLDOWNS.get(capability);
+        Integer lastUse = cooldown == null ? null : state.getVarps().get(cooldown[0]);
+        return lastUse == null ? 0L : (lastUse + cooldown[1]) * 60L;
+    }
+
+    /** Whether using this teleport starts a cooldown, so it serves one journey a trip. */
+    public static boolean hasCooldown(Capability capability) {
+        return COOLDOWNS.containsKey(capability);
+    }
+
+    /**
+     * The scrolls of this kind the master scroll book holds: 0 for none, for a count not yet
+     * read, or for a capability that is no scroll.
+     */
+    public static int storedInBook(Capability capability, PlayerState state) {
+        Integer varbit = STORED_IN_BOOK.get(capability);
+        Integer stored = varbit == null ? null : state.getVarbits().get(varbit);
+        return stored == null ? 0 : stored;
+    }
+
+    /** Whether the master scroll book can hold this teleport. */
+    public static boolean isStoredInBook(Capability capability) {
+        return STORED_IN_BOOK.containsKey(capability);
+    }
+
+    /**
+     * A reading that rises when this teleport is used without leaving the bag: its cooldown's
+     * end moving on, or the master scroll book holding one fewer.
+     */
+    public static long useMark(Capability capability, PlayerState state) {
+        return cooldownEndsAt(capability, state) - storedInBook(capability, state);
+    }
+
+    /**
+     * What the player packs for this capability: the master scroll book for a scroll it holds
+     * when the player owns none loose, or carries the book and no loose one; otherwise the
+     * capability itself. The counts outlast a lost book, so this relies on the scroll's
+     * detector, which refuses a stored scroll once the bank shows no book.
+     */
+    public static Capability packedAs(Capability capability, PlayerState state) {
+        CarryItems.Carry loose = CarryItems.forCapability(capability);
+        boolean bookInHand = ItemCounts.countCarried(state, CarryItems.forCapability(Capability.MASTER_SCROLL_BOOK).getItemIds()[0]) > 0;
+        return storedInBook(capability, state) > 0 && Arrays.stream(loose.getItemIds())
+                .noneMatch(id -> bookInHand ? ItemCounts.countCarried(state, id) > 0 : ItemCounts.ownsAny(state, id))
+                ? Capability.MASTER_SCROLL_BOOK : capability;
+    }
+
+    /** The varps the cooldowns are read from, for the login scan and the live updates. */
+    public static Set<Integer> cooldownVarps() {
+        return COOLDOWNS.values().stream().map(cooldown -> cooldown[0]).collect(Collectors.toSet());
     }
 
     private static final int SKILL_MASTERY = 99;
@@ -270,8 +352,6 @@ public final class CapabilitySources {
 
     private static final Map<Capability, PatchDetector> PATCH_RULES = patchRules();
 
-    private static final Map<Capability, HouseRule> HOUSE_RULES = houseRules();
-
     /**
      * The capabilities that are farming patches, answered from the patch.
      *
@@ -281,67 +361,14 @@ public final class CapabilitySources {
      */
     private static Map<Capability, PatchDetector> patchRules() {
         Map<Capability, PatchDetector> rules = new EnumMap<>(Capability.class);
-        rules.put(Capability.SPIRIT_TREE_GROWN_BRIMHAVEN, grownSpiritTree(Capability.SPIRIT_TREE_GROWN_BRIMHAVEN, 83, "Brimhaven"));
-        // 85 rather than 83: the patch is in the guild's north wing.
-        rules.put(Capability.SPIRIT_TREE_GROWN_FARMING_GUILD, grownSpiritTree(Capability.SPIRIT_TREE_GROWN_FARMING_GUILD, 85,
-                        "Farming Guild"));
-        rules.put(Capability.SPIRIT_TREE_GROWN_PORT_SARIM, grownSpiritTree(Capability.SPIRIT_TREE_GROWN_PORT_SARIM, 83, "Port Sarim"));
+        for (Tables.Row row : TABLE) {
+            if (row.text(0).equals("spiritTree")) {
+                Capability tree = row.requireWidth(4).constant(Capability.class, 1);
+                rules.put(tree, grownSpiritTree(tree, row.integer(2), row.text(3)));
+            }
+        }
         rules.put(Capability.WEISS_HERB_PATCH, weissHerbPatch());
         return rules;
-    }
-
-    /**
-     * The capabilities built in the player's house, answered from what was seen there.
-     *
-     * <p>Levels are base levels. The Nexus refuses a boosted Magic level, but the portal
-     * chamber accepts one (wiki), so a chamber portal's floor names no Magic level.
-     *
-     * @see HouseRule#detect for the order the answers are given in
-     */
-    private static Map<Capability, HouseRule> houseRules() {
-        Map<Capability, HouseRule> rules = new EnumMap<>(Capability.class);
-        // Chamber portals all need 50 Construction. The Troll Stronghold portal is directed
-        // with salts and basalt, so it asks for no Magic level.
-        rules.put(Capability.POH_PORTAL_WEISS, portal(HouseFeature.PORTAL_WEISS, "a Weiss portal", "Making Friends with My Arm"));
-        rules.put(Capability.POH_PORTAL_TROLL_STRONGHOLD, portal(HouseFeature.PORTAL_TROLL_STRONGHOLD, "a Troll Stronghold portal",
-                        "Making Friends with My Arm"));
-        rules.put(Capability.POH_PORTAL_KOUREND, portal(HouseFeature.PORTAL_KOUREND, "a Kourend portal", "Client of Kourend"));
-        rules.put(Capability.POH_PORTAL_FENKENSTRAIN, portal(HouseFeature.PORTAL_FENKENSTRAIN,
-                "a Fenkenstrain's Castle portal", "Priest in Peril"));
-        rules.put(Capability.POH_PORTAL_HARMONY, portal(HouseFeature.PORTAL_HARMONY, "a Harmony Island portal", "The Great Brain Robbery"));
-        // The Nexus room needs 72 Construction, and the Nexus asks for the teleport's own
-        // Magic level on top.
-        rules.put(Capability.POH_NEXUS_WEISS, nexus(PortalNexus.WEISS, "Weiss", "Making Friends with My Arm", 66));
-        rules.put(Capability.POH_NEXUS_TROLL_STRONGHOLD, nexus(PortalNexus.TROLL_STRONGHOLD,
-                "the Troll Stronghold", "Making Friends with My Arm", 66));
-        rules.put(Capability.POH_NEXUS_HARMONY, nexus(PortalNexus.HARMONY_ISLAND, "Harmony Island", "The Great Brain Robbery", 65));
-        rules.put(Capability.POH_SPIRIT_TREE, built(HouseFeature.SPIRIT_TREE, "a spirit tree", floor("a spirit tree in your house")
-                        .construction(75).skill(Skill.FARMING, 83)));
-        rules.put(Capability.POH_FAIRY_RING, built(HouseFeature.FAIRY_RING, "a fairy ring", floor("a fairy ring in your house")
-                        .construction(85)));
-        // The talisman and the pendant hang in the Portal Nexus room, the glory in the quest
-        // hall, and the boxes stand in the achievement gallery.
-        rules.put(Capability.POH_XERICS_TALISMAN, built(HouseFeature.XERICS_TALISMAN, "a mounted Xeric's talisman", 72));
-        rules.put(Capability.POH_DIGSITE_PENDANT, built(HouseFeature.DIGSITE_PENDANT, "a mounted digsite pendant", 82));
-        rules.put(Capability.POH_GLORY, built(HouseFeature.GLORY, "a mounted amulet of glory", 47));
-        rules.put(Capability.POH_JEWELLERY_BOX_BASIC, built(HouseFeature.JEWELLERY_BOX_BASIC, "a basic jewellery box", 81));
-        rules.put(Capability.POH_JEWELLERY_BOX_FANCY, built(HouseFeature.JEWELLERY_BOX_FANCY, "a fancy jewellery box", 86));
-        rules.put(Capability.POH_JEWELLERY_BOX_ORNATE, built(HouseFeature.JEWELLERY_BOX_ORNATE, "an ornate jewellery box", 91));
-        return Collections.unmodifiableMap(rules);
-    }
-
-    /** Teleport jewellery kept in the house, which asks only for a Construction level. */
-    private static HouseRule built(HouseFeature feature, String what, int construction) {
-        return built(feature, what, floor(what + " in your house").construction(construction));
-    }
-
-    private static HouseRule portal(HouseFeature feature, String what, String quest) {
-        return built(feature, what, floor(what).construction(50).quest(quest));
-    }
-
-    private static HouseRule nexus(int destination, String where, String quest, int magic) {
-        return attuned(destination, where, floor(where + " in your Portal Nexus")
-                .construction(72).quest(quest).skill(Skill.MAGIC, magic));
     }
 
     /** How a player who has not been seen with a house item can make it count. */
@@ -473,7 +500,7 @@ public final class CapabilitySources {
      * stages, the fully grown, ridable state.
      */
     private static PatchDetector grownSpiritTree(Capability capability, int farmingLevel, String where) {
-        Detector cannotExist = floor("a grown spirit tree in the " + where + " patch").skill(Skill.FARMING, farmingLevel)
+        Detector cannotExist = new Floor("a grown spirit tree in the " + where + " patch").skill(Skill.FARMING, farmingLevel)
                 .quest("Tree Gnome Village");
         return (state, sight) -> {
             CapabilityVerdict tooEarly = cannotExist.detect(state);
@@ -501,7 +528,7 @@ public final class CapabilitySources {
      * would never be seen.
      */
     private static PatchDetector weissHerbPatch() {
-        Detector unlit = floor("a fire of nourishment at Weiss").quest("Making Friends with My Arm");
+        Detector unlit = new Floor("a fire of nourishment at Weiss").quest("Making Friends with My Arm");
         return (state, sight) -> sight.at(FarmingCatalogue.patchFor(Capability.WEISS_HERB_PATCH)) != null
                         ? CapabilityVerdict.have(Source.DETECTED, "the Weiss herb patch has been seen, so the fire is lit")
                         : unlit.detect(state);
@@ -565,8 +592,9 @@ public final class CapabilitySources {
 
         // Tablets and teleport spells are answered together by TeleportPlanner.
         for (Tables.Row row : TABLE) {
-            Detector rule = tableRule(row, row.constant(Capability.class, 1));
-            if (rule != null && rules.put(row.constant(Capability.class, 1), rule) != null) {
+            Capability capability = row.constant(Capability.class, 1);
+            Detector rule = tableRule(row, capability);
+            if (rule != null && rules.put(capability, rule) != null) {
                 throw row.error("a second rule for " + row.text(1));
             }
         }
@@ -581,7 +609,7 @@ public final class CapabilitySources {
         // The table's diary row answers whether the staff is needed.
         rules.put(Capability.FAIRY_RINGS, fairyRings(rules.get(Capability.STAFFLESS_FAIRY_RINGS)));
         // House items and planted trees are answered from the house and the patch; see
-        // houseRules() and patchRules().
+        // HOUSE_RULES and patchRules().
         return Collections.unmodifiableMap(rules);
     }
 
@@ -623,14 +651,14 @@ public final class CapabilitySources {
                 return questProgressAtLeast(row.requireWidth(5).text(2), row.integer(3), row.text(4));
             case "varbit":
                 return varbitAtLeast(row.requireWidth(7).integer(2), row.integer(4), row.text(5), row.text(6));
-            case "balloon":
-                return balloonStation(row.requireWidth(5).integer(2), row.text(4));
+            case "scroll":
+                return scroll(carried(row.requireWidth(6).text(5), capability), capability, row.optionalText(4));
             case "spell":
                 return spell(row.requireWidth(5).integer(2), row.optionalText(3), row.text(4));
             case "skill":
                 return skill(row.requireWidth(5).constant(Skill.class, 2), row.integer(3), row.text(4));
             case "houseIn":
-                return houseIn(capability, row.requireWidth(3).text(2));
+                return houseIn(row.requireWidth(4).text(2), row.integer(3));
             case "diary":
                 if (DiaryTiers.varbitFor(row.requireWidth(7).text(2), row.text(3)) == null) {
                     throw row.error("no diary flag for " + row.text(2) + " " + row.text(3));
@@ -640,7 +668,11 @@ public final class CapabilitySources {
                 String because = row.requireWidth(3).text(2);
                 return state -> CapabilityVerdict.have(Source.DETECTED, because);
             case "gate":
+            case "cooldown":
+            case "house":
+            case "nexus":
             case "cape":
+            case "spiritTree":
                 return null;
             default:
                 throw row.error("no rule kind " + row.text(0));
@@ -656,6 +688,8 @@ public final class CapabilitySources {
      */
     public static Spellbook spellbookFor(Capability capability) {
         switch (capability) {
+            case LUMBRIDGE_HOME_TELEPORT:
+                return Spellbook.STANDARD;
             case RESPAWN_TELEPORT:
                 return Spellbook.ARCEUUS;
             case FERTILE_SOIL:
@@ -707,13 +741,8 @@ public final class CapabilitySources {
             if (charges != null && charges == 0) {
                 return CapabilityVerdict.lack(Source.DETECTED, "your book has no charges. Recharge it at the Old Memorial");
             }
-            if (holding.getState() != CapabilityState.HAVE) {
-                return holding;
-            }
-            if (page == null || charges == null) {
-                return CapabilityVerdict.unknown("not sure whether your book has a charge");
-            }
-            return holding;
+            return holding.getState() == CapabilityState.HAVE && (page == null || charges == null)
+                    ? CapabilityVerdict.unknown("not sure whether your book has a charge") : holding;
         };
     }
 
@@ -767,15 +796,11 @@ public final class CapabilitySources {
             if (noStaffNeeded.getState() == CapabilityState.HAVE) {
                 return noStaffNeeded;
             }
-            CapabilityVerdict held = staff.detect(state);
-            if (held.getState() == CapabilityState.HAVE) {
-                return opened;
-            }
-            if (noStaffNeeded.getState() == CapabilityState.LACK && held.getState() == CapabilityState.LACK) {
+            if (noStaffNeeded.getState() == CapabilityState.LACK && staff.detect(state).getState() == CapabilityState.LACK) {
                 return CapabilityVerdict.lack(Source.DETECTED, "you need a dramen or lunar staff to use fairy rings");
             }
-            // Unread diary or unseen bank: keep the rungs. The packing list still names the
-            // staff, so a player who has one is not sent off without it.
+            // A staff held, or an unread diary or unseen bank: keep the rungs. The packing
+            // list still names the staff, so a player who has one is not sent off without it.
             return opened;
         };
     }
@@ -830,10 +855,7 @@ public final class CapabilitySources {
      * ordinal, so reordering {@link QuestStatus} cannot change the answer.
      */
     private static boolean hasReached(QuestStatus status, QuestStatus wanted) {
-        if (wanted == QuestStatus.COMPLETED) {
-            return status == QuestStatus.COMPLETED;
-        }
-        return status != QuestStatus.NOT_STARTED;
+        return wanted == QuestStatus.COMPLETED ? status == QuestStatus.COMPLETED : status != QuestStatus.NOT_STARTED;
     }
 
     private static Detector quest(String questName, String description) {
@@ -900,12 +922,23 @@ public final class CapabilitySources {
     }
 
     /**
-     * One balloon station, flagged once the player has flown there. The flag already
-     * implies Enlightened Journey and its Firemaking level.
+     * A teleport scroll, owned loose or stored in an owned master scroll book, whose varbits
+     * count the scrolls of each kind it holds. Behind its quest, when it has one.
      */
-    private static Detector balloonStation(int varbitId, String where) {
-        return varbitAtLeast(varbitId, 1, "you have unlocked the balloon station at " + where,
-                "you have not unlocked the balloon station at " + where);
+    private static Detector scroll(Detector loose, Capability capability, String quest) {
+        Detector book = carried("a master scroll book", Capability.MASTER_SCROLL_BOOK);
+        Detector unlocked = quest == null ? null : quest(quest, "this scroll");
+        return state -> {
+            CapabilityVerdict held = loose.detect(state);
+            if (held.getState() != CapabilityState.HAVE) {
+                if (storedInBook(capability, state) == 0 || book.detect(state).getState() != CapabilityState.HAVE) {
+                    return held;
+                }
+                held = CapabilityVerdict.have(Source.DETECTED, "your master scroll book holds one");
+            }
+            CapabilityVerdict gate = unlocked == null ? held : unlocked.detect(state);
+            return gate.getState() == CapabilityState.HAVE ? held : gate;
+        };
     }
 
     /**
@@ -923,42 +956,27 @@ public final class CapabilitySources {
     }
 
     /**
-     * The answer read off the player's respawn setting, or null when it has not been read.
-     * A player respawns in exactly one place, so every other town is a definite no.
-     */
-    private static CapabilityVerdict fromSelection(String town, PlayerState state) {
-        String selected = selectedRespawnTown(state);
-        if (selected == null) {
-            return null;
-        }
-        return selected.equals(town) ? CapabilityVerdict.have(Source.DETECTED, "your respawn point is " + town)
-                : CapabilityVerdict.lack(Source.DETECTED, "your respawn point is " + selected + ", not " + town);
-    }
-
-    /**
      * A respawn town, unlocked as {@link #RESPAWN_UNLOCKS} answers for it, and selected at
      * {@code where}.
      *
-     * <p>The selected respawn town answers outright when it has been read. Otherwise an
-     * unlocked town answers UNKNOWN, with a reason telling the player where to select it,
-     * and a locked one gives the unlock's own reason.
+     * <p>The selected respawn town answers outright when it has been read: a player respawns
+     * in exactly one place, so every other town is a definite no. Otherwise an unlocked town
+     * answers UNKNOWN, with a reason telling the player where to select it, and a locked one
+     * gives the unlock's own reason.
      */
     private static Detector respawnPoint(String town, String where) {
         Detector unlocked = RESPAWN_UNLOCKS.get(town);
         return state -> {
-            String selectIt = "set your respawn point to " + town + " by talking to " + where + " to use this";
             // The setting outranks the unlock, which only says they could choose it.
-            CapabilityVerdict settled = fromSelection(town, state);
-            if (settled != null) {
-                return settled;
+            String selected = selectedRespawnTown(state);
+            if (selected != null) {
+                return selected.equals(town) ? CapabilityVerdict.have(Source.DETECTED, "your respawn point is " + town)
+                        : CapabilityVerdict.lack(Source.DETECTED, "your respawn point is " + selected + ", not " + town);
             }
             CapabilityVerdict verdict = unlocked.detect(state);
-            return verdict.getState() == CapabilityState.HAVE ? CapabilityVerdict.unknown(selectIt) : verdict;
+            return verdict.getState() == CapabilityState.HAVE ? CapabilityVerdict.unknown("set your respawn point to " + town
+                    + " by talking to " + where + " to use this") : verdict;
         };
-    }
-
-    private static Floor floor(String what) {
-        return new Floor(what);
     }
 
     /**
@@ -969,6 +987,7 @@ public final class CapabilitySources {
      * not actual. Falling short of one is LACK; otherwise the answer is UNKNOWN. An
      * unobserved quest is not a shortfall.
      */
+    @RequiredArgsConstructor
     private static final class Floor implements Detector {
         private final String what;
 
@@ -978,14 +997,6 @@ public final class CapabilitySources {
          */
         private final Map<Skill, Integer> levels = new LinkedHashMap<>();
         private String questName;
-
-        Floor(String what) {
-            this.what = what;
-        }
-
-        Floor construction(int level) {
-            return skill(Skill.CONSTRUCTION, level);
-        }
 
         Floor quest(String questName) {
             this.questName = questName;
@@ -1041,9 +1052,9 @@ public final class CapabilitySources {
      * A house in a named town. UNKNOWN only until the login scan reads the location varbit;
      * every reading after that is a yes or a no.
      */
-    private static Detector houseIn(Capability location, String town) {
+    private static Detector houseIn(String town, int value) {
         return state -> {
-            Boolean here = HouseLocation.isHouseIn(location, state.getVarbits());
+            Boolean here = HouseLocation.isHouseIn(value, state.getVarbits());
             if (here == null) {
                 return CapabilityVerdict.unknown("not sure where your house is");
             }
@@ -1063,7 +1074,9 @@ public final class CapabilitySources {
         return state -> {
             Capability earned = DiaryRewards.bestEarnedTier(capability.getTierFamily(), state.getVarbits());
             if (earned == null) {
-                return CapabilityVerdict.lack(Source.DETECTED, "you have not earned " + capability.getDisplayName() + " yet");
+                // A lower tier the routes cannot use, such as Explorer's ring 1, is held but no help.
+                return CapabilityVerdict.lack(Source.DETECTED, "this needs " + capability.getDisplayName() + " or better, from "
+                        + DiaryRewards.earnedBy(capability));
             }
             if (capability.isSatisfiedBy(earned)) {
                 String because = earned == capability ? "you have " + capability.getDisplayName()
@@ -1072,14 +1085,5 @@ public final class CapabilitySources {
             }
             return CapabilityVerdict.lack(Source.DETECTED, "you have " + earned.getDisplayName() + ", not " + capability.getDisplayName());
         };
-    }
-
-    /**
-     * Every capability whose daily teleport allowance the game itself counts, keyed by the
-     * counting varbit. Used for live varbit changes and to prime a fresh login. Owned by
-     * {@link DiaryRewards}, which holds the varbit facts.
-     */
-    public static Map<Integer, Capability> dailyUsesCapabilitiesByVarbit() {
-        return DiaryRewards.USES_SPENT_BY_VARBIT;
     }
 }

@@ -1,5 +1,6 @@
 package com.larryfarming.farming.engine;
 
+import com.larryfarming.data.Tables;
 import com.larryfarming.engine.*;
 import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.farming.catalogue.CarryItems;
@@ -123,31 +124,21 @@ public final class DepositPlanner {
         return asked;
     }
 
-    /** The roots a regular tree's stump gives when dug up. */
-    private static final Set<Integer> ROOTS = Set.of(ItemID.OAK_ROOTS, ItemID.WILLOW_ROOTS,
-            ItemID.MAPLE_ROOTS, ItemID.YEW_ROOTS, ItemID.MAGIC_ROOTS);
-
     /**
-     * A herb patch's harvest, which comes grimy. The crop table names the clean herb, which
-     * the patch never gives.
+     * What the run leaves in the bag: pots, buckets, roots and grimy herbs from the table, and
+     * what farming hands back, each produce id with the logs of a felled tree among them.
      */
-    private static final Set<Integer> GRIMY_HERBS = Set.of(ItemID.UNIDENTIFIED_GUAM,
-            ItemID.UNIDENTIFIED_MARENTILL, ItemID.UNIDENTIFIED_TARROMIN, ItemID.UNIDENTIFIED_HARRALANDER, ItemID.UNIDENTIFIED_RANARR,
-            ItemID.UNIDENTIFIED_TOADFLAX, ItemID.UNIDENTIFIED_IRIT, ItemID.UNIDENTIFIED_AVANTOE, ItemID.UNIDENTIFIED_KWUARM,
-            ItemID.UNIDENTIFIED_SNAPDRAGON, ItemID.UNIDENTIFIED_HUASCA, ItemID.UNIDENTIFIED_CADANTINE, ItemID.UNIDENTIFIED_LANTADYME,
-            ItemID.UNIDENTIFIED_DWARF_WEED, ItemID.UNIDENTIFIED_TORSTOL);
+    private static final Set<Integer> LEFT_BEHIND = new HashSet<>();
 
-    /** What farming hands back: each produce id, the logs of a felled tree among them. */
-    private static final Set<Integer> PRODUCE = produceIds();
-
-    private static Set<Integer> produceIds() {
-        Set<Integer> ids = new HashSet<>();
+    static {
+        for (Tables.Row row : Tables.read("/com/larryfarming/left-behind.tsv", 2)) {
+            LEFT_BEHIND.add(row.integer(0));
+        }
         for (Crop crop : Crop.values()) {
             if (crop.isProduce() && crop.getItemId() > 0) {
-                ids.add(crop.getItemId());
+                LEFT_BEHIND.add(crop.getItemId());
             }
         }
-        return ids;
     }
 
     /**
@@ -199,7 +190,7 @@ public final class DepositPlanner {
             if (packedThisTrip.contains(itemId) && ItemCounts.leprechaunStores(itemId)) {
                 continue;
             }
-            if (!stock && !packedThisTrip.contains(itemId) && !leftBehind(itemId)) {
+            if (!stock && !packedThisTrip.contains(itemId) && !LEFT_BEHIND.contains(itemId)) {
                 continue;
             }
             // No count on the tile while the whole stack goes back: a count that ticks up with
@@ -210,12 +201,6 @@ public final class DepositPlanner {
                     CropData.tagForPlantable(itemId), "", held.getValue()));
         }
         return deposits;
-    }
-
-    /** What the run itself leaves in the bag: pots, buckets, produce and roots. */
-    static boolean leftBehind(int itemId) {
-        return itemId == ItemID.PLANTPOT_EMPTY || itemId == ItemID.BUCKET_EMPTY || ROOTS.contains(itemId) || PRODUCE.contains(itemId)
-                || GRIMY_HERBS.contains(itemId);
     }
 
     /** Items that take a slot each however many: compost buckets and plant cure. */

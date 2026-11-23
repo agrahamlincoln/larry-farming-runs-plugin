@@ -1,8 +1,8 @@
 package com.larryfarming.farming.detection;
 
+import com.larryfarming.data.Tables;
 import com.larryfarming.farming.model.Capability;
 import java.util.*;
-import net.runelite.api.gameval.VarbitID;
 
 /**
  * How to tell, from game flags alone, which tier of a diary reward item a player has
@@ -23,33 +23,34 @@ public final class DiaryRewards {
      * The diary completion varbit that grants each tier. The highest completed tier names
      * what the player has.
      */
-    private static final Map<Capability, Integer> GRANTED_BY = grantedBy();
+    private static final Map<Capability, Integer> GRANTED_BY = new EnumMap<>(Capability.class);
 
     /**
      * Each varbit counting a capability's uses spent today, upward from zero, and the
-     * capability it counts. The login scan reads each, so a part-spent day is seen.
-     *
-     * <p>Only the Explorer's ring has one: 4552 counts its cabbage-patch teleports (4553
-     * counts energy restores, 4554 free alchs). Varbit 6069 ({@code ARDOUGNE_CLOAK_LOWBITS})
-     * is a single bit and cannot hold the cloak's three or five daily farm teleports, so the
-     * cloak's uses are counted as they happen (see {@link ArdougneFarmTeleportWatch}).
+     * capability it counts. The login scan reads each, so a part-spent day is seen. The
+     * Ardougne cloak has none, so {@link ArdougneFarmTeleportWatch} counts its uses.
      */
-    static final Map<Integer, Capability> USES_SPENT_BY_VARBIT = Map.of(
-            VarbitID.LUMBRIDGE_CABBAGE_TELEPORT, Capability.EXPLORERS_RING_2);
+    public static final Map<Integer, Capability> USES_SPENT_BY_VARBIT;
 
-    private static Map<Capability, Integer> grantedBy() {
-        Map<Capability, Integer> granted = new EnumMap<>(Capability.class);
-        // Lumbridge & Draynor: medium, hard, elite give Explorer's ring 2, 3 and 4.
-        granted.put(Capability.EXPLORERS_RING_2, DiaryTiers.varbitFor("Lumbridge", DiaryTiers.MEDIUM));
-        granted.put(Capability.EXPLORERS_RING_3, DiaryTiers.varbitFor("Lumbridge", DiaryTiers.HARD));
-        granted.put(Capability.EXPLORERS_RING_4, DiaryTiers.varbitFor("Lumbridge", DiaryTiers.ELITE));
-        // Ardougne: easy gives cloak 1, then the same three tiers give 2, 3 and 4. Cloak 1
-        // matters because its Monastery teleport lands beside a fairy ring.
-        granted.put(Capability.ARDOUGNE_CLOAK_1, DiaryTiers.varbitFor("Ardougne", DiaryTiers.EASY));
-        granted.put(Capability.ARDOUGNE_CLOAK_2, DiaryTiers.varbitFor("Ardougne", DiaryTiers.MEDIUM));
-        granted.put(Capability.ARDOUGNE_CLOAK_3, DiaryTiers.varbitFor("Ardougne", DiaryTiers.HARD));
-        granted.put(Capability.ARDOUGNE_CLOAK_4, DiaryTiers.varbitFor("Ardougne", DiaryTiers.ELITE));
-        return Collections.unmodifiableMap(granted);
+    /** The diary tier that earns each reward, as a player names it: "the medium Lumbridge diary". */
+    private static final Map<Capability, String> EARNED_BY = new EnumMap<>(Capability.class);
+
+    static {
+        Map<Integer, Capability> usesSpent = new HashMap<>();
+        for (Tables.Row row : Tables.read("/com/larryfarming/diary-rewards.tsv", 5)) {
+            Capability reward = row.constant(Capability.class, 0);
+            GRANTED_BY.put(reward, DiaryTiers.varbitFor(row.text(1), row.text(2)));
+            EARNED_BY.put(reward, "the " + row.text(2).toLowerCase(Locale.ROOT) + " " + row.text(1) + " diary");
+            if (row.optionalText(3) != null) {
+                usesSpent.put(row.integer(3), reward);
+            }
+        }
+        USES_SPENT_BY_VARBIT = Collections.unmodifiableMap(usesSpent);
+    }
+
+    /** The diary tier that earns this reward, as a player names it, or null for no reward. */
+    public static String earnedBy(Capability reward) {
+        return EARNED_BY.get(reward);
     }
 
     /** The best tier of this family the player has earned, or null if none. */

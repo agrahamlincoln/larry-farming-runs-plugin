@@ -53,11 +53,6 @@ public class Approach {
 
     /** The leg whose requirement is this part of {@link #getWay()}, or null for none. */
     public Leg legFor(Requirement part) {
-        for (Leg leg : legs) {
-            if (leg.getRequires().equals(part)) {
-                return leg;
-            }
-        }
-        return null;
+        return legs.stream().filter(leg -> leg.getRequires().equals(part)).findFirst().orElse(null);
     }
 }

@@ -50,10 +50,24 @@ public final class RunPlanner {
      *
      * <p>The player's position is spent on the first arrival that takes it. By the next
      * journey they are somewhere else. See {@link Allowance}.
+     *
+     * @param onATrip true for a run planned as part of a trip: a patch only another run
+     *     works may yet be on the trip, so a rung leaning on it is uncertain here, not
+     *     written off. The trip's own pass settles it ({@code RunPlanning.replanAcrossTheCircuit}).
      */
-    public List<StopPlan> plan(FarmingRun run, PlayerState state) {
+    public List<StopPlan> plan(FarmingRun run, PlayerState state, boolean onATrip) {
         List<StopPlan> plans = new ArrayList<>();
         Map<PatchRef, CapabilityState> reached = new LinkedHashMap<>();
+        if (onATrip) {
+            for (RunStop stop : run.getStops()) {
+                for (TravelOption rung : stop.getTravel()) {
+                    rung.getRequires().leafPatches().forEach(patch -> reached.put(patch, CapabilityState.UNKNOWN));
+                }
+            }
+        }
+        for (RunStop stop : run.getStops()) {
+            reached.keySet().removeAll(stop.getPatches());
+        }
         Allowance allowance = new Allowance();
         for (RunStop stop : run.getStops()) {
             // A stop gated behind something the player definitely lacks (Harmony Island
@@ -156,9 +170,27 @@ public final class RunPlanner {
             return shutOut;
         }
         CapabilityResolver asked = resolverFor(mayStandHere);
+        // A player already standing at the patches has made the run, however long it was.
+        if (mayStandHere && state != null && stop.isIn(state.getRegionId())) {
+            asked = asked.limitingWalks(Integer.MAX_VALUE);
+        }
         StopPlan routed = routeBy(stop, stop.getTravel(), start, state, reached, asked);
         if (routed != null) {
             return routed;
+        }
+        // Reachable, but only by a run longer than the player allows. A rung within the limit
+        // that wants only a restock names that instead: runes for Catherby Teleport tell the
+        // player more than a long fairy ring walk does.
+        if (routeBy(stop, stop.getTravel(), start, state, reached, asked.limitingWalks(Integer.MAX_VALUE)) != null) {
+            String because = "every way here runs longer than " + (asked.getLongestWalk() * 3 + 9) / 10 + " seconds. See Travel";
+            for (TravelOption rung : ladderFor(stop.getTravel(), start, state, reached, asked)) {
+                if (asked.gapTo(rung.getRequires(), state) == CapabilityResolver.Gap.RESTOCK) {
+                    because = asked.explainShortfall(rung.getRequires(), state);
+                    break;
+                }
+            }
+            return new StopPlan(stop, StopPlan.Outcome.SKIP, null, CapabilityState.LACK, because,
+                    FarmingSkipReason.NOT_WORTH_TRIP, 0L, Collections.emptySet(), null);
         }
         StopPlan unread = waitingOnAfact(stop, state, reached, asked);
         return unread != null ? unread : giveUp(stop, state, asked);
@@ -233,38 +265,16 @@ public final class RunPlanner {
 
     /**
      * The ladder as this player, starting from {@code start}, climbs it: each rung ranked by
-     * its whole walk for this account ({@link #ranked}).
+     * its whole walk for this account ({@link #ranked}), less every rung walking further than
+     * the player allows. A rung with no walk figure stays.
+     *
+     * <p>A rung waiting for a start ({@link TravelOption#isStartOnly()}) stays on only when
+     * this start grants it, and then counts the start's walk in place of its approach. With no
+     * start and no approach, every figure is the catalogue's own, so ranking keeps the
+     * catalogue's order and only drops the rungs past the limit.
      */
     static List<TravelOption> ladderFor(List<TravelOption> ladder, Start start, PlayerState state,
             Map<PatchRef, CapabilityState> reached, CapabilityResolver asked) {
-        List<TravelOption> from = ladderFrom(ladder, start);
-        // Planning runs on every snapshot. With no start and no approach, every figure is the
-        // catalogue's own, so its ranking stands and ranking again would change nothing.
-        // A started rung has a walk the catalogue could not know, so a start always re-ranks.
-        return start == null && !asksForAnApproach(from) ? from : ranked(from, state, reached, asked);
-    }
-
-    /** Whether any rung leaves out an approach whose walk this account decides. */
-    private static boolean asksForAnApproach(List<TravelOption> ladder) {
-        for (TravelOption rung : ladder) {
-            if (!rung.hasWalkFigure()) {
-                continue;
-            }
-            for (Approach approach : FarmingCatalogue.approaches()) {
-                if (rung.getRequires().contains(approach.getWay())) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * The ladder as a player starting from {@code start} climbs it. A rung waiting for a
-     * start ({@link TravelOption#isStartOnly()}) stays on only when this start grants it.
-     * A started rung counts the start's walk in place of its approach.
-     */
-    private static List<TravelOption> ladderFrom(List<TravelOption> ladder, Start start) {
         List<TravelOption> from = new ArrayList<>(ladder.size());
         for (TravelOption rung : ladder) {
             TravelOption started = start == null ? rung : rung.startingFrom(start.getGranted(), start.getWalk(), start.getTiles());
@@ -272,7 +282,7 @@ public final class RunPlanner {
                 from.add(started);
             }
         }
-        return from;
+        return ranked(from, state, reached, asked);
     }
 
     /**
@@ -284,44 +294,47 @@ public final class RunPlanner {
      * ring or by a Salve graveyard tablet.
      *
      * <p>A rung whose every way in is a definite no has no total, so it keeps its place
-     * among the rest: it cannot be taken.
+     * among the rest: it cannot be taken. A rung whose total walks further than the player
+     * allows is left out.
      */
     private static List<TravelOption> ranked(List<TravelOption> ladder, PlayerState state,
             Map<PatchRef, CapabilityState> reached, CapabilityResolver asked) {
-        if (ladder.size() < 2) {
-            return ladder;
-        }
-        int[] walks = new int[ladder.size()];
-        TravelOption.Cost[] costs = new TravelOption.Cost[ladder.size()];
-        for (int i = 0; i < walks.length; i++) {
-            TravelOption rung = ladder.get(i);
-            walks[i] = rung.getWalk();
-            costs[i] = rung.getCost();
-            if (!rung.hasWalkFigure()) {
-                continue;
-            }
+        List<TravelOption> kept = new ArrayList<>(ladder.size());
+        List<Integer> walks = new ArrayList<>(ladder.size());
+        List<TravelOption.Cost> costs = new ArrayList<>(ladder.size());
+        for (TravelOption rung : ladder) {
+            int walk = rung.getWalk();
+            TravelOption.Cost cost = rung.getCost();
             for (Approach approach : FarmingCatalogue.approaches()) {
-                if (!rung.getRequires().contains(approach.getWay())) {
+                if (!rung.hasWalkFigure() || !rung.getRequires().contains(approach.getWay())) {
                     continue;
                 }
                 Approach.Leg leg = approach.legFor(asked.takenBranch(approach.getWay(), state, reached));
                 if (leg == null) {
-                    walks[i] = TravelOption.UNMEASURED;
+                    walk = TravelOption.UNMEASURED;
                     break;
                 }
-                walks[i] += leg.getWalk();
-                costs[i] = RungOrder.dearer(costs[i], leg.getCost());
+                walk += leg.getWalk();
+                cost = RungOrder.dearer(cost, leg.getCost());
+            }
+            if (!rung.hasWalkFigure() || walk == TravelOption.UNMEASURED || walk <= asked.getLongestWalk()) {
+                kept.add(rung);
+                walks.add(walk);
+                costs.add(cost);
             }
         }
-        return RungOrder.rank(ladder, new RungOrder.Figures() {
+        if (kept.size() < 2) {
+            return kept;
+        }
+        return RungOrder.rank(kept, new RungOrder.Figures() {
             @Override
             public int walk(int rung) {
-                return walks[rung];
+                return walks.get(rung);
             }
 
             @Override
             public TravelOption.Cost cost(int rung) {
-                return costs[rung];
+                return costs.get(rung);
             }
         });
     }
@@ -334,12 +347,8 @@ public final class RunPlanner {
     /** The first rung on this ladder the player certainly holds, or null. */
     private TravelOption firstCertain(List<TravelOption> ladder, PlayerState state,
             Map<PatchRef, CapabilityState> reached, CapabilityResolver asked) {
-        for (TravelOption option : ladder) {
-            if (asked.evaluate(option.getRequires(), state, reached) == CapabilityState.HAVE) {
-                return option;
-            }
-        }
-        return null;
+        return ladder.stream().filter(option -> asked.evaluate(option.getRequires(), state, reached) == CapabilityState.HAVE)
+                .findFirst().orElse(null);
     }
 
     /**

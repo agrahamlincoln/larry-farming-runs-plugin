@@ -8,13 +8,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.*;
 import javax.swing.ImageIcon;
 import javax.swing.SwingUtilities;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.SpriteID;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The item and interface sprites the side panel draws, fetched from the client and cached so
@@ -23,10 +24,10 @@ import org.slf4j.LoggerFactory;
  * <p>Every icon is handed out at its final size and fills in place when its pixels arrive,
  * so a row is laid out once.
  */
+@Slf4j
+@RequiredArgsConstructor
 public class IconProvider
 {
-	private static final Logger log = LoggerFactory.getLogger(IconProvider.class);
-
 	private final ItemManager itemManager;
 	private final SpriteManager spriteManager;
 
@@ -41,18 +42,8 @@ public class IconProvider
 	private static final int SPELLBOOK_ICON_SIZE = 16;
 
 	/** Callback to repaint the panel when an async item sprite finishes loading. */
+	@Setter
 	private volatile Runnable onImageLoaded;
-
-	public IconProvider(ItemManager itemManager, SpriteManager spriteManager)
-	{
-		this.itemManager = itemManager;
-		this.spriteManager = spriteManager;
-	}
-
-	public void setOnImageLoaded(Runnable callback)
-	{
-		this.onImageLoaded = callback;
-	}
 
 	/**
 	 * An item's sprite, drawn for a stack of {@code quantity} when {@code stackable}. Every

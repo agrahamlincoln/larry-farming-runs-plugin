@@ -3,6 +3,7 @@ package com.larryfarming.farming.engine;
 import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.farming.catalogue.FarmingCatalogue;
 import com.larryfarming.farming.detection.CapabilityResolver;
+import com.larryfarming.farming.detection.CapabilitySources;
 import com.larryfarming.farming.detection.CapabilityState;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.PlayerState;
@@ -86,13 +87,13 @@ final class RunPlanning {
         // A player who puts the best seeds everywhere has no quota: every patch worth a good
         // seed takes one. The reserved guild patch still is not, so it keeps the filler.
         int quota = FarmingCatalogue.seedPolicy().getGoodSeedsPerRun();
-        int goodPatches = inputs.getPreferences().plantsBestSeedsEverywhere() ? Math.min(countGoodHomes(plans), rotationPatches)
-                : Math.min(countGoodHomes(plans), quota - CropAssigner.goodSeatsSpent(plans, state, inputs, quota, walk));
+        int goodPatches = Math.min(countGoodHomes(plans), inputs.getPreferences().plantsBestSeedsEverywhere() ? rotationPatches
+                : quota - CropAssigner.goodSeatsSpent(plans, state, inputs, quota, walk));
         // A run naming its own seeds (every tree run) gets a ranked ladder, not the herb
         // rotation. Only the rotation draws from the shared stock: a tree run's ladder
         // covers one patch type, so two tree families never compete for a sapling. A patch
         // a diary claims takes its crop in assignCrops, outside the ladder.
-        SeedPlan seeds = run.getSeedPatchType() == null ? SeedSelector.select(inputs.getPreferences(), state, goodPatches,
+        SeedPlan seeds = run.getSeedPatchType() == null ? SeedSelector.select(inputs.getPreferences(), goodPatches,
                         rotationPatches - goodPatches, rotationStock) : SeedSelector.forPreference(inputs.getPreferences(),
                         run.getSeedPatchType(), state, countPlanting(plans) - countDiaryClaims(plans, state, inputs),
                         DiaryPlantings.withheld(state, inputs.getPreferences()));
@@ -217,12 +218,7 @@ final class RunPlanning {
      * and now can must be offered. The second stop's chosen route names no patch.
      */
     private static boolean leansOnApatch(RunStop stop) {
-        for (TravelOption rung : stop.getTravel()) {
-            if (!rung.getRequires().leafPatches().isEmpty()) {
-                return true;
-            }
-        }
-        return false;
+        return stop.getTravel().stream().anyMatch(rung -> !rung.getRequires().leafPatches().isEmpty());
     }
 
     /**
@@ -234,18 +230,11 @@ final class RunPlanning {
      * first pass did. Asked of the whole chain, for the reason {@link #leansOnApatch} gives.
      */
     private static boolean wantsReplanning(RunStop stop, CapabilityResolver resolver) {
-        if (leansOnApatch(stop)) {
-            return true;
-        }
-        for (TravelOption rung : stop.getTravel()) {
-            // Covers a zone named outright and a reach(...) leaf to a place whose ground is
-            // known. TravelOption.to always builds such a leaf, so the declared destination
-            // needs no separate check.
-            if (rung.getRequires().readableFromPosition() || resolver.leansOnTravelTaken(rung.getRequires())) {
-                return true;
-            }
-        }
-        return false;
+        // Position covers a zone named outright and a reach(...) leaf to a place whose ground
+        // is known. TravelOption.to always builds such a leaf, so the declared destination
+        // needs no separate check.
+        return leansOnApatch(stop) || stop.getTravel().stream().anyMatch(rung ->
+                rung.getRequires().readableFromPosition() || resolver.leansOnTravelTaken(rung.getRequires()));
     }
 
     /**
@@ -257,6 +246,44 @@ final class RunPlanning {
     static Itinerary.Trip replanAcrossTheCircuit(Itinerary.Trip trip, RunPlanner planner, PlayerState state) {
         List<StopPlan> settled = replanLeaningRungs(trip.getPlans(), trip.getVisits(), planner, state);
         return trip.rerouted(settled, cropsWithoutTheStopsThatLeft(settled, trip.getCropFor()));
+    }
+
+    /**
+     * The trip with each cooldown teleport used once: the first journey in walk order whose
+     * route takes it claims it, and every later journey that would take it too is routed
+     * again without it. A minigame or home teleport's cooldown, 20 or 30 minutes, outlasts
+     * the walk between two of the trip's journeys.
+     *
+     * <p>A journey, not a stop: every patch at the arrival shares the one cast, so the
+     * claim lands only once the whole arrival is planned. An arrival the player skips casts
+     * nothing and claims nothing.
+     */
+    static Itinerary.Trip claimCooldowns(Itinerary.Trip trip, RunPlanner planner, PlayerState state) {
+        List<StopPlan> plans = new ArrayList<>(trip.getPlans());
+        Set<Capability> claimed = EnumSet.noneOf(Capability.class);
+        // The patches the trip reaches before each stop, so a route leaning on one survives.
+        Map<PatchRef, CapabilityState> reached = new HashMap<>();
+        for (List<Integer> visit : trip.getVisits()) {
+            for (int index : visit) {
+                StopPlan plan = plans.get(index);
+                if (plan.isVisit() && !Collections.disjoint(plan.getRoute().getRequires().leafCapabilities(), claimed)) {
+                    plans.set(index, new RunPlanner(planner.resolver().claiming(claimed)).planStop(plan.getStop(), state, reached, false));
+                }
+            }
+            if (!StopRowWriter.isJourney(visit, plans)) {
+                continue;
+            }
+            for (int index : visit) {
+                StopPlan plan = plans.get(index);
+                if (plan.isVisit()) {
+                    plan.getRoute().getRequires().leafCapabilities().stream().filter(CapabilitySources::hasCooldown).forEach(claimed::add);
+                    for (PatchRef patch : plan.getStop().getPatches()) {
+                        reached.put(patch, plan.getConfidence());
+                    }
+                }
+            }
+        }
+        return trip.rerouted(plans, cropsWithoutTheStopsThatLeft(plans, trip.getCropFor()));
     }
 
     /**
@@ -344,7 +371,7 @@ final class RunPlanning {
      * {@link #takeTheContractsSeedFirst} both read visits off these, so they must agree.
      */
     private static List<StopPlan> plansOf(FarmingRun run, RunPlanner planner, PlayerState state, FarmingInputs inputs) {
-        return StopSkipRules.leaveStandingCrops(run, planner.plan(run, state), inputs, state);
+        return StopSkipRules.leaveStandingCrops(run, planner.plan(run, state, true), inputs, state);
     }
 
     /**

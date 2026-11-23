@@ -29,6 +29,7 @@ public class StatePersistence {
     private static final String KEY_BANK_HELD = "bankHeld";
     private static final String KEY_FARMING_PREFIX = "farming.";
     private static final String KEY_FARMING_TICK_OFFSET = "farmingTickOffset";
+    private static final String KEY_FARMING_TRIP = "farmingTrip";
 
     private static final long SAVE_DEBOUNCE_MS = 5000;
 
@@ -152,8 +153,7 @@ public class StatePersistence {
             return;
         }
         for (FarmingTracker.PersistedEntry e : entries) {
-            store.setRSProfileConfiguration(CONFIG_GROUP, KEY_FARMING_PREFIX + e.getConfigKey(),
-                    e.getVarbitValue() + ":" + e.getObservedAtEpochSec());
+            save(KEY_FARMING_PREFIX + e.getConfigKey(), e.getVarbitValue(), e.getObservedAtEpochSec());
         }
     }
 
@@ -161,16 +161,10 @@ public class StatePersistence {
     public Collection<FarmingTracker.PersistedEntry> loadFarmingPatches() {
         List<FarmingTracker.PersistedEntry> out = new ArrayList<>();
         for (FarmingWorldMap.PatchDef patch : FarmingWorldMap.allPatches()) {
-            String[] parts = fields(KEY_FARMING_PREFIX + patch.configKey(), 2);
-            if (parts == null) {
-                continue;
-            }
-            try {
-                int value = Integer.parseInt(parts[0]);
-                long ts = Long.parseLong(parts[1]);
-                out.add(new FarmingTracker.PersistedEntry(patch.configKey(), value, ts));
-            } catch (NumberFormatException ex) {
-                // ignore malformed entry
+            // A sighting is never stamped before the epoch, so -1 marks one unset or malformed.
+            long[] seen = numbers(KEY_FARMING_PREFIX + patch.configKey(), 0, -1);
+            if (seen[1] >= 0 && fitsInt(seen[0])) {
+                out.add(new FarmingTracker.PersistedEntry(patch.configKey(), Math.toIntExact(seen[0]), seen[1]));
             }
         }
         return out;
@@ -183,8 +177,7 @@ public class StatePersistence {
      * observed growth tick.
      */
     public void saveFarmingTickOffset(int offsetSeconds, int precisionMins, int resolutionSeconds) {
-        store.setRSProfileConfiguration(CONFIG_GROUP, KEY_FARMING_TICK_OFFSET,
-                offsetSeconds + ":" + precisionMins + ":" + resolutionSeconds);
+        save(KEY_FARMING_TICK_OFFSET, offsetSeconds, precisionMins, resolutionSeconds);
     }
 
     /**
@@ -193,27 +186,51 @@ public class StatePersistence {
      * {-1, -1, 1}: no offset learned yet, at one-second resolution.
      */
     public int[] loadFarmingTickOffset() {
-        String[] parts = fields(KEY_FARMING_TICK_OFFSET, 3);
-        if (parts != null) {
-            try {
-                return new int[]{Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), Integer.parseInt(parts[2])};
-            } catch (NumberFormatException ex) {
-                // Malformed: read as never observed.
-            }
+        long[] read = numbers(KEY_FARMING_TICK_OFFSET, -1, -1, 1);
+        if (!Arrays.stream(read).allMatch(StatePersistence::fitsInt)) {
+            return new int[]{-1, -1, 1};
         }
-        return new int[]{-1, -1, 1};
+        return Arrays.stream(read).mapToInt(Math::toIntExact).toArray();
+    }
+
+    /** Whether a stored number fits an int; one that doesn't reads as malformed. */
+    private static boolean fitsInt(long value) {
+        return value == (int) value;
+    }
+
+    /** Persist the trip the player is on as "startEpochSec:lastEpochSec". */
+    public void saveFarmingTrip(long startEpochSec, long lastEpochSec) {
+        save(KEY_FARMING_TRIP, startEpochSec, lastEpochSec);
+    }
+
+    /** Load the trip as {start, last}; {0, 0}, no trip, when unset or malformed. */
+    public long[] loadFarmingTrip() {
+        return numbers(KEY_FARMING_TRIP, 0, 0);
+    }
+
+    /** Store these numbers under {@code key} for this RS profile, colon-separated. */
+    private void save(String key, long... values) {
+        StringJoiner joined = new StringJoiner(":");
+        for (long value : values) {
+            joined.add(String.valueOf(value));
+        }
+        store.setRSProfileConfiguration(CONFIG_GROUP, key, joined.toString());
     }
 
     /**
-     * This RS profile's colon-separated value for {@code key}, split, or null when unset or
-     * when it does not hold exactly {@code count} fields.
+     * This RS profile's colon-separated numbers under {@code key}, or {@code absent} when
+     * unset, malformed, or not as many as {@code absent} holds.
      */
-    private String[] fields(String key, int count) {
+    private long[] numbers(String key, long... absent) {
         String stored = store.getRSProfileConfiguration(CONFIG_GROUP, key);
-        if (stored == null || stored.isEmpty()) {
-            return null;
+        String[] parts = stored == null ? new String[0] : stored.split(":");
+        if (parts.length != absent.length) {
+            return absent;
         }
-        String[] parts = stored.split(":");
-        return parts.length == count ? parts : null;
+        try {
+            return Arrays.stream(parts).mapToLong(Long::parseLong).toArray();
+        } catch (NumberFormatException ex) {
+            return absent;
+        }
     }
 }

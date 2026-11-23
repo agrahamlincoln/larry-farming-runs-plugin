@@ -126,6 +126,7 @@ public final class Preset {
                 .compostsWithFertileSoil(row.of("compostsWithFertileSoil").flag(1, YES))
                 .makeCompostBelow(row.of("makeCompostBelow").integer(1))
                 .stopCompostAt(row.of("stopCompostAt").integer(1))
+                .longestRunSeconds(row.of("longestRunSeconds").integer(1))
                 .picks(picks(row.of("patchPicks")))
                 .forCompost(forCompost(row.of("forCompost")));
         row.requireAllRead();

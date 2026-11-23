@@ -58,7 +58,7 @@ final class Protection {
         if (each == null) {
             return null;
         }
-        int affordable = ItemCounts.countOwned(state, each.itemId, null) / each.amount;
+        int affordable = ItemCounts.countOwned(state, each.itemId) / each.amount;
         int patches = Math.min(Math.min(planting, stop.getPatches().size()), affordable);
         return patches == 0 ? null : new Fee(each.farmer, each.itemId, each.name, each.amount * patches, patches);
     }

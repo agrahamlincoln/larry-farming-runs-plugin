@@ -61,14 +61,14 @@ public class CompostStock {
             seen = Crop.SUPERCOMPOST;
         }
         if (ItemCounts.ownsAny(state, ItemID.BUCKET_ULTRACOMPOST) || inBucket == Crop.ULTRACOMPOST
-                || ItemCounts.countOwned(state, ItemID.FOSSIL_VOLCANIC_ASH, null) >= CompostBins.ASH_PER_BIN) {
+                || ItemCounts.countOwned(state, ItemID.FOSSIL_VOLCANIC_ASH) >= CompostBins.ASH_PER_BIN) {
             seen = Crop.ULTRACOMPOST;
         }
         Crop step = savedStep != null && savedStep.compareTo(seen) > 0 ? savedStep : seen;
         int perBucket = BottomlessBucket.owned(state) ? 2 : 1;
         int uses = held != null && held.getKind().compareTo(step) >= 0 ? held.getUses() : 0;
         for (Crop kind : EnumSet.range(step, Crop.ULTRACOMPOST)) {
-            uses += perBucket * ItemCounts.countOwned(state, kind.getItemId(), null);
+            uses += perBucket * ItemCounts.countOwned(state, kind.getItemId());
         }
         // A filled bucket read empty was read before it was filled.
         boolean unread = !stored && filled && (reading == null || reading.getUses() == 0);

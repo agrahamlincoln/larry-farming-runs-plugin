@@ -41,15 +41,15 @@ public final class LoadoutPlanner {
      * Falador farm teleport. Otherwise the slot is left out, so the ring earns no tip and no
      * nag.
      *
-     * @param staffWielded whether the run needs a fairy-ring staff in hand, which then
-     *     holds the weapon slot (see {@link Loadouts#forRun})
+     * @param staffWielded whether the run needs a fairy-ring staff in hand (see
+     *     {@link Loadouts#forRun})
      * @param ringTeleports whether the route teleports to the Falador farm by the ring,
      *     which the planner only allows while the ring has a teleport left today
      * @param basketWorn whether the trip cuts logs with the player's own basket and no route
      *     needs a cape's teleport (see {@code CarryPlanner.basketPlace})
      */
     public static List<SlotAdvice> plan(PlayerState state, boolean staffWielded, boolean ringTeleports, boolean basketWorn) {
-        List<LoadoutSlot> slots = Loadouts.forRun(staffWielded, basketWorn);
+        List<LoadoutSlot> slots = Loadouts.forRun(staffWielded, basketWorn, ItemCounts.ownsAny(state, Loadouts.MAGIC_SECATEURS));
         List<SlotAdvice> advice = new ArrayList<>(slots.size());
         for (LoadoutSlot slot : slots) {
             if (slot.getSlot() == EquipmentSlot.RING) {
@@ -128,7 +128,7 @@ public final class LoadoutPlanner {
      */
     private static int first(PlayerState state, GearPick pick, boolean carried) {
         for (int itemId : pick.getItemIds()) {
-            int count = carried ? ItemCounts.countCarried(state, itemId, null) : ItemCounts.countOwned(state, itemId, null);
+            int count = carried ? ItemCounts.countCarried(state, itemId) : ItemCounts.countOwned(state, itemId);
             if (count > 0) {
                 return itemId;
             }

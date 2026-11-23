@@ -3,6 +3,7 @@ package com.larryfarming.farming.catalogue;
 import com.larryfarming.data.Tables;
 import com.larryfarming.farming.model.Capability;
 import java.util.*;
+import lombok.Getter;
 
 /**
  * What a capability means in the inventory: the thing to bring so the route works, one row
@@ -28,14 +29,19 @@ public final class CarryItems {
     /** Something to bring, with the sprite to draw for it. */
     public static final class Carry {
         private final int[] itemIds;
+        @Getter
         private final String name;
+        /** Whether a teleport can use up the last of it. */
+        @Getter
+        private final boolean usedUp;
 
         /**
          * @param itemIds every id that counts as having this, the first being the one drawn;
          *     never empty, since the table refuses a row without ids
          */
-        Carry(String name, int... itemIds) {
+        Carry(String name, boolean usedUp, int... itemIds) {
             this.name = name;
+            this.usedUp = usedUp;
             this.itemIds = itemIds;
         }
 
@@ -47,10 +53,6 @@ public final class CarryItems {
         /** Every id that satisfies this line, the drawn one included. */
         public int[] getItemIds() {
             return itemIds.clone();
-        }
-
-        public String getName() {
-            return name;
         }
     }
 
@@ -92,13 +94,13 @@ public final class CarryItems {
 
     private static Map<Capability, Carry> load() {
         Map<Capability, Carry> items = new EnumMap<>(Capability.class);
-        for (Tables.Row row : Tables.read("/com/larryfarming/carry-items.tsv", 4)) {
+        for (Tables.Row row : Tables.read("/com/larryfarming/carry-items.tsv", 5)) {
             Capability capability = row.constant(Capability.class, 0);
             int[] ids = row.integers(2);
             if (ids.length == 0) {
                 throw row.error("no item ids for " + capability);
             }
-            if (items.put(capability, new Carry(row.text(1), ids)) != null) {
+            if (items.put(capability, new Carry(row.text(1), row.optionalText(4) != null, ids)) != null) {
                 throw row.error("a second row for " + capability);
             }
         }

@@ -8,7 +8,7 @@ import java.util.*;
  * mid-sentence. One place, so the runs list, the rows and the skip reasons spell a crop the
  * same way.
  */
-final class CropNames {
+public final class CropNames {
 
     private CropNames() {
     }
@@ -37,7 +37,7 @@ final class CropNames {
      * A crop or seed name for mid-sentence: lower case, except a name led by Hespori, which
      * is a proper noun ("no Hespori seed").
      */
-    static String inSentence(String name) {
+    public static String inSentence(String name) {
         return name.startsWith(Crop.HESPORI.getDisplayName()) ? name : name.toLowerCase(Locale.ROOT);
     }
 }

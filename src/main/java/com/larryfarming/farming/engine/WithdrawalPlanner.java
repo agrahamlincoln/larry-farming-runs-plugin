@@ -146,18 +146,16 @@ public final class WithdrawalPlanner {
                 needs.addAll(buckets);
             }
             if (next != null && next.onTheWayIn) {
-                needs = withTravelOn(needs, CarryPlanner.travelFor(StopPlan.pick(trip.plans, trip.made.get(next.firstArrival)), state, resolver));
+                needs = withTravelOn(needs, CarryPlanner.travelFor(StopPlan.pick(plans, made.get(next.firstArrival)), state, resolver));
             }
             List<FarmingCarryItem> take = shortfallOn(needs, bagHolds);
-            // Underway the starting chance stands for the next bank, not the first stretch.
-            if (starting && !underway) {
-                firstStretch = withBoxedSeeds(boxedLines, needs);
-            }
-            if (starting && !boxed.isEmpty()) {
+            if (starting) {
                 // The trip's seeds lead the starting row, above the routine tools.
-                List<FarmingCarryItem> both = new ArrayList<>(boxed);
-                both.addAll(take);
-                take = both;
+                take.addAll(0, boxed);
+                // Underway the starting chance stands for the next bank, not the first stretch.
+                if (!underway) {
+                    firstStretch = withBoxedSeeds(boxedLines, needs);
+                }
             }
             if (take.isEmpty()) {
                 continue;
@@ -239,14 +237,8 @@ public final class WithdrawalPlanner {
         }
         // Only the kinds the trip plants hold their room: the rest are emptied out at the
         // bank, which the seed box's line asks for.
-        Set<Integer> held = new LinkedHashSet<>();
-        if (SeedBox.contentsCarried(state)) {
-            for (ItemStack stack : state.getSeedBox()) {
-                if (types.contains(stack.getItemId())) {
-                    held.add(stack.getItemId());
-                }
-            }
-        }
+        Set<Integer> held = !SeedBox.contentsCarried(state) ? Set.of()
+                : state.getSeedBox().stream().map(ItemStack::getItemId).filter(types::contains).collect(Collectors.toSet());
         Set<Integer> boxed = kindsToBox(types, held, trip);
 
         List<FarmingCarryItem> withdraw = new ArrayList<>();
@@ -371,7 +363,7 @@ public final class WithdrawalPlanner {
         // By where each starts packing. On a tie the bank after the arrival before goes
         // ahead of the bank on the way in, as the rows are drawn. The sort is stable, so
         // everything else keeps the sim's walk order.
-        Collections.sort(chances, (a, b) -> a.firstArrival != b.firstArrival ? Integer.compare(a.firstArrival, b.firstArrival)
+        chances.sort((a, b) -> a.firstArrival != b.firstArrival ? Integer.compare(a.firstArrival, b.firstArrival)
                 : Boolean.compare(a.onTheWayIn, b.onTheWayIn));
         return chances;
     }
@@ -440,12 +432,10 @@ public final class WithdrawalPlanner {
         }
         for (FarmingCarryItem line : travel) {
             FarmingCarryItem already = byItem.get(line.getItemId());
-            if (already == null || already.getQuantity() == 0) {
-                // A counted line outranks a named one, so its count is not lost.
-                if (already == null || line.getQuantity() > 0) {
-                    byItem.put(line.getItemId(), line);
-                }
-            } else {
+            // A counted line outranks a named one, so its count is not lost.
+            if (already == null || (already.getQuantity() == 0 && line.getQuantity() > 0)) {
+                byItem.put(line.getItemId(), line);
+            } else if (already.getQuantity() > 0) {
                 // A note explains one half's count, so the sum keeps it only if both agree:
                 // a gardener's fee plus a fare is no longer "to have a tree cleared".
                 byItem.put(line.getItemId(), already.withQuantity(already.getQuantity() + line.getQuantity())

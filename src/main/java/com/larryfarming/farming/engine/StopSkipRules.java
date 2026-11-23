@@ -119,25 +119,15 @@ final class StopSkipRules {
      * contradict each other on screen.
      */
     private static boolean anythingToDoAt(RunStop stop, FarmingInputs inputs) {
-        for (PatchRef ref : stop.getPatches()) {
-            if (PatchWork.at(inputs.patchAt(ref), stop, inputs.getPreferences(), inputs.getNowEpochSec()) != null) {
-                return true;
-            }
-        }
-        return false;
+        return stop.getPatches().stream()
+                .anyMatch(ref -> PatchWork.at(inputs.patchAt(ref), stop, inputs.getPreferences(), inputs.getNowEpochSec()) != null);
     }
 
     /**
      * Whether every patch at this stop has been seen.
      */
     private static boolean everyPatchLookedAt(RunStop stop, FarmingInputs inputs) {
-        for (PatchRef ref : stop.getPatches()) {
-            PatchPrediction seen = inputs.patchAt(ref);
-            if (seen == null || seen.getCrop() == null) {
-                return false;
-            }
-        }
-        return true;
+        return stop.getPatches().stream().map(inputs::patchAt).allMatch(seen -> seen != null && seen.getCrop() != null);
     }
 
     /**
@@ -177,12 +167,7 @@ final class StopSkipRules {
      * sapling was seated.
      */
     static boolean anythingStandingAt(StopPlan plan, FarmingInputs inputs) {
-        for (PatchRef ref : plan.getStop().getPatches()) {
-            if (stillStandingIn(ref, plan.getStop(), inputs) != null) {
-                return true;
-            }
-        }
-        return false;
+        return plan.getStop().getPatches().stream().anyMatch(ref -> stillStandingIn(ref, plan.getStop(), inputs) != null);
     }
 
     /**
@@ -201,23 +186,17 @@ final class StopSkipRules {
      */
     static Crop stillStandingIn(PatchRef ref, RunStop stop, FarmingInputs inputs) {
         PatchPrediction seen = inputs.patchAt(ref);
-        // A checked lumber tree is still rooted, though no stop declares it a standing crop.
-        // Asked first because the patch knows: the object offers "Chop down".
-        if (seen != null && seen.isFellable()) {
+        // A lumber tree still rooted stands, though no stop declares it a standing crop:
+        // a checked one, whose object offers "Chop down", and one still owed its check,
+        // which the check leaves rooted. Asked first because the patch knows. If an owed
+        // tree read as ground, checking it would move it behind every bare patch mid-visit,
+        // and the sapling it was dealt would go elsewhere.
+        if ((seen != null && seen.isFellable()) || owedItsCheckBeforeTheAxe(ref, seen)) {
             return seen.getCrop();
-        }
-        // So does one still owed its check, which the check leaves rooted. If it read as
-        // ground, checking it would move it behind every bare patch mid-visit, and the
-        // sapling it was dealt would go elsewhere.
-        if (owedItsCheckBeforeTheAxe(ref, seen)) {
-            return seen.getCrop();
-        }
-        if (seen == null || !FixedCrops.stands(stop, seen.getCrop(), inputs.getPreferences()) || seen.getCrop() == null
-                || seen.getCrop() == Crop.WEEDS) {
-            return null;
         }
         // A dead crop is dug out, leaving bare ground. A diseased one is cured and stays.
-        if (seen.getState() == CropState.DEAD) {
+        if (seen == null || !FixedCrops.stands(stop, seen.getCrop(), inputs.getPreferences()) || seen.getCrop() == null
+                || seen.getCrop() == Crop.WEEDS || seen.getState() == CropState.DEAD) {
             return null;
         }
         // A regrowing crop stands between harvests, fruit on it or not. Fellable trees
@@ -254,10 +233,41 @@ final class StopSkipRules {
      * decided whether an upgrade is worth felling for. And only where a harvest is the sole
      * act; a diseased, dead or grown-and-unchecked tree is a reason to go on its own, and
      * {@link PatchWork#at} ranks those above a harvest.
+     *
+     * <p>With "Pick fruit from trees you pass" on, the fruit is picked instead, but only
+     * where the trip goes anyway: see {@link #pickFruitOnlyInPassing}.
      */
     static boolean leftStandingAt(StopPlan plan, List<Crop> assigned, FarmingInputs inputs) {
-        if (!plan.isVisit() || !plan.getStop().isStandingCrop() || !assigned.isEmpty() || inputs.getPreferences().picksFruitInPassing()
-                || plan.getStop().isErrand()) {
+        return !inputs.getPreferences().picksFruitInPassing() && onlyFruitAt(plan, assigned, inputs);
+    }
+
+    /**
+     * With fruit picked in passing, the trip with each tree that has only fruit to pick
+     * dropped, unless another stop takes the trip to the same place. Fruit alone is no
+     * reason to go. Asked of the whole trip, since the stop that passes a tree is often on
+     * another run: the herb run at Catherby passes its fruit tree.
+     *
+     * <p>A tree dropped here no longer starts the route of a stop that leaned on it, so
+     * the trip's leaning rungs are decided again.
+     */
+    static Itinerary.Trip pickFruitOnlyInPassing(Itinerary.Trip trip, FarmingInputs inputs, RunPlanner planner, PlayerState state) {
+        List<StopPlan> plans = new ArrayList<>(trip.getPlans());
+        for (int i = 0; i < plans.size(); i++) {
+            StopPlan plan = plans.get(i);
+            if (inputs.getPreferences().picksFruitInPassing() && onlyFruitAt(plan, trip.getCropFor().get(i), inputs)
+                    && plans.stream().noneMatch(other -> other != plan && other.isVisit()
+                            && other.getStop().getArrival() == plan.getStop().getArrival())) {
+                plans.set(i, StopPlan.skip(plan.getStop(), "", FarmingSkipReason.STANDING_CROP, 0L));
+            }
+        }
+        // With no tree dropped, no route leaned on one that left.
+        return plans.equals(trip.getPlans()) ? trip
+                : RunPlanning.replanAcrossTheCircuit(trip.rerouted(plans, RunPlanning.cropsWithoutTheStopsThatLeft(plans, trip.getCropFor())),
+                        planner, state);
+    }
+
+    private static boolean onlyFruitAt(StopPlan plan, List<Crop> assigned, FarmingInputs inputs) {
+        if (!plan.isVisit() || !plan.getStop().isStandingCrop() || !assigned.isEmpty() || plan.getStop().isErrand()) {
             return false;
         }
         boolean anythingToPick = false;
@@ -408,9 +418,11 @@ final class StopSkipRules {
     /**
      * The standing-crop skip: nothing to do at a patch already holding a live one of the
      * crops the stop may grow.
+     *
+     * @param seen the patch as seen, never null
      */
     private static StopPlan skipIfStanding(RunStop stop, PatchPrediction seen) {
-        if (seen == null || !FixedCrops.grows(stop, seen.getCrop()) || !isAlive(seen.getState())) {
+        if (!FixedCrops.grows(stop, seen.getCrop()) || !isAlive(seen.getState())) {
             return null;
         }
         return StopPlan.skip(stop, "your " + inSentence(seen.getCrop()) + " is still growing here",

@@ -36,6 +36,7 @@ approach	SPIRIT_TREE_DEPARTURE
 leg	all(CONSTRUCTION_CAPE,POH_SPIRIT_TREE)	5	FREE
 leg	all(reach:HOUSE,POH_SPIRIT_TREE)	5	CONSUMABLE
 leg	all(VARROCK_DIARY_MEDIUM,reach:GRAND_EXCHANGE)	30	CONSUMABLE
+leg	ARDOUGNE_CLOAK_1	76	FREE
 leg	reach:VARROCK	87	CONSUMABLE
 approach	STRONGHOLD_TREE
 leg	DIARY_CAPE	17	FREE
@@ -48,6 +49,60 @@ leg	SLAYER_RING	38	CHARGE
 # --- Arrivals, in circuit order ---
 arrival	FARMING_GUILD
 arrival	HOSIDIUS
+via	XERICS_TALISMAN	Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	35	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_XERICS_TALISMAN)	Construction cape to your house, then the mounted Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	40	FREE
+to	HOUSE	POH_XERICS_TALISMAN	then the mounted Xeric's talisman to Xeric's Glade
+banks	91	HOSIDIUS
+walks	40	CONSUMABLE
+via	CONSTRUCTION_CAPE	Construction cape to the Hosidius house portal, then run north
+banks	114	HOSIDIUS
+walks	45	FREE
+to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
+walks	45	CONSUMABLE
+onlyWhenCertain
+via	HOSIDIUS_TABLET	Hosidius teleport tablet, then run north
+banks	114	HOSIDIUS
+walks	45	CONSUMABLE
+via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	80	CHARGE
+via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
+banks	55	HOSIDIUS
+walks	80	CHARGE
+via	all(@RING,FAIRY_RINGS)	Fairy ring AKR by the Hosidius Vinery, then run west
+banks	67	HOSIDIUS
+walks	101	FREE
+via	SKILLS_NECKLACE	Skills necklace to the Woodcutting Guild, then run east
+banks	112	HOSIDIUS
+walks	136	CHARGE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Woodcutting Guild, then run east
+banks	112	HOSIDIUS
+walks	141	CONSUMABLE
+via	all(MINIGAME_TELEPORT,TITHE_FARM_TELEPORT)	Minigame teleport to the Tithe Farm, then run west
+walks	119	FREE
+via	all(GAMES_NECKLACE,LOVAKENGJ_MINECART)	Games necklace to Wintertodt, then the minecart to Hosidius South and run north-west
+walks	143	CHARGE
+to	ARCEUUS_LIBRARY	LOVAKENGJ_MINECART	then the minecart to Hosidius South and run north-west
+walks	145	CONSUMABLE
+via	all(RADAS_BLESSING_3,LOVAKENGJ_MINECART)	Rada's blessing 3 to the Kourend Woodland, then the minecart to Hosidius South and run north-west
+walks	130	FREE
+via	all(RADAS_BLESSING_1,LOVAKENGJ_MINECART)	Rada's blessing to the Kourend Woodland, then the minecart to Hosidius South and run north-west
+walks	130	CHARGE
+via	all(all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK),SPIRIT_TREE_GROWN_HOSIDIUS)	Ride a spirit tree to Hosidius from your house, the Grand Exchange or the Battlefield of Khazard, then run east
+walks	113	FREE
+to	KOUREND_CASTLE	LOVAKENGJ_MINECART	then run east to the minecart at Kingstown, ride it to Hosidius South and run north-west
+walks	179	CONSUMABLE
+via	WATSON_SCROLL	Watson teleport scroll, then run south-east
+banks	51	HOSIDIUS
+walks	131	CONSUMABLE
+to	HOUSE	POH_PORTAL_KOUREND	then the Kourend portal
+walks	196	CONSUMABLE
+to	KOUREND_CASTLE	then run south-east
+walks	191	CONSUMABLE
 arrival	LOCUS_OASIS
 arrival	ORTUS_FARM
 arrival	KASTORI
@@ -69,8 +124,14 @@ via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn V
 walks	173	FREE
 via	MOKHAIOTL_WAYSTONE	Mokhaiotl waystone to the Ruins of Mokhaiotl, then climb out and run south-east
 walks	89	CONSUMABLE
-via	VARLAMORE_ACCESS	Take Primio from the Varrock east gate to Civitas illa Fortis. Run north-west to Quetzacalli Gorge and take the mountain guide to Auburn Valley, then run south to Achilka's boat.
-floor
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,all(RENU,QUETZAL_SITE_KASTORI)))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site and ride Renu to Kastori, then run north-east
+walks	66	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,all(RENU,QUETZAL_SITE_KASTORI))	then the Civitas illa Fortis portal, then run east to the quetzal landing site and ride Renu to Kastori, then run north-east
+walks	66	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,RENU))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	135	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,RENU)	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	135	CONSUMABLE
 arrival	NEMUS_RETREAT
 arrival	AUBURNVALE
 arrival	LLETYA
@@ -92,6 +153,18 @@ walks	144	CONSUMABLE
 via	all(RING_OF_THE_ELEMENTS,BALLOON_STATION_VARROCK,BALLOON_STATION_GRAND_TREE)	Ring of the elements to the earth altar, then the Varrock balloon to the Grand Tree. The flight costs one magic log. The fruit tree is south and the tree patch is south-west.
 walks	69	CONSUMABLE
 via	all(RING_OF_DUELING,GNOME_GLIDER)	Ring of dueling to Al Kharid, then the glider. Climb down from the top of the Grand Tree to the fruit tree, then run south-west to the tree patch.
+via	all(ARDOUGNE_CLOAK_1,SPIRIT_TREE_NETWORK)	Ardougne cloak to the Monastery, then run north-west to the Battlefield of Khazard spirit tree and ride it to the Grand Tree. The fruit tree is just east and the tree patch is south-west.
+walks	133	FREE
+via	all(FISHING_CAPE,all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED))	Fishing cape to Otto's Grotto, then run north-west and climb the rocks into the Stronghold, then run south to the fruit tree and south-west across the Stronghold to the tree patch
+walks	167	FREE
+via	all(GAMES_NECKLACE,all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED))	Games necklace to the Barbarian Outpost, then run south-west and climb the rocks into the Stronghold, then run south to the fruit tree and south-west across the Stronghold to the tree patch
+walks	172	CHARGE
+via	all(CONSTRUCTION_CAPE,all(any(POH_JEWELLERY_BOX_BASIC,POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE),all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED)))	Construction cape to your house, then its jewellery box to the Barbarian Outpost, then run south-west and climb the rocks into the Stronghold, then run south to the fruit tree and south-west across the Stronghold to the tree patch
+walks	177	FREE
+to	HOUSE	all(any(POH_JEWELLERY_BOX_BASIC,POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE),all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED))	then its jewellery box to the Barbarian Outpost, then run south-west and climb the rocks into the Stronghold, then run south to the fruit tree and south-west across the Stronghold to the tree patch
+walks	177	CONSUMABLE
+to	BARBARIAN_OUTPOST	all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED)	then run south-west and climb the rocks into the Stronghold, then run south to the fruit tree and south-west across the Stronghold to the tree patch
+walks	185	CONSUMABLE
 arrival	TREE_GNOME_VILLAGE
 arrival	ARDOUGNE_MONASTERY
 arrival	ARDOUGNE_FARM
@@ -154,30 +227,110 @@ attributes	-	-	-	My Arm's Big Adventure	-	-
 stop	ARCEUUS	TROLLHEIM_HERB
 at	TROLL_STRONGHOLD
 accessGate	TROLL_STRONGHOLD_HERB_PATCH
-via	STONY_BASALT	Stony basalt to the Troll Stronghold
+via	all(STONY_BASALT,FREMENNIK_DIARY_HARD,TROLL_STRONGHOLD_ROCKS)	Stony basalt to the Troll Stronghold roof
 walks	9	CONSUMABLE
-via	all(CONSTRUCTION_CAPE,POH_PORTAL_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold portal
+via	all(STONY_BASALT,TROLL_STRONGHOLD_ROCKS)	Stony basalt to the Troll Stronghold, then climb the rocks to its roof
+walks	12	CONSUMABLE
+via	STONY_BASALT	Stony basalt to the Troll Stronghold, then go up through it to the roof
+walks	81	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_TROLL_STRONGHOLD,FREMENNIK_DIARY_HARD,TROLL_STRONGHOLD_ROCKS))	Construction cape to your house, then the Troll Stronghold portal to the roof
 walks	14	FREE
-to	HOUSE	POH_PORTAL_TROLL_STRONGHOLD	then the Troll Stronghold portal
+to	HOUSE	all(POH_PORTAL_TROLL_STRONGHOLD,FREMENNIK_DIARY_HARD,TROLL_STRONGHOLD_ROCKS)	then the Troll Stronghold portal to the roof
 walks	14	CONSUMABLE
-via	all(CONSTRUCTION_CAPE,POH_NEXUS_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold from the Portal Nexus
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_TROLL_STRONGHOLD,TROLL_STRONGHOLD_ROCKS))	Construction cape to your house, then the Troll Stronghold portal, then climb the rocks to the roof
+walks	17	FREE
+to	HOUSE	all(POH_PORTAL_TROLL_STRONGHOLD,TROLL_STRONGHOLD_ROCKS)	then the Troll Stronghold portal, then climb the rocks to the roof
+walks	17	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold portal, then go up through the stronghold to the roof
+walks	86	FREE
+to	HOUSE	POH_PORTAL_TROLL_STRONGHOLD	then the Troll Stronghold portal, then go up through the stronghold to the roof
+walks	86	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_NEXUS_TROLL_STRONGHOLD,FREMENNIK_DIARY_HARD,TROLL_STRONGHOLD_ROCKS))	Construction cape to your house, then the Troll Stronghold roof from the Portal Nexus
 walks	14	FREE
-to	HOUSE	POH_NEXUS_TROLL_STRONGHOLD	then the Troll Stronghold from the Portal Nexus
+to	HOUSE	all(POH_NEXUS_TROLL_STRONGHOLD,FREMENNIK_DIARY_HARD,TROLL_STRONGHOLD_ROCKS)	then the Troll Stronghold roof from the Portal Nexus
 walks	14	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_NEXUS_TROLL_STRONGHOLD,TROLL_STRONGHOLD_ROCKS))	Construction cape to your house, then the Troll Stronghold from the Portal Nexus, then climb the rocks to the roof
+walks	17	FREE
+to	HOUSE	all(POH_NEXUS_TROLL_STRONGHOLD,TROLL_STRONGHOLD_ROCKS)	then the Troll Stronghold from the Portal Nexus, then climb the rocks to the roof
+walks	17	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_NEXUS_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold from the Portal Nexus, then go up through the stronghold to the roof
+walks	86	FREE
+to	HOUSE	POH_NEXUS_TROLL_STRONGHOLD	then the Troll Stronghold from the Portal Nexus, then go up through the stronghold to the roof
+walks	86	CONSUMABLE
+to	TROLLHEIM	TROLL_STRONGHOLD_ROCKS	then climb down the rocks west to the Troll Stronghold, then the rocks to its roof
+walks	98	CONSUMABLE
+to	TROLLHEIM	TROLLHEIM_CLIMBS	then climb down the rocks west to the Troll Stronghold and go up through it to the roof
+walks	167	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_TROLLHEIM,TROLL_STRONGHOLD_ROCKS))	Construction cape to your house, then the Trollheim portal, then climb down the rocks west to the Troll Stronghold, then the rocks to its roof
+walks	103	FREE
+to	HOUSE	all(POH_PORTAL_TROLLHEIM,TROLL_STRONGHOLD_ROCKS)	then the Trollheim portal, then climb down the rocks west to the Troll Stronghold, then the rocks to its roof
+walks	103	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_TROLLHEIM,TROLLHEIM_CLIMBS))	Construction cape to your house, then the Trollheim portal, then climb down the rocks west to the Troll Stronghold and go up through it to the roof
+walks	172	FREE
+to	HOUSE	all(POH_PORTAL_TROLLHEIM,TROLLHEIM_CLIMBS)	then the Trollheim portal, then climb down the rocks west to the Troll Stronghold and go up through it to the roof
+walks	172	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_NEXUS_TROLLHEIM,TROLL_STRONGHOLD_ROCKS))	Construction cape to your house, then Trollheim from the Portal Nexus, then climb down the rocks west to the Troll Stronghold, then the rocks to its roof
+walks	103	FREE
+to	HOUSE	all(POH_NEXUS_TROLLHEIM,TROLL_STRONGHOLD_ROCKS)	then Trollheim from the Portal Nexus, then climb down the rocks west to the Troll Stronghold, then the rocks to its roof
+walks	103	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_NEXUS_TROLLHEIM,TROLLHEIM_CLIMBS))	Construction cape to your house, then Trollheim from the Portal Nexus, then climb down the rocks west to the Troll Stronghold and go up through it to the roof
+walks	172	FREE
+to	HOUSE	all(POH_NEXUS_TROLLHEIM,TROLLHEIM_CLIMBS)	then Trollheim from the Portal Nexus, then climb down the rocks west to the Troll Stronghold and go up through it to the roof
+walks	172	CONSUMABLE
 skipIfUnreachable
 stop	LUNAR	TROLLHEIM_HERB
 at	TROLL_STRONGHOLD
 accessGate	TROLL_STRONGHOLD_HERB_PATCH
-via	STONY_BASALT	Stony basalt to the Troll Stronghold
+via	all(STONY_BASALT,FREMENNIK_DIARY_HARD,TROLL_STRONGHOLD_ROCKS)	Stony basalt to the Troll Stronghold roof
 walks	9	CONSUMABLE
-via	all(CONSTRUCTION_CAPE,POH_PORTAL_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold portal
+via	all(STONY_BASALT,TROLL_STRONGHOLD_ROCKS)	Stony basalt to the Troll Stronghold, then climb the rocks to its roof
+walks	12	CONSUMABLE
+via	STONY_BASALT	Stony basalt to the Troll Stronghold, then go up through it to the roof
+walks	81	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_TROLL_STRONGHOLD,FREMENNIK_DIARY_HARD,TROLL_STRONGHOLD_ROCKS))	Construction cape to your house, then the Troll Stronghold portal to the roof
 walks	14	FREE
-to	HOUSE	POH_PORTAL_TROLL_STRONGHOLD	then the Troll Stronghold portal
+to	HOUSE	all(POH_PORTAL_TROLL_STRONGHOLD,FREMENNIK_DIARY_HARD,TROLL_STRONGHOLD_ROCKS)	then the Troll Stronghold portal to the roof
 walks	14	CONSUMABLE
-via	all(CONSTRUCTION_CAPE,POH_NEXUS_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold from the Portal Nexus
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_TROLL_STRONGHOLD,TROLL_STRONGHOLD_ROCKS))	Construction cape to your house, then the Troll Stronghold portal, then climb the rocks to the roof
+walks	17	FREE
+to	HOUSE	all(POH_PORTAL_TROLL_STRONGHOLD,TROLL_STRONGHOLD_ROCKS)	then the Troll Stronghold portal, then climb the rocks to the roof
+walks	17	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold portal, then go up through the stronghold to the roof
+walks	86	FREE
+to	HOUSE	POH_PORTAL_TROLL_STRONGHOLD	then the Troll Stronghold portal, then go up through the stronghold to the roof
+walks	86	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_NEXUS_TROLL_STRONGHOLD,FREMENNIK_DIARY_HARD,TROLL_STRONGHOLD_ROCKS))	Construction cape to your house, then the Troll Stronghold roof from the Portal Nexus
 walks	14	FREE
-to	HOUSE	POH_NEXUS_TROLL_STRONGHOLD	then the Troll Stronghold from the Portal Nexus
+to	HOUSE	all(POH_NEXUS_TROLL_STRONGHOLD,FREMENNIK_DIARY_HARD,TROLL_STRONGHOLD_ROCKS)	then the Troll Stronghold roof from the Portal Nexus
 walks	14	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_NEXUS_TROLL_STRONGHOLD,TROLL_STRONGHOLD_ROCKS))	Construction cape to your house, then the Troll Stronghold from the Portal Nexus, then climb the rocks to the roof
+walks	17	FREE
+to	HOUSE	all(POH_NEXUS_TROLL_STRONGHOLD,TROLL_STRONGHOLD_ROCKS)	then the Troll Stronghold from the Portal Nexus, then climb the rocks to the roof
+walks	17	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_NEXUS_TROLL_STRONGHOLD)	Construction cape to your house, then the Troll Stronghold from the Portal Nexus, then go up through the stronghold to the roof
+walks	86	FREE
+to	HOUSE	POH_NEXUS_TROLL_STRONGHOLD	then the Troll Stronghold from the Portal Nexus, then go up through the stronghold to the roof
+walks	86	CONSUMABLE
+to	TROLLHEIM	TROLL_STRONGHOLD_ROCKS	then climb down the rocks west to the Troll Stronghold, then the rocks to its roof
+walks	98	CONSUMABLE
+to	TROLLHEIM	TROLLHEIM_CLIMBS	then climb down the rocks west to the Troll Stronghold and go up through it to the roof
+walks	167	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_TROLLHEIM,TROLL_STRONGHOLD_ROCKS))	Construction cape to your house, then the Trollheim portal, then climb down the rocks west to the Troll Stronghold, then the rocks to its roof
+walks	103	FREE
+to	HOUSE	all(POH_PORTAL_TROLLHEIM,TROLL_STRONGHOLD_ROCKS)	then the Trollheim portal, then climb down the rocks west to the Troll Stronghold, then the rocks to its roof
+walks	103	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_TROLLHEIM,TROLLHEIM_CLIMBS))	Construction cape to your house, then the Trollheim portal, then climb down the rocks west to the Troll Stronghold and go up through it to the roof
+walks	172	FREE
+to	HOUSE	all(POH_PORTAL_TROLLHEIM,TROLLHEIM_CLIMBS)	then the Trollheim portal, then climb down the rocks west to the Troll Stronghold and go up through it to the roof
+walks	172	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_NEXUS_TROLLHEIM,TROLL_STRONGHOLD_ROCKS))	Construction cape to your house, then Trollheim from the Portal Nexus, then climb down the rocks west to the Troll Stronghold, then the rocks to its roof
+walks	103	FREE
+to	HOUSE	all(POH_NEXUS_TROLLHEIM,TROLL_STRONGHOLD_ROCKS)	then Trollheim from the Portal Nexus, then climb down the rocks west to the Troll Stronghold, then the rocks to its roof
+walks	103	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_NEXUS_TROLLHEIM,TROLLHEIM_CLIMBS))	Construction cape to your house, then Trollheim from the Portal Nexus, then climb down the rocks west to the Troll Stronghold and go up through it to the roof
+walks	172	FREE
+to	HOUSE	all(POH_NEXUS_TROLLHEIM,TROLLHEIM_CLIMBS)	then Trollheim from the Portal Nexus, then climb down the rocks west to the Troll Stronghold and go up through it to the roof
+walks	172	CONSUMABLE
 noFallbackGiven
 
 site	MORYTANIA	HERB
@@ -200,8 +353,30 @@ walks	61	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
+to	KHARYRLL	then run east through Canifis
+banks	24	CANIFIS
+walks	134	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KHARYRLL)	Construction cape to your house, then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	FREE
+to	HOUSE	POH_PORTAL_KHARYRLL	then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to Le-sabrè, then run east through Canifis
+banks	31	CANIFIS
+walks	149	FREE
+via	MORYTANIA_LEGS_4	Morytania legs to the slime pit, then climb up to the Ectofuntus and run west
+banks	266	CANIFIS
+walks	159	FREE
+via	SLAYER_RING	Slayer ring to the Slayer Tower, then run east through Canifis
+banks	52	CANIFIS
+walks	194	CHARGE
 to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_SALVE_GRAVEYARD)	Construction cape to your house, then the Salve Graveyard portal, then run east
+walks	186	FREE
+to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
+walks	186	CONSUMABLE
 noAlternative
 stop	LUNAR	MORYTANIA_HERB
 at	CANIFIS
@@ -228,8 +403,30 @@ walks	61	FREE
 to	HOUSE	POH_PORTAL_FENKENSTRAIN	then the Fenkenstrain's Castle portal
 banks	157	CANIFIS
 walks	61	CONSUMABLE
+to	KHARYRLL	then run east through Canifis
+banks	24	CANIFIS
+walks	134	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KHARYRLL)	Construction cape to your house, then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	FREE
+to	HOUSE	POH_PORTAL_KHARYRLL	then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to Le-sabrè, then run east through Canifis
+banks	31	CANIFIS
+walks	149	FREE
+via	MORYTANIA_LEGS_4	Morytania legs to the slime pit, then climb up to the Ectofuntus and run west
+banks	266	CANIFIS
+walks	159	FREE
+via	SLAYER_RING	Slayer ring to the Slayer Tower, then run east through Canifis
+banks	52	CANIFIS
+walks	194	CHARGE
 to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_SALVE_GRAVEYARD)	Construction cape to your house, then the Salve Graveyard portal, then run east
+walks	186	FREE
+to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
+walks	186	CONSUMABLE
 noAlternative
 
 site	FALADOR_HERB	HERB
@@ -239,27 +436,53 @@ xpTier	Falador	Medium	10
 stop	ARCEUUS LUNAR	FALADOR_HERB
 at	FALADOR_FARM
 via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
+banks	192	FALADOR_EAST
 walks	20	CHARGE
 via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
+banks	192	FALADOR_EAST
 walks	20	CHARGE
 via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
+banks	192	FALADOR_EAST
 walks	20	CHARGE
 via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)))	Construction cape to your house, then its spirit tree to Port Sarim, then run north
+banks	182	FALADOR_EAST
 walks	60	FREE
 to	HOUSE	all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	then its spirit tree to Port Sarim, then run north
+banks	182	FALADOR_EAST
 walks	60	CONSUMABLE
 via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
+banks	182	FALADOR_EAST
 walks	55	FREE
+to	DRAYNOR_MANOR	then run south-west
+banks	183	FALADOR_EAST
+walks	82	CONSUMABLE
 via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	95	CHARGE
 via	all(CONSTRUCTION_CAPE,POH_GLORY)	Construction cape to your house, then its mounted glory to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	FREE
 to	HOUSE	POH_GLORY	then its mounted glory to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	CONSUMABLE
 via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	FREE
 to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	CONSUMABLE
+via	RING_OF_THE_ELEMENTS	Ring of the elements to the air altar, then run east
+banks	101	FALADOR_EAST
+walks	95	CHARGE
+via	DIARY_CAPE	Achievement diary cape to Twiggy O'Korn in Draynor Village, then run north-west
+banks	191	FALADOR_EAST
+walks	99	FREE
+via	all(MINIGAME_TELEPORT,RAT_PITS_TELEPORT)	Minigame teleport to the Port Sarim Rat Pits, then run north
+banks	147	FALADOR_EAST
+walks	123	FREE
+via	RING_OF_WEALTH	Ring of wealth to Falador Park, then run south-east
+banks	18	FALADOR_EAST
+walks	107	CHARGE
 to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
@@ -282,6 +505,21 @@ walks	58	CONSUMABLE
 to	CAMELOT	then run south-east
 banks	40	CATHERBY
 walks	58	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to the flax keeper, then run east
+banks	40	CATHERBY
+walks	78	FREE
+via	KANDARIN_HEADGEAR_4	Kandarin headgear 4 to Sherlock, then run north-east
+banks	40	CATHERBY
+walks	94	FREE
+via	KANDARIN_HEADGEAR_3	Kandarin headgear 3 to Sherlock, then run north-east
+banks	40	CATHERBY
+walks	94	CHARGE
+via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run north-east
+banks	40	CATHERBY
+walks	137	FREE
+via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run north-east
+banks	40	CATHERBY
+walks	144	FREE
 noFallbackGiven
 
 site	ARDOUGNE_HERB	HERB
@@ -309,12 +547,33 @@ walks	74	FREE
 via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run west
 banks	160	ARDOUGNE_NORTH
 walks	62	FREE
+via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to the Fishing Guild, then run east
+banks	63	ARDOUGNE_NORTH
+walks	66	FREE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Fishing Guild, then run east
+banks	63	ARDOUGNE_NORTH
+walks	66	CONSUMABLE
+via	KANDARIN_HEADGEAR_4	Kandarin headgear 4 to Sherlock, then run south-west
+banks	182	ARDOUGNE_NORTH
+walks	71	FREE
+via	KANDARIN_HEADGEAR_3	Kandarin headgear 3 to Sherlock, then run south-west
+banks	182	ARDOUGNE_NORTH
+walks	71	CHARGE
+via	COMBAT_BRACELET	Combat bracelet to the Ranging Guild, then run south
+banks	128	ARDOUGNE_NORTH
+walks	71	CHARGE
 to	ARDOUGNE	then run north
 banks	52	ARDOUGNE_NORTH
 walks	97	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run west
 banks	161	ARDOUGNE_NORTH
 walks	72	FREE
+via	all(RESPAWN_TELEPORT,RESPAWN_AVAILABLE_CAMELOT)	Respawn Teleport to Camelot, then run south-west
+banks	153	ARDOUGNE_NORTH
+walks	132	CONSUMABLE
+to	CAMELOT	then run south-west
+banks	153	ARDOUGNE_NORTH
+walks	132	CONSUMABLE
 skipIfUnreachable
 
 site	HOSIDIUS_HERB	HERB
@@ -332,17 +591,47 @@ walks	28	FREE
 to	HOUSE	POH_XERICS_TALISMAN	then the mounted Xeric's talisman to Xeric's Glade
 banks	91	HOSIDIUS
 walks	28	CONSUMABLE
+via	CONSTRUCTION_CAPE	Construction cape to the Hosidius house portal, then run north
+banks	114	HOSIDIUS
+walks	33	FREE
 to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
 walks	33	CONSUMABLE
 onlyWhenCertain
+via	HOSIDIUS_TABLET	Hosidius teleport tablet, then run north
+banks	114	HOSIDIUS
+walks	33	CONSUMABLE
 via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
-via	all(CONSTRUCTION_CAPE,POH_PORTAL_KOUREND)	Construction cape to your house, then the Kourend portal
-walks	190	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring AKR by the Hosidius Vinery, then run west
+banks	67	HOSIDIUS
+walks	89	FREE
+via	SKILLS_NECKLACE	Skills necklace to the Woodcutting Guild, then run east
+banks	112	HOSIDIUS
+walks	124	CHARGE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Woodcutting Guild, then run east
+banks	112	HOSIDIUS
+walks	129	CONSUMABLE
+via	all(MINIGAME_TELEPORT,TITHE_FARM_TELEPORT)	Minigame teleport to the Tithe Farm, then run west
+walks	107	FREE
+via	all(GAMES_NECKLACE,LOVAKENGJ_MINECART)	Games necklace to Wintertodt, then the minecart to Hosidius South and run north-west
+walks	131	CHARGE
+to	ARCEUUS_LIBRARY	LOVAKENGJ_MINECART	then the minecart to Hosidius South and run north-west
+walks	133	CONSUMABLE
+via	all(RADAS_BLESSING_3,LOVAKENGJ_MINECART)	Rada's blessing 3 to the Kourend Woodland, then the minecart to Hosidius South and run north-west
+walks	118	FREE
+via	all(RADAS_BLESSING_1,LOVAKENGJ_MINECART)	Rada's blessing to the Kourend Woodland, then the minecart to Hosidius South and run north-west
+walks	118	CHARGE
+via	all(all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK),SPIRIT_TREE_GROWN_HOSIDIUS)	Ride a spirit tree to Hosidius from your house, the Grand Exchange or the Battlefield of Khazard, then run east
+walks	101	FREE
+to	KOUREND_CASTLE	LOVAKENGJ_MINECART	then run east to the minecart at Kingstown, ride it to Hosidius South and run north-west
+walks	167	CONSUMABLE
+via	WATSON_SCROLL	Watson teleport scroll, then run south-east
+banks	51	HOSIDIUS
+walks	131	CONSUMABLE
 to	HOUSE	POH_PORTAL_KOUREND	then the Kourend portal
 walks	190	CONSUMABLE
 to	KOUREND_CASTLE	then run south-east
@@ -367,6 +656,11 @@ to	HARMONY_ISLAND	-
 walks	28	CONSUMABLE
 swapTo	HARMONY_ISLAND	-
 walks	27	CONSUMABLE
+via	MOS_LE_HARMLESS_SCROLL	Mos le'harmless teleport, then run south-west to Brother Tranquility and take his boat to Harmony Island, then run north
+walks	79	CONSUMABLE
+to	CATHERBY	CHARTER_SHIP	then run south to the dock and charter a ship to Mos Le'Harmless, run north to Brother Tranquility and take his boat to Harmony Island, then run north
+fare	2500
+walks	116	CONSUMABLE
 skipIfUnreachable
 gate	-	0	0	0	Morytania	Elite
 
@@ -389,6 +683,16 @@ walks	91	FREE
 to	CIVITAS_ILLA_FORTIS	then run south-west from Sunrise Palace
 banks	15	CIVITAS_ILLA_FORTIS_WEST
 walks	114	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,RENU))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+walks	67	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,RENU)	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+walks	67	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_CIVITAS)	Construction cape to your house, then the Civitas illa Fortis portal, then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	119	FREE
+to	HOUSE	POH_PORTAL_CIVITAS	then the Civitas illa Fortis portal, then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	119	CONSUMABLE
 to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Hunter Guild, then run north
 banks	87	HUNTER_GUILD
 walks	127	CONSUMABLE
@@ -408,6 +712,21 @@ walks	49	CONSUMABLE
 to	CAMELOT	then run south-east
 banks	40	CATHERBY
 walks	49	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to the flax keeper, then run east
+banks	40	CATHERBY
+walks	69	FREE
+via	KANDARIN_HEADGEAR_4	Kandarin headgear 4 to Sherlock, then run north-east
+banks	40	CATHERBY
+walks	87	FREE
+via	KANDARIN_HEADGEAR_3	Kandarin headgear 3 to Sherlock, then run north-east
+banks	40	CATHERBY
+walks	87	CHARGE
+via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run north-east
+banks	40	CATHERBY
+walks	130	FREE
+via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run north-east
+banks	40	CATHERBY
+walks	137	FREE
 noFallbackGiven
 optional	Worked while at the herb patch beside it
 
@@ -424,6 +743,21 @@ walks	58	CONSUMABLE
 to	CAMELOT	then run south-east
 banks	40	CATHERBY
 walks	58	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to the flax keeper, then run east
+banks	40	CATHERBY
+walks	78	FREE
+via	KANDARIN_HEADGEAR_4	Kandarin headgear 4 to Sherlock, then run north-east
+banks	40	CATHERBY
+walks	94	FREE
+via	KANDARIN_HEADGEAR_3	Kandarin headgear 3 to Sherlock, then run north-east
+banks	40	CATHERBY
+walks	94	CHARGE
+via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run north-east
+banks	40	CATHERBY
+walks	137	FREE
+via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run north-east
+banks	40	CATHERBY
+walks	144	FREE
 noFallbackGiven
 optional	Worked while at the herb patch beside it
 
@@ -440,6 +774,21 @@ walks	54	CONSUMABLE
 to	CAMELOT	then run south-east
 banks	40	CATHERBY
 walks	54	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to the flax keeper, then run east
+banks	40	CATHERBY
+walks	72	FREE
+via	KANDARIN_HEADGEAR_4	Kandarin headgear 4 to Sherlock, then run north-east
+banks	40	CATHERBY
+walks	88	FREE
+via	KANDARIN_HEADGEAR_3	Kandarin headgear 3 to Sherlock, then run north-east
+banks	40	CATHERBY
+walks	88	CHARGE
+via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run north-east
+banks	40	CATHERBY
+walks	131	FREE
+via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run north-east
+banks	40	CATHERBY
+walks	138	FREE
 noFallbackGiven
 optional	Worked while at the herb patch beside it
 
@@ -456,17 +805,47 @@ walks	28	FREE
 to	HOUSE	POH_XERICS_TALISMAN	then the mounted Xeric's talisman to Xeric's Glade
 banks	91	HOSIDIUS
 walks	28	CONSUMABLE
+via	CONSTRUCTION_CAPE	Construction cape to the Hosidius house portal, then run north
+banks	114	HOSIDIUS
+walks	33	FREE
 to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
 walks	33	CONSUMABLE
 onlyWhenCertain
+via	HOSIDIUS_TABLET	Hosidius teleport tablet, then run north
+banks	114	HOSIDIUS
+walks	33	CONSUMABLE
 via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
-via	all(CONSTRUCTION_CAPE,POH_PORTAL_KOUREND)	Construction cape to your house, then the Kourend portal
-walks	190	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring AKR by the Hosidius Vinery, then run west
+banks	67	HOSIDIUS
+walks	89	FREE
+via	SKILLS_NECKLACE	Skills necklace to the Woodcutting Guild, then run east
+banks	112	HOSIDIUS
+walks	124	CHARGE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Woodcutting Guild, then run east
+banks	112	HOSIDIUS
+walks	129	CONSUMABLE
+via	all(MINIGAME_TELEPORT,TITHE_FARM_TELEPORT)	Minigame teleport to the Tithe Farm, then run west
+walks	107	FREE
+via	all(GAMES_NECKLACE,LOVAKENGJ_MINECART)	Games necklace to Wintertodt, then the minecart to Hosidius South and run north-west
+walks	131	CHARGE
+to	ARCEUUS_LIBRARY	LOVAKENGJ_MINECART	then the minecart to Hosidius South and run north-west
+walks	133	CONSUMABLE
+via	all(RADAS_BLESSING_3,LOVAKENGJ_MINECART)	Rada's blessing 3 to the Kourend Woodland, then the minecart to Hosidius South and run north-west
+walks	118	FREE
+via	all(RADAS_BLESSING_1,LOVAKENGJ_MINECART)	Rada's blessing to the Kourend Woodland, then the minecart to Hosidius South and run north-west
+walks	118	CHARGE
+via	all(all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK),SPIRIT_TREE_GROWN_HOSIDIUS)	Ride a spirit tree to Hosidius from your house, the Grand Exchange or the Battlefield of Khazard, then run east
+walks	101	FREE
+to	KOUREND_CASTLE	LOVAKENGJ_MINECART	then run east to the minecart at Kingstown, ride it to Hosidius South and run north-west
+walks	167	CONSUMABLE
+via	WATSON_SCROLL	Watson teleport scroll, then run south-east
+banks	51	HOSIDIUS
+walks	131	CONSUMABLE
 to	HOUSE	POH_PORTAL_KOUREND	then the Kourend portal
 walks	190	CONSUMABLE
 to	KOUREND_CASTLE	then run south-east
@@ -487,17 +866,47 @@ walks	28	FREE
 to	HOUSE	POH_XERICS_TALISMAN	then the mounted Xeric's talisman to Xeric's Glade
 banks	91	HOSIDIUS
 walks	28	CONSUMABLE
+via	CONSTRUCTION_CAPE	Construction cape to the Hosidius house portal, then run north
+banks	114	HOSIDIUS
+walks	33	FREE
 to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
 walks	33	CONSUMABLE
 onlyWhenCertain
+via	HOSIDIUS_TABLET	Hosidius teleport tablet, then run north
+banks	114	HOSIDIUS
+walks	33	CONSUMABLE
 via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	74	CHARGE
-via	all(CONSTRUCTION_CAPE,POH_PORTAL_KOUREND)	Construction cape to your house, then the Kourend portal
-walks	190	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring AKR by the Hosidius Vinery, then run west
+banks	67	HOSIDIUS
+walks	89	FREE
+via	SKILLS_NECKLACE	Skills necklace to the Woodcutting Guild, then run east
+banks	112	HOSIDIUS
+walks	124	CHARGE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Woodcutting Guild, then run east
+banks	112	HOSIDIUS
+walks	129	CONSUMABLE
+via	all(MINIGAME_TELEPORT,TITHE_FARM_TELEPORT)	Minigame teleport to the Tithe Farm, then run west
+walks	107	FREE
+via	all(GAMES_NECKLACE,LOVAKENGJ_MINECART)	Games necklace to Wintertodt, then the minecart to Hosidius South and run north-west
+walks	131	CHARGE
+to	ARCEUUS_LIBRARY	LOVAKENGJ_MINECART	then the minecart to Hosidius South and run north-west
+walks	133	CONSUMABLE
+via	all(RADAS_BLESSING_3,LOVAKENGJ_MINECART)	Rada's blessing 3 to the Kourend Woodland, then the minecart to Hosidius South and run north-west
+walks	118	FREE
+via	all(RADAS_BLESSING_1,LOVAKENGJ_MINECART)	Rada's blessing to the Kourend Woodland, then the minecart to Hosidius South and run north-west
+walks	118	CHARGE
+via	all(all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK),SPIRIT_TREE_GROWN_HOSIDIUS)	Ride a spirit tree to Hosidius from your house, the Grand Exchange or the Battlefield of Khazard, then run east
+walks	101	FREE
+to	KOUREND_CASTLE	LOVAKENGJ_MINECART	then run east to the minecart at Kingstown, ride it to Hosidius South and run north-west
+walks	167	CONSUMABLE
+via	WATSON_SCROLL	Watson teleport scroll, then run south-east
+banks	51	HOSIDIUS
+walks	131	CONSUMABLE
 to	HOUSE	POH_PORTAL_KOUREND	then the Kourend portal
 walks	190	CONSUMABLE
 to	KOUREND_CASTLE	then run south-east
@@ -518,17 +927,47 @@ walks	31	FREE
 to	HOUSE	POH_XERICS_TALISMAN	then the mounted Xeric's talisman to Xeric's Glade
 banks	91	HOSIDIUS
 walks	31	CONSUMABLE
+via	CONSTRUCTION_CAPE	Construction cape to the Hosidius house portal, then run north
+banks	114	HOSIDIUS
+walks	39	FREE
 to	HOUSE	POH_IN_HOSIDIUS	with your house in Hosidius
 walks	39	CONSUMABLE
 onlyWhenCertain
+via	HOSIDIUS_TABLET	Hosidius teleport tablet, then run north
+banks	114	HOSIDIUS
+walks	39	CONSUMABLE
 via	BOOK_OF_THE_DEAD	Book of the Dead: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	68	CHARGE
 via	KHAREDSTS_MEMOIRS	Kharedst's memoirs: Lunch by the Lancalliums
 banks	55	HOSIDIUS
 walks	68	CHARGE
-via	all(CONSTRUCTION_CAPE,POH_PORTAL_KOUREND)	Construction cape to your house, then the Kourend portal
-walks	184	FREE
+via	all(@RING,FAIRY_RINGS)	Fairy ring AKR by the Hosidius Vinery, then run west
+banks	67	HOSIDIUS
+walks	98	FREE
+via	SKILLS_NECKLACE	Skills necklace to the Woodcutting Guild, then run east
+banks	112	HOSIDIUS
+walks	131	CHARGE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Woodcutting Guild, then run east
+banks	112	HOSIDIUS
+walks	136	CONSUMABLE
+via	all(MINIGAME_TELEPORT,TITHE_FARM_TELEPORT)	Minigame teleport to the Tithe Farm, then run west
+walks	118	FREE
+via	all(GAMES_NECKLACE,LOVAKENGJ_MINECART)	Games necklace to Wintertodt, then the minecart to Hosidius South and run north-west
+walks	142	CHARGE
+to	ARCEUUS_LIBRARY	LOVAKENGJ_MINECART	then the minecart to Hosidius South and run north-west
+walks	144	CONSUMABLE
+via	all(RADAS_BLESSING_3,LOVAKENGJ_MINECART)	Rada's blessing 3 to the Kourend Woodland, then the minecart to Hosidius South and run north-west
+walks	129	FREE
+via	all(RADAS_BLESSING_1,LOVAKENGJ_MINECART)	Rada's blessing to the Kourend Woodland, then the minecart to Hosidius South and run north-west
+walks	129	CHARGE
+via	all(all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK),SPIRIT_TREE_GROWN_HOSIDIUS)	Ride a spirit tree to Hosidius from your house, the Grand Exchange or the Battlefield of Khazard, then run east
+walks	108	FREE
+to	KOUREND_CASTLE	LOVAKENGJ_MINECART	then run east to the minecart at Kingstown, ride it to Hosidius South and run north-west
+walks	178	CONSUMABLE
+via	WATSON_SCROLL	Watson teleport scroll, then run south-east
+banks	51	HOSIDIUS
+walks	119	CONSUMABLE
 to	HOUSE	POH_PORTAL_KOUREND	then the Kourend portal
 walks	184	CONSUMABLE
 to	KOUREND_CASTLE	then run south-east
@@ -562,12 +1001,33 @@ walks	74	FREE
 via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run west
 banks	160	ARDOUGNE_NORTH
 walks	62	FREE
+via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to the Fishing Guild, then run east
+banks	63	ARDOUGNE_NORTH
+walks	66	FREE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Fishing Guild, then run east
+banks	63	ARDOUGNE_NORTH
+walks	66	CONSUMABLE
+via	KANDARIN_HEADGEAR_4	Kandarin headgear 4 to Sherlock, then run south-west
+banks	182	ARDOUGNE_NORTH
+walks	71	FREE
+via	KANDARIN_HEADGEAR_3	Kandarin headgear 3 to Sherlock, then run south-west
+banks	182	ARDOUGNE_NORTH
+walks	71	CHARGE
+via	COMBAT_BRACELET	Combat bracelet to the Ranging Guild, then run south
+banks	128	ARDOUGNE_NORTH
+walks	71	CHARGE
 to	ARDOUGNE	then run north
 banks	52	ARDOUGNE_NORTH
 walks	97	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run west
 banks	161	ARDOUGNE_NORTH
 walks	72	FREE
+via	all(RESPAWN_TELEPORT,RESPAWN_AVAILABLE_CAMELOT)	Respawn Teleport to Camelot, then run south-west
+banks	153	ARDOUGNE_NORTH
+walks	132	CONSUMABLE
+to	CAMELOT	then run south-west
+banks	153	ARDOUGNE_NORTH
+walks	132	CONSUMABLE
 skipIfUnreachable
 optional	Worked while at the herb patch beside it
 
@@ -596,12 +1056,33 @@ walks	74	FREE
 via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run west
 banks	160	ARDOUGNE_NORTH
 walks	62	FREE
+via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to the Fishing Guild, then run east
+banks	63	ARDOUGNE_NORTH
+walks	66	FREE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Fishing Guild, then run east
+banks	63	ARDOUGNE_NORTH
+walks	66	CONSUMABLE
+via	KANDARIN_HEADGEAR_4	Kandarin headgear 4 to Sherlock, then run south-west
+banks	182	ARDOUGNE_NORTH
+walks	71	FREE
+via	KANDARIN_HEADGEAR_3	Kandarin headgear 3 to Sherlock, then run south-west
+banks	182	ARDOUGNE_NORTH
+walks	71	CHARGE
+via	COMBAT_BRACELET	Combat bracelet to the Ranging Guild, then run south
+banks	128	ARDOUGNE_NORTH
+walks	71	CHARGE
 to	ARDOUGNE	then run north
 banks	52	ARDOUGNE_NORTH
 walks	97	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run west
 banks	161	ARDOUGNE_NORTH
 walks	72	FREE
+via	all(RESPAWN_TELEPORT,RESPAWN_AVAILABLE_CAMELOT)	Respawn Teleport to Camelot, then run south-west
+banks	153	ARDOUGNE_NORTH
+walks	132	CONSUMABLE
+to	CAMELOT	then run south-west
+banks	153	ARDOUGNE_NORTH
+walks	132	CONSUMABLE
 skipIfUnreachable
 optional	Worked while at the herb patch beside it
 
@@ -630,12 +1111,33 @@ walks	74	FREE
 via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run west
 banks	160	ARDOUGNE_NORTH
 walks	62	FREE
+via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to the Fishing Guild, then run east
+banks	63	ARDOUGNE_NORTH
+walks	66	FREE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Fishing Guild, then run east
+banks	63	ARDOUGNE_NORTH
+walks	66	CONSUMABLE
+via	KANDARIN_HEADGEAR_4	Kandarin headgear 4 to Sherlock, then run south-west
+banks	182	ARDOUGNE_NORTH
+walks	71	FREE
+via	KANDARIN_HEADGEAR_3	Kandarin headgear 3 to Sherlock, then run south-west
+banks	182	ARDOUGNE_NORTH
+walks	71	CHARGE
+via	COMBAT_BRACELET	Combat bracelet to the Ranging Guild, then run south
+banks	128	ARDOUGNE_NORTH
+walks	71	CHARGE
 to	ARDOUGNE	then run north
 banks	52	ARDOUGNE_NORTH
 walks	97	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run west
 banks	161	ARDOUGNE_NORTH
 walks	72	FREE
+via	all(RESPAWN_TELEPORT,RESPAWN_AVAILABLE_CAMELOT)	Respawn Teleport to Camelot, then run south-west
+banks	153	ARDOUGNE_NORTH
+walks	132	CONSUMABLE
+to	CAMELOT	then run south-west
+banks	153	ARDOUGNE_NORTH
+walks	132	CONSUMABLE
 skipIfUnreachable
 optional	Worked while at the herb patch beside it
 
@@ -644,27 +1146,53 @@ pick	pickFaladorNorthWest	compostFaladorNorthWest	Falador	Falador north-west	-
 stop	ARCEUUS LUNAR	FALADOR_NORTH_WEST_ALLOTMENT
 at	FALADOR_FARM
 via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
+banks	192	FALADOR_EAST
 walks	20	CHARGE
 via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
+banks	192	FALADOR_EAST
 walks	20	CHARGE
 via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
+banks	192	FALADOR_EAST
 walks	20	CHARGE
 via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)))	Construction cape to your house, then its spirit tree to Port Sarim, then run north
+banks	182	FALADOR_EAST
 walks	60	FREE
 to	HOUSE	all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	then its spirit tree to Port Sarim, then run north
+banks	182	FALADOR_EAST
 walks	60	CONSUMABLE
 via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
+banks	182	FALADOR_EAST
 walks	55	FREE
+to	DRAYNOR_MANOR	then run south-west
+banks	183	FALADOR_EAST
+walks	82	CONSUMABLE
 via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	95	CHARGE
 via	all(CONSTRUCTION_CAPE,POH_GLORY)	Construction cape to your house, then its mounted glory to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	FREE
 to	HOUSE	POH_GLORY	then its mounted glory to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	CONSUMABLE
 via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	FREE
 to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	CONSUMABLE
+via	RING_OF_THE_ELEMENTS	Ring of the elements to the air altar, then run east
+banks	101	FALADOR_EAST
+walks	95	CHARGE
+via	DIARY_CAPE	Achievement diary cape to Twiggy O'Korn in Draynor Village, then run north-west
+banks	191	FALADOR_EAST
+walks	99	FREE
+via	all(MINIGAME_TELEPORT,RAT_PITS_TELEPORT)	Minigame teleport to the Port Sarim Rat Pits, then run north
+banks	147	FALADOR_EAST
+walks	123	FREE
+via	RING_OF_WEALTH	Ring of wealth to Falador Park, then run south-east
+banks	18	FALADOR_EAST
+walks	107	CHARGE
 to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
@@ -676,27 +1204,53 @@ pick	pickFaladorSouthEast	compostFaladorSouthEast	Falador	Falador south-east	-
 stop	ARCEUUS LUNAR	FALADOR_SOUTH_EAST_ALLOTMENT
 at	FALADOR_FARM
 via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
+banks	192	FALADOR_EAST
 walks	20	CHARGE
 via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
+banks	192	FALADOR_EAST
 walks	20	CHARGE
 via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
+banks	192	FALADOR_EAST
 walks	20	CHARGE
 via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)))	Construction cape to your house, then its spirit tree to Port Sarim, then run north
+banks	182	FALADOR_EAST
 walks	60	FREE
 to	HOUSE	all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	then its spirit tree to Port Sarim, then run north
+banks	182	FALADOR_EAST
 walks	60	CONSUMABLE
 via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
+banks	182	FALADOR_EAST
 walks	55	FREE
+to	DRAYNOR_MANOR	then run south-west
+banks	183	FALADOR_EAST
+walks	82	CONSUMABLE
 via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	95	CHARGE
 via	all(CONSTRUCTION_CAPE,POH_GLORY)	Construction cape to your house, then its mounted glory to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	FREE
 to	HOUSE	POH_GLORY	then its mounted glory to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	CONSUMABLE
 via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	FREE
 to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	CONSUMABLE
+via	RING_OF_THE_ELEMENTS	Ring of the elements to the air altar, then run east
+banks	101	FALADOR_EAST
+walks	95	CHARGE
+via	DIARY_CAPE	Achievement diary cape to Twiggy O'Korn in Draynor Village, then run north-west
+banks	191	FALADOR_EAST
+walks	99	FREE
+via	all(MINIGAME_TELEPORT,RAT_PITS_TELEPORT)	Minigame teleport to the Port Sarim Rat Pits, then run north
+banks	147	FALADOR_EAST
+walks	123	FREE
+via	RING_OF_WEALTH	Ring of wealth to Falador Park, then run south-east
+banks	18	FALADOR_EAST
+walks	107	CHARGE
 to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
@@ -708,27 +1262,53 @@ pick	pickFaladorFlower	-	Falador	Falador flowers	-
 stop	ARCEUUS LUNAR	FALADOR_FLOWER
 at	FALADOR_FARM
 via	EXPLORERS_RING_4	Explorer's ring 4 to the cabbage patch
+banks	192	FALADOR_EAST
 walks	20	CHARGE
 via	EXPLORERS_RING_3	Explorer's ring 3 to the cabbage patch
+banks	192	FALADOR_EAST
 walks	20	CHARGE
 via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch
+banks	192	FALADOR_EAST
 walks	20	CHARGE
 via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)))	Construction cape to your house, then its spirit tree to Port Sarim, then run north
+banks	182	FALADOR_EAST
 walks	60	FREE
 to	HOUSE	all(POH_SPIRIT_TREE,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	then its spirit tree to Port Sarim, then run north
+banks	182	FALADOR_EAST
 walks	60	CONSUMABLE
 via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,all(SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM))	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
+banks	182	FALADOR_EAST
 walks	55	FREE
+to	DRAYNOR_MANOR	then run south-west
+banks	183	FALADOR_EAST
+walks	82	CONSUMABLE
 via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	95	CHARGE
 via	all(CONSTRUCTION_CAPE,POH_GLORY)	Construction cape to your house, then its mounted glory to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	FREE
 to	HOUSE	POH_GLORY	then its mounted glory to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	CONSUMABLE
 via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	FREE
 to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Draynor Village, then run north-west
+banks	192	FALADOR_EAST
 walks	100	CONSUMABLE
+via	RING_OF_THE_ELEMENTS	Ring of the elements to the air altar, then run east
+banks	101	FALADOR_EAST
+walks	95	CHARGE
+via	DIARY_CAPE	Achievement diary cape to Twiggy O'Korn in Draynor Village, then run north-west
+banks	191	FALADOR_EAST
+walks	99	FREE
+via	all(MINIGAME_TELEPORT,RAT_PITS_TELEPORT)	Minigame teleport to the Port Sarim Rat Pits, then run north
+banks	147	FALADOR_EAST
+walks	123	FREE
+via	RING_OF_WEALTH	Ring of wealth to Falador Park, then run south-east
+banks	18	FALADOR_EAST
+walks	107	CHARGE
 to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
@@ -755,8 +1335,30 @@ walks	61	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
+to	KHARYRLL	then run east through Canifis
+banks	24	CANIFIS
+walks	134	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KHARYRLL)	Construction cape to your house, then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	FREE
+to	HOUSE	POH_PORTAL_KHARYRLL	then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to Le-sabrè, then run east through Canifis
+banks	31	CANIFIS
+walks	149	FREE
+via	MORYTANIA_LEGS_4	Morytania legs to the slime pit, then climb up to the Ectofuntus and run west
+banks	266	CANIFIS
+walks	159	FREE
+via	SLAYER_RING	Slayer ring to the Slayer Tower, then run east through Canifis
+banks	52	CANIFIS
+walks	194	CHARGE
 to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_SALVE_GRAVEYARD)	Construction cape to your house, then the Salve Graveyard portal, then run east
+walks	186	FREE
+to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
+walks	186	CONSUMABLE
 noAlternative
 optional	Worked while at the herb patch beside it
 stop	LUNAR	MORYTANIA_NORTH_WEST_ALLOTMENT
@@ -784,8 +1386,30 @@ walks	61	FREE
 to	HOUSE	POH_PORTAL_FENKENSTRAIN	then the Fenkenstrain's Castle portal
 banks	157	CANIFIS
 walks	61	CONSUMABLE
+to	KHARYRLL	then run east through Canifis
+banks	24	CANIFIS
+walks	134	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KHARYRLL)	Construction cape to your house, then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	FREE
+to	HOUSE	POH_PORTAL_KHARYRLL	then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to Le-sabrè, then run east through Canifis
+banks	31	CANIFIS
+walks	149	FREE
+via	MORYTANIA_LEGS_4	Morytania legs to the slime pit, then climb up to the Ectofuntus and run west
+banks	266	CANIFIS
+walks	159	FREE
+via	SLAYER_RING	Slayer ring to the Slayer Tower, then run east through Canifis
+banks	52	CANIFIS
+walks	194	CHARGE
 to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_SALVE_GRAVEYARD)	Construction cape to your house, then the Salve Graveyard portal, then run east
+walks	186	FREE
+to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
+walks	186	CONSUMABLE
 noAlternative
 optional	Worked while at the herb patch beside it
 
@@ -809,8 +1433,30 @@ walks	61	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
+to	KHARYRLL	then run east through Canifis
+banks	24	CANIFIS
+walks	134	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KHARYRLL)	Construction cape to your house, then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	FREE
+to	HOUSE	POH_PORTAL_KHARYRLL	then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to Le-sabrè, then run east through Canifis
+banks	31	CANIFIS
+walks	149	FREE
+via	MORYTANIA_LEGS_4	Morytania legs to the slime pit, then climb up to the Ectofuntus and run west
+banks	266	CANIFIS
+walks	159	FREE
+via	SLAYER_RING	Slayer ring to the Slayer Tower, then run east through Canifis
+banks	52	CANIFIS
+walks	194	CHARGE
 to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_SALVE_GRAVEYARD)	Construction cape to your house, then the Salve Graveyard portal, then run east
+walks	186	FREE
+to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
+walks	186	CONSUMABLE
 noAlternative
 optional	Worked while at the herb patch beside it
 stop	LUNAR	MORYTANIA_SOUTH_EAST_ALLOTMENT
@@ -838,8 +1484,30 @@ walks	61	FREE
 to	HOUSE	POH_PORTAL_FENKENSTRAIN	then the Fenkenstrain's Castle portal
 banks	157	CANIFIS
 walks	61	CONSUMABLE
+to	KHARYRLL	then run east through Canifis
+banks	24	CANIFIS
+walks	134	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KHARYRLL)	Construction cape to your house, then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	FREE
+to	HOUSE	POH_PORTAL_KHARYRLL	then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to Le-sabrè, then run east through Canifis
+banks	31	CANIFIS
+walks	149	FREE
+via	MORYTANIA_LEGS_4	Morytania legs to the slime pit, then climb up to the Ectofuntus and run west
+banks	266	CANIFIS
+walks	159	FREE
+via	SLAYER_RING	Slayer ring to the Slayer Tower, then run east through Canifis
+banks	52	CANIFIS
+walks	194	CHARGE
 to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_SALVE_GRAVEYARD)	Construction cape to your house, then the Salve Graveyard portal, then run east
+walks	186	FREE
+to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
+walks	186	CONSUMABLE
 noAlternative
 optional	Worked while at the herb patch beside it
 
@@ -863,8 +1531,30 @@ walks	61	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring ALQ, then run north
 banks	216	CANIFIS
 walks	40	FREE
+to	KHARYRLL	then run east through Canifis
+banks	24	CANIFIS
+walks	134	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KHARYRLL)	Construction cape to your house, then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	FREE
+to	HOUSE	POH_PORTAL_KHARYRLL	then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to Le-sabrè, then run east through Canifis
+banks	31	CANIFIS
+walks	149	FREE
+via	MORYTANIA_LEGS_4	Morytania legs to the slime pit, then climb up to the Ectofuntus and run west
+banks	266	CANIFIS
+walks	159	FREE
+via	SLAYER_RING	Slayer ring to the Slayer Tower, then run east through Canifis
+banks	52	CANIFIS
+walks	194	CHARGE
 to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_SALVE_GRAVEYARD)	Construction cape to your house, then the Salve Graveyard portal, then run east
+walks	186	FREE
+to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
+walks	186	CONSUMABLE
 noAlternative
 optional	Worked while at the herb patch beside it
 stop	LUNAR	MORYTANIA_FLOWER
@@ -892,8 +1582,30 @@ walks	61	FREE
 to	HOUSE	POH_PORTAL_FENKENSTRAIN	then the Fenkenstrain's Castle portal
 banks	157	CANIFIS
 walks	61	CONSUMABLE
+to	KHARYRLL	then run east through Canifis
+banks	24	CANIFIS
+walks	134	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KHARYRLL)	Construction cape to your house, then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	FREE
+to	HOUSE	POH_PORTAL_KHARYRLL	then the Kharyrll portal, then run east through Canifis
+banks	24	CANIFIS
+walks	139	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to Le-sabrè, then run east through Canifis
+banks	31	CANIFIS
+walks	149	FREE
+via	MORYTANIA_LEGS_4	Morytania legs to the slime pit, then climb up to the Ectofuntus and run west
+banks	266	CANIFIS
+walks	159	FREE
+via	SLAYER_RING	Slayer ring to the Slayer Tower, then run east through Canifis
+banks	52	CANIFIS
+walks	194	CHARGE
 to	SALVE_GRAVEYARD	then run east
 walks	181	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_SALVE_GRAVEYARD)	Construction cape to your house, then the Salve Graveyard portal, then run east
+walks	186	FREE
+to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
+walks	186	CONSUMABLE
 noAlternative
 optional	Worked while at the herb patch beside it
 
@@ -916,6 +1628,16 @@ walks	91	FREE
 to	CIVITAS_ILLA_FORTIS	then run south-west from Sunrise Palace
 banks	15	CIVITAS_ILLA_FORTIS_WEST
 walks	114	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,RENU))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+walks	67	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,RENU)	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+walks	67	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_CIVITAS)	Construction cape to your house, then the Civitas illa Fortis portal, then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	119	FREE
+to	HOUSE	POH_PORTAL_CIVITAS	then the Civitas illa Fortis portal, then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	119	CONSUMABLE
 to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Hunter Guild, then run north
 banks	87	HUNTER_GUILD
 walks	127	CONSUMABLE
@@ -941,6 +1663,16 @@ walks	91	FREE
 to	CIVITAS_ILLA_FORTIS	then run south-west from Sunrise Palace
 banks	15	CIVITAS_ILLA_FORTIS_WEST
 walks	114	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,RENU))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+walks	67	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,RENU)	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+walks	67	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_CIVITAS)	Construction cape to your house, then the Civitas illa Fortis portal, then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	119	FREE
+to	HOUSE	POH_PORTAL_CIVITAS	then the Civitas illa Fortis portal, then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	119	CONSUMABLE
 to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Hunter Guild, then run north
 banks	87	HUNTER_GUILD
 walks	127	CONSUMABLE
@@ -966,6 +1698,16 @@ walks	91	FREE
 to	CIVITAS_ILLA_FORTIS	then run south-west from Sunrise Palace
 banks	15	CIVITAS_ILLA_FORTIS_WEST
 walks	114	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,RENU))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+walks	67	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,RENU)	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run north
+walks	67	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_CIVITAS)	Construction cape to your house, then the Civitas illa Fortis portal, then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	119	FREE
+to	HOUSE	POH_PORTAL_CIVITAS	then the Civitas illa Fortis portal, then run south-west from Sunrise Palace
+banks	15	CIVITAS_ILLA_FORTIS_WEST
+walks	119	CONSUMABLE
 to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Hunter Guild, then run north
 banks	87	HUNTER_GUILD
 walks	127	CONSUMABLE
@@ -989,6 +1731,11 @@ to	HARMONY_ISLAND	-
 walks	28	CONSUMABLE
 swapTo	HARMONY_ISLAND	-
 walks	27	CONSUMABLE
+via	MOS_LE_HARMLESS_SCROLL	Mos le'harmless teleport, then run south-west to Brother Tranquility and take his boat to Harmony Island, then run north
+walks	79	CONSUMABLE
+to	CATHERBY	CHARTER_SHIP	then run south to the dock and charter a ship to Mos Le'Harmless, run north to Brother Tranquility and take his boat to Harmony Island, then run north
+fare	2500
+walks	116	CONSUMABLE
 skipIfUnreachable
 optional	Worked while at the herb patch beside it
 
@@ -999,6 +1746,7 @@ via	RING_OF_DUELING	Ring of dueling to Emir's Arena
 banks	105	AL_KHARID
 walks	34	CHARGE
 via	AMULET_OF_GLORY	Amulet of glory to Al Kharid, then run north-east
+banks	51	AL_KHARID
 walks	43	CHARGE
 via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_BASIC,POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to Emir's Arena
 banks	105	AL_KHARID
@@ -1014,6 +1762,20 @@ via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your ho
 walks	48	FREE
 to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Al Kharid, then run north-east
 walks	48	CONSUMABLE
+via	RING_OF_THE_ELEMENTS	Ring of the elements to the fire altar, then run south
+banks	90	AL_KHARID
+walks	75	CHARGE
+via	DIARY_CAPE	Achievement diary cape to Jarr, then run north
+banks	32	AL_KHARID
+walks	83	FREE
+to	LUMBRIDGE	then run east through the toll gate
+fare	10
+banks	71	AL_KHARID
+walks	95	CONSUMABLE
+via	LUMBRIDGE_HOME_TELEPORT	Lumbridge Home Teleport, then run east through the toll gate
+fare	10
+banks	71	AL_KHARID
+walks	131	FREE
 noFallbackGiven
 plants	POTATO_CACTUS
 optional	Replanted each visit for its health check
@@ -1028,7 +1790,23 @@ via	all(@RING,FAIRY_RINGS)	Fairy ring DJP, then run west past the Tower of Life
 banks	98	ARDOUGNE_SOUTH
 walks	39	FREE
 to	ARDOUGNE	then run south-west to the Monastery
+banks	28	ARDOUGNE_SOUTH
 walks	91	CONSUMABLE
+to	PORT_KHAZARD	then run north to the Monastery
+banks	144	ARDOUGNE_SOUTH
+walks	65	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK))	Construction cape to your house, then the spirit tree to the Battlefield of Khazard, then run south-east to the Monastery
+banks	110	ARDOUGNE_SOUTH
+walks	88	FREE
+to	HOUSE	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	then the spirit tree to the Battlefield of Khazard, then run south-east to the Monastery
+banks	110	ARDOUGNE_SOUTH
+walks	88	CONSUMABLE
+to	GRAND_EXCHANGE	all(VARROCK_DIARY_MEDIUM,SPIRIT_TREE_NETWORK)	choosing the Grand Exchange, then run north-east to its spirit tree, ride it to the Battlefield of Khazard and run south-east to the Monastery
+banks	110	ARDOUGNE_SOUTH
+walks	113	CONSUMABLE
+to	VARROCK	SPIRIT_TREE_NETWORK	then run north to the Grand Exchange spirit tree, ride it to the Battlefield of Khazard and run south-east to the Monastery
+banks	110	ARDOUGNE_SOUTH
+walks	170	CONSUMABLE
 noFallbackGiven
 plants	WHITEBERRIES
 optional	Grows more slowly than a herb run comes round
@@ -1038,10 +1816,24 @@ site	MUSHROOMS	HERB
 stop	ARCEUUS LUNAR	MORT_MYRE_MUSHROOM
 at	MORT_MYRE
 accessGate	MORYTANIA_ACCESS
+via	DIARY_CAPE	Achievement diary cape to Le-sabrè, then run west
+walks	12	FREE
 to	SALVE_GRAVEYARD	then run north-east
 walks	19	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring CKS, then run east
 walks	2	FREE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_SALVE_GRAVEYARD)	Construction cape to your house, then the Salve Graveyard portal, then run north-east
+walks	25	FREE
+to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run north-east
+walks	25	CONSUMABLE
+to	KHARYRLL	then run west
+walks	48	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_KHARYRLL)	Construction cape to your house, then the Kharyrll portal, then run west
+walks	53	FREE
+to	HOUSE	POH_PORTAL_KHARYRLL	then the Kharyrll portal, then run west
+walks	53	CONSUMABLE
+via	SLAYER_RING	Slayer ring to the Slayer Tower, then run south-east
+walks	70	CHARGE
 to	FENKENSTRAINS_CASTLE	then run south-west into Mort Myre
 walks	106	CONSUMABLE
 skipIfUnreachable
@@ -1062,6 +1854,22 @@ via	EXPLORERS_RING_2	Explorer's ring 2 to the cabbage patch, then run east
 walks	115	CHARGE
 via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run north
 walks	116	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_GLORY)	Construction cape to your house, then its mounted glory to Draynor Village, then run north
+walks	121	FREE
+to	HOUSE	POH_GLORY	then its mounted glory to Draynor Village, then run north
+walks	121	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to Draynor Village, then run north
+walks	121	FREE
+to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Draynor Village, then run north
+walks	121	CONSUMABLE
+via	all(all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK),SPIRIT_TREE_GROWN_PORT_SARIM)	Ride a spirit tree to Port Sarim from your house, the Grand Exchange or the Battlefield of Khazard, then run north
+walks	116	FREE
+via	all(@STRONGHOLD_TREE_BY_POD_OR_RING,SPIRIT_TREE_NETWORK,SPIRIT_TREE_GROWN_PORT_SARIM)	Spirit tree to the Grand Tree, then on to Port Sarim, then run north
+walks	116	FREE
+via	DIARY_CAPE	Achievement diary cape to Twiggy O'Korn in Draynor Village, then run north
+walks	141	FREE
+via	RING_OF_THE_ELEMENTS	Ring of the elements to the air altar, then run north-east
+walks	179	CHARGE
 skipIfUnreachable
 plants	BELLADONNA
 optional	Grows more slowly than a herb run comes round
@@ -1075,6 +1883,10 @@ via	QUETZAL_WHISTLE	Quetzal whistle to Auburnvale, then run east
 walks	36	CHARGE
 to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to Auburnvale, then run east
 walks	51	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,RENU))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Auburnvale, then run east
+walks	56	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,RENU)	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Auburnvale, then run east
+walks	56	CONSUMABLE
 via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn Valley, then run north-east
 walks	44	FREE
 to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to Auburnvale, then run east
@@ -1109,7 +1921,40 @@ walks	80	FREE
 to	HOUSE	all(POH_DIGSITE_PENDANT,CANAL_BARGE)	then the mounted digsite pendant to the Digsite, then the barge, then run round the hill
 banks	10	MUSEUM_CAMP
 walks	80	CONSUMABLE
-noAlternative
+via	all(DIGSITE_SCROLL,CANAL_BARGE,FOSSIL_ISLAND_HOLE)	Digsite teleport scroll, then the barge and the hole under the hill
+banks	32	MUSEUM_CAMP
+walks	70	CONSUMABLE
+via	all(DIGSITE_SCROLL,CANAL_BARGE)	Digsite teleport scroll, then the barge, then run round the hill
+banks	10	MUSEUM_CAMP
+walks	112	CONSUMABLE
+via	all(RING_OF_DUELING,GNOME_GLIDER,CANAL_BARGE,FOSSIL_ISLAND_HOLE)	Ring of dueling to Al Kharid, then the glider to Lemanto Andra. Run east to the barge, then the hole under the hill
+banks	32	MUSEUM_CAMP
+walks	95	CHARGE
+via	all(RING_OF_DUELING,GNOME_GLIDER,CANAL_BARGE)	Ring of dueling to Al Kharid, then the glider to Lemanto Andra. Run east to the barge, then run round the hill
+banks	10	MUSEUM_CAMP
+walks	137	CHARGE
+via	all(LUMBERYARD_SCROLL,CANAL_BARGE,FOSSIL_ISLAND_HOLE)	Lumberyard teleport scroll, then run south-east to the barge and the hole under the hill
+banks	32	MUSEUM_CAMP
+walks	88	CONSUMABLE
+via	all(LUMBERYARD_SCROLL,CANAL_BARGE)	Lumberyard teleport scroll, then run south-east to the barge, then run round the hill
+banks	10	MUSEUM_CAMP
+walks	130	CONSUMABLE
+via	all(RING_OF_THE_ELEMENTS,CANAL_BARGE,FOSSIL_ISLAND_HOLE)	Ring of the elements to the earth altar, then run south-east to the barge and the hole under the hill
+banks	32	MUSEUM_CAMP
+walks	90	CHARGE
+via	all(RING_OF_THE_ELEMENTS,CANAL_BARGE)	Ring of the elements to the earth altar, then run south-east to the barge, then run round the hill
+banks	10	MUSEUM_CAMP
+walks	132	CHARGE
+to	SENNTISTEN	all(CANAL_BARGE,FOSSIL_ISLAND_HOLE)	then run north to the barge and the hole under the hill
+banks	32	MUSEUM_CAMP
+walks	143	CONSUMABLE
+to	SENNTISTEN	CANAL_BARGE	then run north to the barge, then run round the hill
+banks	10	MUSEUM_CAMP
+walks	185	CONSUMABLE
+to	VARROCK	all(CANAL_BARGE,FOSSIL_ISLAND_HOLE)	then run east to the barge and the hole under the hill
+banks	32	MUSEUM_CAMP
+walks	179	CONSUMABLE
+skipIfUnreachable
 
 site	LOCUS_OASIS	HARDWOOD
 switch	visitLocusOasis	Locus Oasis
@@ -1118,22 +1963,76 @@ at	LOCUS_OASIS
 accessGate	LOCUS_OASIS_PATCH
 via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AJP to the Avium Savannah, then run south-east
 walks	42	FREE
+via	all(QUETZAL_WHISTLE,QUETZAL_SITE_COLOSSAL_WYRM)	Quetzal whistle to the Colossal Wyrm Remains, then run north-east
+walks	44	CHARGE
+to	CIVITAS_ILLA_FORTIS	all(RENU,QUETZAL_SITE_COLOSSAL_WYRM)	then run east to the quetzal landing site, ride Renu to the Colossal Wyrm Remains, then run north-east
+walks	59	CONSUMABLE
+via	all(QUETZAL_WHISTLE,QUETZAL_SITE_OUTER_FORTIS)	Quetzal whistle to Outer Fortis, then run south
+walks	65	CHARGE
+to	CIVITAS_ILLA_FORTIS	all(RENU,QUETZAL_SITE_OUTER_FORTIS)	then run east to the quetzal landing site, ride Renu to Outer Fortis, then run south
+walks	80	CONSUMABLE
+via	QUETZAL_WHISTLE	Quetzal whistle to the Hunter Guild landing site, then run south-east
+walks	103	CHARGE
+to	CIVITAS_ILLA_FORTIS	RENU	then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run south-east
+walks	118	CONSUMABLE
+to	VARROCK	all(RENU,QUETZAL_SITE_COLOSSAL_WYRM)	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Colossal Wyrm Remains, then run north-east
+walks	124	CONSUMABLE
+via	HUNTER_CAPE	Hunter cape to the Hunter Guild, then run south-east
+walks	127	FREE
+to	CIVITAS_ILLA_FORTIS	then run south out of the city
+walks	163	CONSUMABLE
+to	VARROCK	all(RENU,QUETZAL_SITE_OUTER_FORTIS)	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to Outer Fortis, then run south
+walks	145	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,all(RENU,QUETZAL_SITE_COLOSSAL_WYRM)))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to the Colossal Wyrm Remains, then run north-east
+walks	64	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,all(RENU,QUETZAL_SITE_COLOSSAL_WYRM))	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to the Colossal Wyrm Remains, then run north-east
+walks	64	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,all(RENU,QUETZAL_SITE_OUTER_FORTIS)))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Outer Fortis, then run south
+walks	85	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,all(RENU,QUETZAL_SITE_OUTER_FORTIS))	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Outer Fortis, then run south
+walks	85	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,RENU))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run south-east
+walks	123	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,RENU)	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to the Hunter Guild, then run south-east
+walks	123	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_CIVITAS)	Construction cape to your house, then the Civitas illa Fortis portal, then run south out of the city
+walks	168	FREE
+to	HOUSE	POH_PORTAL_CIVITAS	then the Civitas illa Fortis portal, then run south out of the city
+walks	168	CONSUMABLE
+to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Hunter Guild, then run south-east
+walks	183	CONSUMABLE
 noFallbackGiven
 
 site	TAI_BWO_WANNAI_CALQUAT	CALQUAT
 switch	visitTaiBwoWannaiCalquat	Tai Bwo Wannai
 stop	ANY	TAI_BWO_WANNAI_CALQUAT
 at	TAI_BWO_WANNAI
+via	TAI_BWO_SCROLL	Tai Bwo Wannai teleport scroll, then run north
+walks	39	CONSUMABLE
+via	CONSTRUCTION_CAPE	Construction cape to the Brimhaven house portal, then run south
+walks	71	FREE
 to	HOUSE	POH_IN_BRIMHAVEN	with your house in Brimhaven
 walks	74	CONSUMABLE
 onlyWhenCertain
+via	BRIMHAVEN_TABLET	Brimhaven teleport tablet, then run south
+walks	74	CONSUMABLE
+via	patch:BRIMHAVEN_FRUIT_TREE	Run south from the Brimhaven fruit patch
+walks	106	FREE
 to	SALVE_GRAVEYARD	FAIRY_RINGS	then fairy ring CKR
 walks	129	CONSUMABLE
 via	all(@RING,FAIRY_RINGS)	Fairy ring CKR, south of Tai Bwo Wannai, then run north
 walks	107	FREE
+via	all(all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK),SPIRIT_TREE_GROWN_BRIMHAVEN)	Ride a spirit tree to Brimhaven from your house, the Grand Exchange or the Battlefield of Khazard, then run south
+walks	134	FREE
 to	ARDOUGNE	then Captain Barnaby's ferry to Brimhaven, and run south to Tai Bwo Wannai
 fare	30
 walks	176	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to Pirate Jackie the Fruit, then run south
+walks	124	FREE
+to	HOUSE	POH_IN_RIMMINGTON	with your house in Rimmington, then run west to Captain Barnaby's ferry to Brimhaven, and run south to Tai Bwo Wannai
+fare	30
+walks	171	CONSUMABLE
+onlyWhenCertain
 noFallbackGiven
 
 site	KASTORI_CALQUAT	CALQUAT
@@ -1159,8 +2058,14 @@ via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn V
 walks	162	FREE
 via	MOKHAIOTL_WAYSTONE	Mokhaiotl waystone to the Ruins of Mokhaiotl, then climb out and run south-east
 walks	90	CONSUMABLE
-via	VARLAMORE_ACCESS	Take Primio from the Varrock east gate to Civitas illa Fortis. Run north-west to Quetzacalli Gorge and take the mountain guide to Auburn Valley, then run south to Achilka's boat.
-floor
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,all(RENU,QUETZAL_SITE_KASTORI)))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site and ride Renu to Kastori, then run north-east
+walks	40	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,all(RENU,QUETZAL_SITE_KASTORI))	then the Civitas illa Fortis portal, then run east to the quetzal landing site and ride Renu to Kastori, then run north-east
+walks	40	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,RENU))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	124	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,RENU)	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	124	CONSUMABLE
 skipIfUnreachable
 
 site	GREAT_CONCH_CALQUAT	CALQUAT
@@ -1172,6 +2077,7 @@ via	all(@RING,FAIRY_RINGS)	Fairy ring CJQ to the Great Conch
 walks	104	FREE
 via	all(SAILORS_AMULET,CHARTER_SHIP)	Sailors' amulet to Deepfin Point, then charter to the Summer Shore. On your first visit, inspect the dock marker at Deepfin Point.
 fare	1800
+walks	76	CHARGE
 skipIfUnreachable
 
 site	VARROCK_TREE	REGULAR_TREE
@@ -1181,13 +2087,59 @@ at	VARROCK_PARK
 to	VARROCK	-
 banks	62	VARROCK_EAST
 walks	37	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to Toby, then run north
+banks	51	VARROCK_EAST
+walks	47	FREE
 via	all(CONSTRUCTION_CAPE,all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK))	Construction cape to your house, then the spirit tree to Varrock
 walks	86	FREE
 to	HOUSE	all(POH_SPIRIT_TREE,SPIRIT_TREE_NETWORK)	then the spirit tree to Varrock
 walks	86	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_VARROCK)	Construction cape to your house, then the Varrock portal, then run east
+walks	88	FREE
+to	HOUSE	POH_PORTAL_VARROCK	then the Varrock portal, then run east
+walks	88	CONSUMABLE
+via	RING_OF_WEALTH	Ring of wealth to the Grand Exchange, then run east
+banks	80	VARROCK_EAST
+walks	82	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to the Grand Exchange, then run east
+walks	87	FREE
+to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to the Grand Exchange, then run east
+walks	87	CONSUMABLE
+via	SKILLS_NECKLACE	Skills necklace to the Cooking Guild, then run east
+banks	80	VARROCK_EAST
+walks	93	CHARGE
+via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to the Cooking Guild, then run east
+walks	98	FREE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Cooking Guild, then run east
+walks	98	CONSUMABLE
+via	RING_OF_THE_ELEMENTS	Ring of the elements to the earth altar, then run west
+banks	25	VARROCK_EAST
+walks	99	CHARGE
+via	COMBAT_BRACELET	Combat bracelet to the Champions' Guild, then run north
+banks	51	VARROCK_EAST
+walks	99	CHARGE
+via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to the Champions' Guild, then run north
+walks	104	FREE
+to	HOUSE	any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE)	then its jewellery box to the Champions' Guild, then run north
+walks	104	CONSUMABLE
 via	CHRONICLE	Chronicle to the Champions' Guild
 banks	42	VARROCK_EAST
 walks	110	CHARGE
+via	all(@RING,FAIRY_RINGS)	Fairy ring DKR, then run east
+banks	80	VARROCK_EAST
+walks	130	FREE
+via	all(MINIGAME_TELEPORT,RAT_PITS_TELEPORT)	Minigame teleport to the Varrock Rat Pits, then run north
+banks	15	VARROCK_EAST
+walks	112	FREE
+via	DIGSITE_PENDANT	Digsite pendant to the Digsite, then run west
+banks	23	VARROCK_EAST
+walks	144	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_DIGSITE_PENDANT)	Construction cape to your house, then the mounted digsite pendant to the Digsite, then run west
+banks	23	VARROCK_EAST
+walks	149	FREE
+to	HOUSE	POH_DIGSITE_PENDANT	then the mounted digsite pendant to the Digsite, then run west
+banks	23	VARROCK_EAST
+walks	149	CONSUMABLE
 via	AMULET_OF_GLORY	Amulet of glory to Edgeville, then run east
 walks	197	CHARGE
 skipIfUnreachable
@@ -1199,9 +2151,34 @@ at	LUMBRIDGE
 to	LUMBRIDGE	-
 banksUpstairs	5	LUMBRIDGE_CASTLE
 walks	46	CONSUMABLE
+via	LUMBRIDGE_HOME_TELEPORT	Lumbridge Home Teleport, then run west
+banksUpstairs	5	LUMBRIDGE_CASTLE
+walks	82	FREE
+via	all(CONSTRUCTION_CAPE,POH_PORTAL_LUMBRIDGE)	Construction cape to your house, then the Lumbridge portal, then run west
+banksUpstairs	5	LUMBRIDGE_CASTLE
+walks	51	FREE
+to	HOUSE	POH_PORTAL_LUMBRIDGE	then the Lumbridge portal, then run west
+banksUpstairs	5	LUMBRIDGE_CASTLE
+walks	51	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to Mikasi, then run west
+walks	51	FREE
+via	COWBELL_AMULET	Cowbell amulet to the cow field, then run south-west
+walks	86	CHARGE
+via	NECKLACE_OF_PASSAGE	Necklace of passage to the Wizards' Tower, then run north-east
+walks	110	CHARGE
 via	RING_OF_THE_ELEMENTS	Ring of the elements to the water altar
 banksUpstairs	47	LUMBRIDGE_CASTLE
 walks	109	CHARGE
+via	AMULET_OF_GLORY	Amulet of glory to Draynor Village, then run east
+walks	94	CHARGE
+via	all(CONSTRUCTION_CAPE,POH_GLORY)	Construction cape to your house, then its mounted glory to Draynor Village, then run east
+walks	99	FREE
+to	HOUSE	POH_GLORY	then its mounted glory to Draynor Village, then run east
+walks	99	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,POH_JEWELLERY_BOX_ORNATE)	Construction cape to your house, then its jewellery box to Draynor Village, then run east
+walks	99	FREE
+to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Draynor Village, then run east
+walks	99	CONSUMABLE
 skipIfUnreachable
 
 site	FALADOR_TREE	REGULAR_TREE
@@ -1224,6 +2201,12 @@ walks	39	CONSUMABLE
 via	all(RESPAWN_TELEPORT,RESPAWN_AVAILABLE_FALADOR)	Respawn Teleport, with Falador set as your respawn point
 banks	41	FALADOR_EAST
 walks	61	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to Sir Rebral, then run north-east into the park
+banks	45	FALADOR_EAST
+walks	68	FREE
+via	RING_OF_THE_ELEMENTS	Ring of the elements to the air altar, then run north-east
+banks	18	FALADOR_EAST
+walks	113	CHARGE
 via	SKILLS_NECKLACE	Skills necklace to the Mining Guild
 banks	1	FALADOR_EAST
 walks	104	CHARGE
@@ -1239,6 +2222,8 @@ site	TAVERLEY_TREE	REGULAR_TREE
 switch	visitTaverleyTree	Taverley
 stop	ANY	TAVERLEY_TREE
 at	TAVERLEY
+via	all(RING_OF_THE_ELEMENTS,BALLOON_STATION_VARROCK,BALLOON_STATION_TAVERLEY)	Ring of the elements to the earth altar, then the Varrock balloon to Taverley
+walks	30	CONSUMABLE
 via	all(RING_OF_DUELING,BALLOON_STATION_CASTLE_WARS,BALLOON_STATION_TAVERLEY)	Ring of dueling to Castle Wars, then the balloon to Taverley
 walks	48	CONSUMABLE
 via	all(CONSTRUCTION_CAPE,all(any(POH_JEWELLERY_BOX_BASIC,POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE),BALLOON_STATION_CASTLE_WARS,BALLOON_STATION_TAVERLEY))	Construction cape to your house, then its jewellery box to Castle Wars, then the balloon to Taverley
@@ -1248,6 +2233,10 @@ walks	53	CONSUMABLE
 to	HOUSE	POH_IN_TAVERLEY	with your house in Taverley
 walks	49	CONSUMABLE
 onlyWhenCertain
+via	CONSTRUCTION_CAPE	Construction cape to the Taverley house portal, then run south-east
+walks	49	FREE
+via	TAVERLEY_TABLET	Taverley teleport tablet, then run south-east
+walks	49	CONSUMABLE
 to	FALADOR	then run north-west to Taverley
 walks	91	CONSUMABLE
 to	FALADOR	TAVERLEY_CLIMBING_ROCKS	then run north and climb the rocks into Taverley
@@ -1262,6 +2251,12 @@ via	COMBAT_BRACELET	Combat bracelet to the Warriors' Guild, then run south to Ta
 walks	117	CHARGE
 via	GAMES_NECKLACE	Games necklace to Burthorpe, then run south to Taverley
 walks	119	CHARGE
+via	all(DIARY_CAPE,TAVERLEY_CLIMBING_ROCKS)	Achievement diary cape to Sir Rebral, then run north and climb the rocks into Taverley
+walks	111	FREE
+via	DIARY_CAPE	Achievement diary cape to Sir Rebral, then run north-west to Taverley
+walks	134	FREE
+via	RING_OF_THE_ELEMENTS	Ring of the elements to the air altar, then run north-west to Taverley
+walks	181	CHARGE
 skipIfUnreachable
 
 site	GRAND_TREE	REGULAR_TREE
@@ -1290,6 +2285,27 @@ via	ROYAL_SEED_POD	Royal seed pod to the Grand Tree, then out of the tree and ru
 banks	1	GNOME_STRONGHOLD_SOUTH
 walks	79	FREE
 via	all(RING_OF_DUELING,GNOME_GLIDER)	Ring of dueling to Al Kharid, then the glider
+via	all(RING_OF_THE_ELEMENTS,BALLOON_STATION_VARROCK,BALLOON_STATION_GRAND_TREE)	Ring of the elements to the earth altar, then the Varrock balloon to the Grand Tree, then run south-west. The flight costs one magic log.
+banks	0	GNOME_STRONGHOLD_SOUTH
+walks	69	CONSUMABLE
+via	all(ARDOUGNE_CLOAK_1,SPIRIT_TREE_NETWORK)	Ardougne cloak to the Monastery, then run north-west to the Battlefield of Khazard spirit tree and ride it to the Grand Tree, then run south-west
+banks	0	GNOME_STRONGHOLD_SOUTH
+walks	112	FREE
+via	all(FISHING_CAPE,all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED))	Fishing cape to Otto's Grotto, then run north-west and climb the rocks into the Stronghold, then run south-west
+banks	4	GNOME_STRONGHOLD_SOUTH
+walks	156	FREE
+via	all(GAMES_NECKLACE,all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED))	Games necklace to the Barbarian Outpost, then run south-west and climb the rocks into the Stronghold, then run south-west
+banks	4	GNOME_STRONGHOLD_SOUTH
+walks	161	CHARGE
+via	all(CONSTRUCTION_CAPE,all(any(POH_JEWELLERY_BOX_BASIC,POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE),all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED)))	Construction cape to your house, then its jewellery box to the Barbarian Outpost, then run south-west and climb the rocks into the Stronghold, then run south-west
+banks	4	GNOME_STRONGHOLD_SOUTH
+walks	166	FREE
+to	HOUSE	all(any(POH_JEWELLERY_BOX_BASIC,POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE),all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED))	then its jewellery box to the Barbarian Outpost, then run south-west and climb the rocks into the Stronghold, then run south-west
+banks	4	GNOME_STRONGHOLD_SOUTH
+walks	166	CONSUMABLE
+to	BARBARIAN_OUTPOST	all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED)	then run south-west and climb the rocks into the Stronghold, then run south-west
+banks	4	GNOME_STRONGHOLD_SOUTH
+walks	174	CONSUMABLE
 skipIfUnreachable
 
 site	NEMUS_RETREAT_TREE	REGULAR_TREE
@@ -1297,15 +2313,23 @@ switch	visitNemusRetreatTree	Nemus Retreat
 stop	ANY	NEMUS_RETREAT_TREE
 at	NEMUS_RETREAT
 accessGate	VARLAMORE_ACCESS
+via	all(PENDANT_OF_ATES,ATES_STATUE_NEMUS_RETREAT,NEMUS_BROKEN_WALL)	Pendant of Ates to Nemus Retreat, then climb the broken wall north
+walks	44	CHARGE
 via	all(PENDANT_OF_ATES,ATES_STATUE_NEMUS_RETREAT)	Pendant of Ates to Nemus Retreat
 walks	57	CHARGE
-via	all(QUETZAL_WHISTLE,MOUNTAIN_GUIDE)	Quetzal whistle to Quetzacalli Gorge, then the mountain guide
+via	all(QUETZAL_WHISTLE,MOUNTAIN_GUIDE)	Quetzal whistle to Quetzacalli Gorge, then follow the mountain guide
 walks	44	CHARGE
-to	CIVITAS_ILLA_FORTIS	all(RENU,MOUNTAIN_GUIDE)	then run east to the quetzal landing site, ride Renu to Quetzacalli Gorge, then the mountain guide
+to	CIVITAS_ILLA_FORTIS	all(RENU,MOUNTAIN_GUIDE)	then run east to the quetzal landing site, ride Renu to Quetzacalli Gorge, then follow the mountain guide
 walks	59	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,all(RENU,MOUNTAIN_GUIDE)))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Quetzacalli Gorge, then follow the mountain guide
+walks	64	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,all(RENU,MOUNTAIN_GUIDE))	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Quetzacalli Gorge, then follow the mountain guide
+walks	64	CONSUMABLE
+via	all(all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS),NEMUS_STEPPING_STONES)	Fairy ring AIS to Auburn Valley, then run west over the stepping stones and the broken wall
+walks	71	FREE
 via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn Valley, then run west to Nemus Retreat
 walks	111	FREE
-to	VARROCK	all(RENU,MOUNTAIN_GUIDE)	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to Quetzacalli Gorge, then the mountain guide
+to	VARROCK	all(RENU,MOUNTAIN_GUIDE)	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to Quetzacalli Gorge, then follow the mountain guide
 walks	124	CONSUMABLE
 skipIfUnreachable
 
@@ -1322,11 +2346,17 @@ walks	33	CONSUMABLE
 onlyWhenCertain
 via	BRIMHAVEN_TABLET	Brimhaven teleport tablet, then run north
 walks	32	CONSUMABLE
-via	all(all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK),SPIRIT_TREE_GROWN_BRIMHAVEN)	Ride a spirit tree to Brimhaven from your house or the Grand Exchange, then run west
+via	all(all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK),SPIRIT_TREE_GROWN_BRIMHAVEN)	Ride a spirit tree to Brimhaven from your house, the Grand Exchange or the Battlefield of Khazard, then run west
 walks	35	FREE
 to	ARDOUGNE	then Captain Barnaby's ferry to Brimhaven, and run north-west
 fare	30
 walks	65	CONSUMABLE
+to	HOUSE	POH_IN_RIMMINGTON	with your house in Rimmington, then run west to Captain Barnaby's ferry to Brimhaven, and run north-west
+fare	30
+walks	60	CONSUMABLE
+onlyWhenCertain
+via	AMULET_OF_GLORY	Amulet of glory to Karamja, then run west
+walks	166	CHARGE
 skipIfUnreachable
 
 site	CATHERBY_FRUIT	FRUIT_TREE
@@ -1342,6 +2372,21 @@ walks	112	CONSUMABLE
 to	CAMELOT	then run south-east
 banks	11	CATHERBY
 walks	112	CONSUMABLE
+via	DIARY_CAPE	Achievement diary cape to the flax keeper, then run east
+banks	11	CATHERBY
+walks	116	FREE
+via	KANDARIN_HEADGEAR_4	Kandarin headgear 4 to Sherlock, then run north-east
+banks	11	CATHERBY
+walks	131	FREE
+via	KANDARIN_HEADGEAR_3	Kandarin headgear 3 to Sherlock, then run north-east
+banks	11	CATHERBY
+walks	131	CHARGE
+via	all(@RING,FAIRY_RINGS)	Fairy ring BLR by the Legends' Guild, then run north-east
+banks	11	CATHERBY
+walks	170	FREE
+via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run north-east
+banks	11	CATHERBY
+walks	177	FREE
 noFallbackGiven
 
 site	GRAND_TREE_FRUIT	FRUIT_TREE
@@ -1371,6 +2416,24 @@ banks	65	GNOME_STRONGHOLD_SOUTH
 walks	25	CONSUMABLE
 via	all(RING_OF_DUELING,GNOME_GLIDER)	Ring of dueling to Al Kharid, then the glider
 banks	65	GNOME_STRONGHOLD_SOUTH
+via	all(ARDOUGNE_CLOAK_1,SPIRIT_TREE_NETWORK)	Ardougne cloak to the Monastery, then run north-west to the Battlefield of Khazard spirit tree and ride it to the Grand Tree
+banks	65	GNOME_STRONGHOLD_SOUTH
+walks	89	FREE
+via	all(FISHING_CAPE,all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED))	Fishing cape to Otto's Grotto, then run north-west and climb the rocks into the Stronghold, then run south
+banks	65	GNOME_STRONGHOLD_SOUTH
+walks	123	FREE
+via	all(GAMES_NECKLACE,all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED))	Games necklace to the Barbarian Outpost, then run south-west and climb the rocks into the Stronghold, then run south
+banks	65	GNOME_STRONGHOLD_SOUTH
+walks	128	CHARGE
+via	all(CONSTRUCTION_CAPE,all(any(POH_JEWELLERY_BOX_BASIC,POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE),all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED)))	Construction cape to your house, then its jewellery box to the Barbarian Outpost, then run south-west and climb the rocks into the Stronghold, then run south
+banks	65	GNOME_STRONGHOLD_SOUTH
+walks	133	FREE
+to	HOUSE	all(any(POH_JEWELLERY_BOX_BASIC,POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE),all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED))	then its jewellery box to the Barbarian Outpost, then run south-west and climb the rocks into the Stronghold, then run south
+banks	65	GNOME_STRONGHOLD_SOUTH
+walks	133	CONSUMABLE
+to	BARBARIAN_OUTPOST	all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED)	then run south-west and climb the rocks into the Stronghold, then run south
+banks	65	GNOME_STRONGHOLD_SOUTH
+walks	141	CONSUMABLE
 noFallbackGiven
 
 site	TREE_GNOME_VILLAGE_FRUIT	FRUIT_TREE
@@ -1384,12 +2447,21 @@ walks	84	FREE
 via	all(zone:GNOME_STRONGHOLD,SPIRIT_TREE_NETWORK,SPIRIT_TREE_STRONGHOLD)	Run to the Stronghold spirit tree and ride it to the Tree Gnome Village, then ask Elkoy to lead you out of the maze and run north-west
 via	all(@RING,FAIRY_RINGS)	Fairy ring CIQ, north-west of Yanille, then run north-west
 walks	81	FREE
+via	CONSTRUCTION_CAPE	Construction cape to the Yanille house portal, then run north-west
+walks	113	FREE
+to	HOUSE	POH_IN_YANILLE	with your house in Yanille, then run north-west from the portal
+walks	113	CONSUMABLE
+onlyWhenCertain
+via	YANILLE_TABLET	Yanille teleport tablet, then run north-west
+walks	113	CONSUMABLE
+via	ARDOUGNE_CLOAK_1	Ardougne cloak to the Monastery, then run west
+walks	129	FREE
 via	RING_OF_DUELING	Ring of dueling to Castle Wars, then run north
 walks	155	CHARGE
-via	all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK)	Ride a spirit tree to the Tree Gnome Village from your house or the Grand Exchange, then ask Elkoy to lead you out of the maze and run north-west
+to	PORT_KHAZARD	then run west
+walks	160	CONSUMABLE
+via	all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK)	Ride a spirit tree to the Tree Gnome Village from your house, the Grand Exchange or the Battlefield of Khazard, then ask Elkoy to lead you out of the maze and run north-west
 walks	48	FREE
-via	NECKLACE_OF_PASSAGE	Necklace of passage to the Outpost, then run south
-walks	300	CHARGE
 noFallbackGiven
 
 site	LLETYA_FRUIT	FRUIT_TREE
@@ -1425,8 +2497,14 @@ via	all(all(@RING,FAIRY_RINGS),VARLAMORE_FAIRY_RINGS)	Fairy ring AIS to Auburn V
 walks	147	FREE
 via	MOKHAIOTL_WAYSTONE	Mokhaiotl waystone to the Ruins of Mokhaiotl, then climb out and run south-east
 walks	63	CONSUMABLE
-via	VARLAMORE_ACCESS	Take Primio from the Varrock east gate to Civitas illa Fortis. Run north-west to Quetzacalli Gorge and take the mountain guide to Auburn Valley, then run south to Achilka's boat.
-floor
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,all(RENU,QUETZAL_SITE_KASTORI)))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site and ride Renu to Kastori, then run north-east
+walks	53	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,all(RENU,QUETZAL_SITE_KASTORI))	then the Civitas illa Fortis portal, then run east to the quetzal landing site and ride Renu to Kastori, then run north-east
+walks	53	CONSUMABLE
+via	all(CONSTRUCTION_CAPE,all(POH_PORTAL_CIVITAS,RENU))	Construction cape to your house, then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	109	FREE
+to	HOUSE	all(POH_PORTAL_CIVITAS,RENU)	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
+walks	109	CONSUMABLE
 skipIfUnreachable
 
 site	HESPORI	HESPORI
@@ -1438,6 +2516,9 @@ walks	19	FREE
 via	SKILLS_NECKLACE	Skills necklace to the Farming Guild
 banks	25	FARMING_GUILD
 walks	19	CHARGE
+via	SEED_OF_GROWTH	Seed of growth to the Farming Guild
+banks	25	FARMING_GUILD
+walks	19	CONSUMABLE
 via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to the Farming Guild
 banks	25	FARMING_GUILD
 walks	24	FREE
@@ -1468,6 +2549,15 @@ walks	102	CONSUMABLE
 via	all(GAMES_NECKLACE,LOVAKENGJ_MINECART)	Games necklace to Wintertodt, then the minecart
 banks	25	FARMING_GUILD
 walks	100	CHARGE
+to	KOUREND_CASTLE	LOVAKENGJ_MINECART	then run east to the minecart at Kingstown
+banks	25	FARMING_GUILD
+walks	136	CONSUMABLE
+via	all(RADAS_BLESSING_3,LOVAKENGJ_MINECART)	Rada's blessing 3 to the Kourend Woodland, then the minecart
+banks	25	FARMING_GUILD
+walks	87	FREE
+via	all(RADAS_BLESSING_1,LOVAKENGJ_MINECART)	Rada's blessing to the Kourend Woodland, then the minecart
+banks	25	FARMING_GUILD
+walks	87	CHARGE
 via	LOVAKENGJ_MINECART	Minecart to the Farming Guild stop, beside the gate
 banks	25	FARMING_GUILD
 floor
@@ -1483,6 +2573,9 @@ walks	18	FREE
 via	SKILLS_NECKLACE	Skills necklace to the Farming Guild
 banks	25	FARMING_GUILD
 walks	18	CHARGE
+via	SEED_OF_GROWTH	Seed of growth to the Farming Guild
+banks	25	FARMING_GUILD
+walks	18	CONSUMABLE
 via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to the Farming Guild
 banks	25	FARMING_GUILD
 walks	23	FREE
@@ -1513,6 +2606,15 @@ walks	101	CONSUMABLE
 via	all(GAMES_NECKLACE,LOVAKENGJ_MINECART)	Games necklace to Wintertodt, then the minecart
 banks	25	FARMING_GUILD
 walks	99	CHARGE
+to	KOUREND_CASTLE	LOVAKENGJ_MINECART	then run east to the minecart at Kingstown
+banks	25	FARMING_GUILD
+walks	135	CONSUMABLE
+via	all(RADAS_BLESSING_3,LOVAKENGJ_MINECART)	Rada's blessing 3 to the Kourend Woodland, then the minecart
+banks	25	FARMING_GUILD
+walks	86	FREE
+via	all(RADAS_BLESSING_1,LOVAKENGJ_MINECART)	Rada's blessing to the Kourend Woodland, then the minecart
+banks	25	FARMING_GUILD
+walks	86	CHARGE
 via	LOVAKENGJ_MINECART	Minecart to the Farming Guild stop, beside the gate
 banks	25	FARMING_GUILD
 floor
@@ -1522,12 +2624,18 @@ plants	ATTAS
 site	SEAWEED	SEAWEED
 stop	ANY	SEAWEED_NORTH,SEAWEED_SOUTH
 at	FOSSIL_ISLAND_SEAWEED
-via	all(DIGSITE_PENDANT,FOSSIL_ISLAND_ZIPLINE)	Digsite pendant to the House on the Hill, then the zipline down
-via	all(CONSTRUCTION_CAPE,all(POH_DIGSITE_PENDANT,FOSSIL_ISLAND_ZIPLINE))	Construction cape to your house, then the mounted digsite pendant to the House on the Hill, then the zipline down
-to	HOUSE	all(POH_DIGSITE_PENDANT,FOSSIL_ISLAND_ZIPLINE)	then the mounted digsite pendant to the House on the Hill, then the zipline down
+via	all(DIGSITE_PENDANT,CANAL_BARGE,FOSSIL_ISLAND_ZIPLINE)	Digsite pendant to the House on the Hill, then the zipline down
+via	all(CONSTRUCTION_CAPE,all(POH_DIGSITE_PENDANT,CANAL_BARGE,FOSSIL_ISLAND_ZIPLINE))	Construction cape to your house, then the mounted digsite pendant to the House on the Hill, then the zipline down
+to	HOUSE	all(POH_DIGSITE_PENDANT,CANAL_BARGE,FOSSIL_ISLAND_ZIPLINE)	then the mounted digsite pendant to the House on the Hill, then the zipline down
 via	all(DIGSITE_PENDANT,CANAL_BARGE)	Digsite pendant to the Digsite, barge to the Museum Camp, then row out and dive
 via	all(CONSTRUCTION_CAPE,all(POH_DIGSITE_PENDANT,CANAL_BARGE))	Construction cape to your house, then the mounted digsite pendant to the Digsite, barge to the Museum Camp, then row out and dive
 to	HOUSE	all(POH_DIGSITE_PENDANT,CANAL_BARGE)	then the mounted digsite pendant to the Digsite, barge to the Museum Camp, then row out and dive
+via	all(DIGSITE_SCROLL,CANAL_BARGE)	Digsite teleport scroll, barge to the Museum Camp, then row out and dive
+via	all(LUMBERYARD_SCROLL,CANAL_BARGE)	Lumberyard teleport scroll, run south-east to the barge, barge to the Museum Camp, then row out and dive
+via	all(RING_OF_THE_ELEMENTS,CANAL_BARGE)	Ring of the elements to the earth altar, run south-east to the barge, barge to the Museum Camp, then row out and dive
+via	all(RING_OF_DUELING,GNOME_GLIDER,CANAL_BARGE)	Ring of dueling to Al Kharid, then the glider to Lemanto Andra. Run east to the barge, barge to the Museum Camp, then row out and dive
+to	SENNTISTEN	CANAL_BARGE	then run north to the barge, barge to the Museum Camp, then row out and dive
+to	VARROCK	CANAL_BARGE	then run east to the barge, barge to the Museum Camp, then row out and dive
 noFallbackGiven
 actions	HARVEST COMPOST PLANT PAY_PROTECTION
 plants	SEAWEED
@@ -1543,6 +2651,9 @@ walks	11	FREE
 via	SKILLS_NECKLACE	Skills necklace to the Farming Guild
 banks	25	FARMING_GUILD
 walks	11	CHARGE
+via	SEED_OF_GROWTH	Seed of growth to the Farming Guild
+banks	25	FARMING_GUILD
+walks	11	CONSUMABLE
 via	all(CONSTRUCTION_CAPE,any(POH_JEWELLERY_BOX_FANCY,POH_JEWELLERY_BOX_ORNATE))	Construction cape to your house, then its jewellery box to the Farming Guild
 banks	25	FARMING_GUILD
 walks	16	FREE
@@ -1573,6 +2684,15 @@ walks	94	CONSUMABLE
 via	all(GAMES_NECKLACE,LOVAKENGJ_MINECART)	Games necklace to Wintertodt, then the minecart
 banks	25	FARMING_GUILD
 walks	92	CHARGE
+to	KOUREND_CASTLE	LOVAKENGJ_MINECART	then run east to the minecart at Kingstown
+banks	25	FARMING_GUILD
+walks	128	CONSUMABLE
+via	all(RADAS_BLESSING_3,LOVAKENGJ_MINECART)	Rada's blessing 3 to the Kourend Woodland, then the minecart
+banks	25	FARMING_GUILD
+walks	79	FREE
+via	all(RADAS_BLESSING_1,LOVAKENGJ_MINECART)	Rada's blessing to the Kourend Woodland, then the minecart
+banks	25	FARMING_GUILD
+walks	79	CHARGE
 via	LOVAKENGJ_MINECART	Minecart to the Farming Guild stop, beside the gate
 banks	25	FARMING_GUILD
 floor
@@ -1595,4 +2715,5 @@ contract	FARMING_GUILD_REDWOOD
 patchFor	SPIRIT_TREE_GROWN_BRIMHAVEN	BRIMHAVEN_SPIRIT_TREE
 patchFor	SPIRIT_TREE_GROWN_FARMING_GUILD	FARMING_GUILD_SPIRIT_TREE
 patchFor	SPIRIT_TREE_GROWN_PORT_SARIM	PORT_SARIM_SPIRIT_TREE
+patchFor	SPIRIT_TREE_GROWN_HOSIDIUS	HOSIDIUS_SPIRIT_TREE
 patchFor	WEISS_HERB_PATCH	WEISS_HERB

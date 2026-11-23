@@ -79,7 +79,7 @@ public final class FarmingAdviceBuilder {
         if (pick == null) {
             return null;
         }
-        FarmingAdvice trip = walkTrip(List.of(pick), id.getDisplayName(), state, given);
+        FarmingAdvice trip = walkTrip(List.of(pick), id.getDisplayName(), state, given, RunVariants.newResolverCache());
         return trip != null ? trip : adviseOn(pick.getRun(), state, given, pick.getPlanFor());
     }
 
@@ -97,7 +97,7 @@ public final class FarmingAdviceBuilder {
                 .switchedOff(RunSettings.switchedOff(prefs)).runSettings(RunSettings.forRuns(prefs, state, inputs::patchAt, inputs.getCompost(),
                         inputs.quietPicks(state)))
                 .runFirst(RunSettings.runFirst(prefs)).waitForEveryPatch(RunSettings.waitForEveryPatch(prefs))
-                .travelGroups(RunSettings.travelGroups(prefs, state, inputs.getHouse())).house(house)
+                .travelGroups(RunSettings.travelGroups(prefs, state, inputs.getHouse())).longestRun(RunSettings.longestRun(prefs)).house(house)
                 .fairyRingBlocked(fairyRingBlocked(advice, state, inputs)).build();
     }
 
@@ -156,12 +156,7 @@ public final class FarmingAdviceBuilder {
      * family's crops off.
      */
     private static FarmingRunStatus statusOf(List<FarmingRunStatus> runs, RunId wanted) {
-        for (FarmingRunStatus run : runs) {
-            if (wanted.name().equals(run.getRunId())) {
-                return run;
-            }
-        }
-        return null;
+        return runs.stream().filter(run -> wanted.name().equals(run.getRunId())).findFirst().orElse(null);
     }
 
     /**
@@ -223,7 +218,7 @@ public final class FarmingAdviceBuilder {
         if (due.isEmpty()) {
             return null;
         }
-        return walkTrip(due, "Farm run", state, inputs);
+        return walkTrip(due, "Farm run", state, inputs, resolvers);
     }
 
     /**
@@ -234,14 +229,17 @@ public final class FarmingAdviceBuilder {
      *     coming due or going quiet never re-decides which family's stop leads an arrival
      *     or wins a patch two families name.
      * @param runName the walkthrough's title
+     * @param resolvers one resolver per book, shared with the scoring that chose {@code due}
      */
-    private static FarmingAdvice walkTrip(List<RunVariants.Choice> due, String runName, PlayerState state, FarmingInputs inputs) {
-        List<RunVariants.Choice> merged = new ArrayList<>(due);
+    private static FarmingAdvice walkTrip(List<RunVariants.Choice> due, String runName, PlayerState state, FarmingInputs inputs,
+            Map<Spellbook, CapabilityResolver> resolvers) {
+        List<RunVariants.Choice> sorted = new ArrayList<>(due);
         // The preset's order, even for a player who runs herbs first.
-        merged.sort(Comparator.comparingInt(choice -> choice.getRun().getId().getPriority()));
+        sorted.sort(Comparator.comparingInt(choice -> choice.getRun().getId().getPriority()));
+        List<RunVariants.Choice> merged = bookForTrip(sorted, state, inputs, resolvers);
 
-        Spellbook planFor = bookForTrip(merged, openBookOf(state));
-        CapabilityResolver resolver = inputs.resolverOn(planFor);
+        Spellbook planFor = bookAskedFor(merged, openBookOf(state));
+        CapabilityResolver resolver = resolvers.computeIfAbsent(planFor, inputs::resolverOn);
 
         List<Itinerary.Planned> planned = new ArrayList<>(merged.size());
         List<SeedPlan> seeds = new ArrayList<>(merged.size());
@@ -281,8 +279,9 @@ public final class FarmingAdviceBuilder {
         // to visit.
         Itinerary.Trip trip = RunPlanning.replanAcrossTheCircuit(headingFirst(
                 CloakToTheRings.bushesBeforeTheFirstRing(Itinerary.merge(planned, state), resolver, state), inputs), planner, state);
-        // The respawn suggestion follows the family the ranking puts first.
-        return drawTrip(trip, true, runName, due.get(0).getRun(), plantedIn, seeds, state, planner, inputs, planFor);
+        // The respawn suggestion follows the family the ranking puts first, as the trip walks it.
+        FarmingRun respawnFor = merged.get(sorted.indexOf(due.get(0))).getRun();
+        return drawTrip(trip, true, runName, respawnFor, plantedIn, seeds, state, planner, inputs, planFor);
     }
 
     /**
@@ -295,9 +294,10 @@ public final class FarmingAdviceBuilder {
      * @return the walkthrough, or null when a merged trip draws no row; a single run is the
      *     trip even with no row
      */
-    private static FarmingAdvice drawTrip(Itinerary.Trip trip, boolean merged,
+    private static FarmingAdvice drawTrip(Itinerary.Trip planned, boolean merged,
             String runName, FarmingRun respawnFor, Map<PatchRef, Crop> plantedIn,
             List<SeedPlan> seeds, PlayerState state, RunPlanner planner, FarmingInputs inputs, Spellbook planFor) {
+        Itinerary.Trip trip = RunPlanning.claimCooldowns(StopSkipRules.pickFruitOnlyInPassing(planned, inputs, planner, state), planner, state);
         CapabilityResolver resolver = planner.resolver();
         List<FarmingStopAdvice> stops = new ArrayList<>(trip.getVisits().size());
         // Grown as the circuit is walked, for visits that earn an arrival's combined route
@@ -455,9 +455,7 @@ public final class FarmingAdviceBuilder {
 
     /** Whether the player stands in the map region of a patch this arrival visits. */
     private static boolean standsIn(List<Integer> visit, List<StopPlan> plans, PlayerState state) {
-        Integer region = state == null ? null : state.getRegionId();
-        return region != null && StopRowWriter.visitsIn(visit, plans).stream()
-                .anyMatch(plan -> plan.getStop().getPatches().stream().anyMatch(ref -> ref.getRegionId() == region));
+        return state != null && StopRowWriter.visitsIn(visit, plans).stream().anyMatch(plan -> plan.getStop().isIn(state.getRegionId()));
     }
 
     /** A visit made from where the player stands: no route, no teleport, nothing it leans on. */
@@ -519,38 +517,62 @@ public final class FarmingAdviceBuilder {
      * nothing about this one.
      */
     private static boolean grewThisTrip(StopPlan plan, FarmingInputs inputs) {
-        if (plan.isVisit() || plan.getSkipReason() == FarmingSkipReason.STANDING_CROP) {
-            return false;
-        }
-        for (PatchRef ref : plan.getStop().getPatches()) {
-            PatchPrediction seen = inputs.patchAt(ref);
-            if (StopSkipRules.isStillGrowing(seen) && RunScheduler.seenThisTrip(seen.getObservedAtEpochSec(), inputs.getNowEpochSec())) {
-                return true;
-            }
-        }
-        return false;
+        return !plan.isVisit() && plan.getSkipReason() != FarmingSkipReason.STANDING_CROP
+                && plan.getStop().getPatches().stream().map(inputs::patchAt).anyMatch(seen ->
+                        StopSkipRules.isStillGrowing(seen) && RunScheduler.seenThisTrip(seen.getObservedAtEpochSec(), inputs.getNowEpochSec()));
     }
 
     /**
-     * The one book the whole trip is walked on. Its rungs route every stop, and its seats
-     * order every family's stops on the circuit.
+     * Chooses the one book the whole trip is walked on, which {@link #bookAskedFor} reads off
+     * the families this returns. Its rungs route every stop, and its seats order every
+     * family's stops on the circuit.
      *
      * <p>The first book any family <em>asked</em> for, otherwise the open one. Only the herb
      * run comes in per-book variants; every other {@link RunVariants.Choice} names the open
      * book. Taking the top-ranked family's book instead would plan a trailing herb run's
      * Arceuus route on Standard and silently drop patches.
      *
-     * <p><b>Not measured:</b> what the swap costs the other families. A swap may turn
-     * another family's spell into a tablet. That cost is bounded, because a teleport with no
-     * spell falls back to a tablet, and the player is told to swap.
+     * <p>A swap may turn another family's spell into a tablet, and the player is told to
+     * swap. But a swap earns its keep in one family's patches and costs every other family
+     * its spells: without tablets, a tree run of Standard teleports reaches none of its
+     * patches on Lunar, though the runs list counts it due on the book the player has open.
+     * So a swap that strands a family is undone: every family off the open book is chosen
+     * again on it, unless that would strand one of them instead. Reachable patches are
+     * counted as {@link RunVariants.Choice} counts them. Only stranding is measured: a swap
+     * that cuts another family to fewer patches, but not zero, stands.
+     *
+     * @return the families as the trip walks them: {@code due} itself, or a copy with the
+     *     swapping families chosen again on the open book
      */
-    private static Spellbook bookForTrip(List<RunVariants.Choice> due, Spellbook openBook) {
-        for (RunVariants.Choice choice : due) {
-            if (choice.getPlanFor() != openBook && choice.getPlanFor() != Spellbook.ANY) {
-                return choice.getPlanFor();
-            }
+    static List<RunVariants.Choice> bookForTrip(List<RunVariants.Choice> due, PlayerState state, FarmingInputs inputs,
+            Map<Spellbook, CapabilityResolver> resolvers) {
+        Spellbook openBook = openBookOf(state);
+        Spellbook swapTo = bookAskedFor(due, openBook);
+        if (swapTo == openBook || due.stream().noneMatch(choice -> choice.getPlanFor() != swapTo
+                && strands(choice, RunVariants.bestOn(List.of(choice.getRun()), state, openBook, swapTo, inputs, resolvers)))) {
+            return due;
         }
-        return openBook;
+        List<RunVariants.Choice> unswapped = new ArrayList<>(due.size());
+        for (RunVariants.Choice choice : due) {
+            RunVariants.Choice again = choice.getPlanFor() == openBook ? choice : RunVariants.bestOn(
+                    FarmingCatalogue.runsById().get(choice.getRun().getId()), state, openBook, openBook, inputs, resolvers);
+            if (strands(choice, again)) {
+                return due;
+            }
+            unswapped.add(again);
+        }
+        return unswapped;
+    }
+
+    /** The first book any family asks for other than the open one, else the open one. */
+    private static Spellbook bookAskedFor(List<RunVariants.Choice> due, Spellbook openBook) {
+        return due.stream().map(RunVariants.Choice::getPlanFor).filter(book -> book != openBook && book != Spellbook.ANY)
+                .findFirst().orElse(openBook);
+    }
+
+    /** Whether a family that reached a patch as it was chosen reaches none chosen this other way. */
+    private static boolean strands(RunVariants.Choice before, RunVariants.Choice after) {
+        return before.getReachablePatches() > 0 && after.getReachablePatches() == 0;
     }
 
     // --- Seeds ---------------------------------------------------------------
@@ -578,13 +600,8 @@ public final class FarmingAdviceBuilder {
 
     /** Whether any visit plants a herb patch the rotation fills. */
     private static boolean plantsTheHerbRotation(List<StopPlan> plans) {
-        for (StopPlan plan : plans) {
-            if (plan.isVisit() && plan.getStop().isPlanting() && !plan.getStop().isFixedCrop()
-                    && plan.getStop().patchType() == PatchType.HERB) {
-                return true;
-            }
-        }
-        return false;
+        return plans.stream().anyMatch(plan -> plan.isVisit() && plan.getStop().isPlanting() && !plan.getStop().isFixedCrop()
+                && plan.getStop().patchType() == PatchType.HERB);
     }
 
     // --- Spellbook -----------------------------------------------------------
@@ -725,17 +742,8 @@ public final class FarmingAdviceBuilder {
      * only while the ring has a teleport left today, so this also says one is left.
      */
     private static boolean teleportsByExplorersRing(List<StopPlan> plans) {
-        for (StopPlan plan : plans) {
-            if (!plan.isVisit() || plan.getNeeds() == null) {
-                continue;
-            }
-            for (Capability need : plan.getNeeds()) {
-                if (need.getTierFamily() == Capability.TierFamily.EXPLORERS_RING) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return plans.stream().filter(plan -> plan.isVisit() && plan.getNeeds() != null).flatMap(plan -> plan.getNeeds().stream())
+                .anyMatch(need -> need.getTierFamily() == Capability.TierFamily.EXPLORERS_RING);
     }
 
     /**

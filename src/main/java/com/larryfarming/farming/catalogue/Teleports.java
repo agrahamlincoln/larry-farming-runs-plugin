@@ -35,6 +35,12 @@ public final class Teleports {
      */
     public static final TeleportMeans SPELLBOOK_SWAP;
 
+    /** Every teleport tablet the table names, by item id; see {@link #tabletIds()}. */
+    private static final Set<Integer> TABLET_IDS = new TreeSet<>();
+
+    /** The spellbook icon of each spell cast with no destination and no runes. */
+    private static final Map<Capability, Integer> ICONS = new EnumMap<>(Capability.class);
+
     // The teleports table, read once. Assigned here rather than in initialisers because one
     // pass over the rows fills all three.
     static {
@@ -57,6 +63,7 @@ public final class Teleports {
                     }
                     break;
                 case "tablet":
+                    TABLET_IDS.add(row.integer(3));
                     byPlace.computeIfAbsent(row.requireWidth(6).constant(Destination.class, 1),
                             place -> new ArrayList<>()).add(TeleportMeans.tablet(row.text(2), row.integer(3), row.optionalText(5)));
                     break;
@@ -70,6 +77,9 @@ public final class Teleports {
                 case "runes":
                     byCapability.put(row.constant(Capability.class, 1),
                             Collections.unmodifiableMap(runes(row.requireWidth(3), 2)));
+                    break;
+                case "icon":
+                    ICONS.put(row.requireWidth(4).constant(Capability.class, 1), row.integer(2));
                     break;
                 default:
                     throw row.error("no kind " + row.text(0));
@@ -88,6 +98,16 @@ public final class Teleports {
 
     // After the table, which BY_SWAP reads.
     private static final Map<Destination, TeleportMeans> BY_SWAP = bySwap();
+
+    /** Every teleport tablet the table names, by item id. */
+    public static Set<Integer> tabletIds() {
+        return Collections.unmodifiableSet(TABLET_IDS);
+    }
+
+    /** The spellbook icon of a spell cast with no destination, such as Minigame Teleport, or 0. */
+    public static int iconFor(Capability capability) {
+        return ICONS.getOrDefault(capability, 0);
+    }
 
     /** Every way of reaching this place, spells before tablets. Never null. */
     public static List<TeleportMeans> to(Destination destination) {

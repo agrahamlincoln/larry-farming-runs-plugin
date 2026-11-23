@@ -13,6 +13,8 @@ He learns your teleports and unlocks as you play, so there's nothing to set up.
   from the unlocks on your account.
 - **The plan keeps up.** A new diary reward or quest unlock changes the route the moment the
   game reports it.
+- **Routes stay short.** You choose the longest run after a teleport, up to a minute. The
+  default is 45 seconds. Larry skips a patch that only a longer run reaches.
 
 ## What do I bring?
 

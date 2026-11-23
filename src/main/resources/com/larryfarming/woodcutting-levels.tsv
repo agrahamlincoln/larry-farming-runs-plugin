@@ -1,0 +1,14 @@
+# The Woodcutting level to chop each lumber or hardwood tree once grown, the same as the wild
+# tree. Fruit trees chop at any level and have no row.
+#
+# crop	level
+OAK	15
+WILLOW	30
+TEAK	35
+MAPLE	45
+MAHOGANY	50
+YEW	60
+CAMPHOR	66
+MAGIC	75
+IRONWOOD	80
+ROSEWOOD	92
