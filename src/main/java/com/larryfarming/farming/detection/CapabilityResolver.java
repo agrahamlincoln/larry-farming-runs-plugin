@@ -76,7 +76,7 @@ public final class CapabilityResolver {
     @Getter
     private final int longestWalk;
 
-    /** Cooldown teleports an earlier stop on the trip uses. See {@link #claiming}. */
+    /** Cooldown teleports an earlier journey on the trip casts. See {@link #claiming}. */
     @With(AccessLevel.PRIVATE)
     private final Set<Capability> claimed;
 
@@ -135,7 +135,7 @@ public final class CapabilityResolver {
     }
 
     /**
-     * The same resolver, with these cooldown teleports spent by an earlier stop on the trip:
+     * The same resolver, with these cooldown teleports spent by an earlier journey on the trip:
      * a cooldown outlasts any trip, so each is used once.
      */
     public CapabilityResolver claiming(Set<Capability> spent) {

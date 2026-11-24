@@ -297,8 +297,13 @@ public final class FarmingAdviceBuilder {
     private static FarmingAdvice drawTrip(Itinerary.Trip planned, boolean merged,
             String runName, FarmingRun respawnFor, Map<PatchRef, Crop> plantedIn,
             List<SeedPlan> seeds, PlayerState state, RunPlanner planner, FarmingInputs inputs, Spellbook planFor) {
-        Itinerary.Trip trip = RunPlanning.claimCooldowns(StopSkipRules.pickFruitOnlyInPassing(planned, inputs, planner, state), planner, state);
+        Itinerary.Trip trip = StopSkipRules.pickFruitOnlyInPassing(planned, inputs, planner, state);
         CapabilityResolver resolver = planner.resolver();
+        // claimed holds the cooldown teleports the rows so far send the player by, and
+        // claiming plans without them. A cooldown outlasts the trip, so each is cast once.
+        Set<Capability> claimed = EnumSet.noneOf(Capability.class);
+        RunPlanner claiming = planner;
+        List<List<Crop>> cropFor = new ArrayList<>(trip.getCropFor());
         List<FarmingStopAdvice> stops = new ArrayList<>(trip.getVisits().size());
         // Grown as the circuit is walked, for visits that earn an arrival's combined route
         // (planned here, not in replanAcrossTheCircuit). Filled for any combined chain with a
@@ -320,6 +325,7 @@ public final class FarmingAdviceBuilder {
         // The trip's plans, less the way to the first arrival when the player already stands there.
         List<StopPlan> tripPlans = new ArrayList<>(trip.getPlans());
         for (List<Integer> visit : trip.getVisits()) {
+            RunPlanning.routeAroundClaims(visit, tripPlans, cropFor, claimed, claiming, state, reached, start);
             // Standing in the first arrival made, its visits need no route to read and no
             // teleport to pack, so the row leads with its work.
             boolean here = mayStandHere && StopRowWriter.isJourney(visit, tripPlans) && standsIn(visit, tripPlans, state);
@@ -327,8 +333,8 @@ public final class FarmingAdviceBuilder {
                 visit.forEach(index -> tripPlans.set(index, standingAt(tripPlans.get(index))));
             }
             StopPlan route = merged && !here ? StopRowWriter.routeForVisit(visit, tripPlans,
-                    StopRowWriter.leadOf(visit, tripPlans), planner, state, reached, mayStandHere, start) : null;
-            FarmingStopAdvice row = StopRowWriter.adviseOnGroup(visit, tripPlans, trip.getCropFor(), plantedIn, inputs, route, state);
+                    StopRowWriter.leadOf(visit, tripPlans), claiming, state, reached, mayStandHere, start) : null;
+            FarmingStopAdvice row = StopRowWriter.adviseOnGroup(visit, tripPlans, cropFor, plantedIn, inputs, route, state);
             start = CloakToTheRings.after(start, visit, tripPlans, resolver, state);
             stops.add(row);
             // Only VISIT rows feed the bag and the reached patches. The sim banks at any
@@ -344,6 +350,10 @@ public final class FarmingAdviceBuilder {
                     RunPlanner.stood(reached, tripPlans.get(index));
                 }
                 mayStandHere = false;
+                // Claimed from the route the row prints, which is the cast the player makes. A
+                // sibling's own route is not taken: it comes along on the lead's journey.
+                claimed.addAll(RunPlanning.cooldownsOf(route != null ? route : StopRowWriter.leadOf(visit, tripPlans)));
+                claiming = new RunPlanner(resolver.claiming(claimed));
             }
             for (int index : visit) {
                 covered.add(trip.getRunFor().get(index));
@@ -355,7 +365,7 @@ public final class FarmingAdviceBuilder {
         if (stops.isEmpty() && merged) {
             return null;
         }
-        boolean underway = underway(trip.getVisits(), trip.getPlans(), trip.getRunFor(), inputs);
+        boolean underway = underway(trip.getVisits(), tripPlans, trip.getRunFor(), inputs);
         // A single run is itself the trip, so the panel has one rule for "which families am
         // I looking at?".
         List<String> tripRuns = merged ? namesOf(covered) : List.of(respawnFor.getId().name());
@@ -363,7 +373,6 @@ public final class FarmingAdviceBuilder {
         // The bag is simulated over the arrivals made, the bank stops spliced in, and
         // everything the panel shows around the rows added.
         List<StopPlan> plans = onTheJourneys(tripPlans, made);
-        List<List<Crop>> cropFor = trip.getCropFor();
         // One answer for the loadout and the bag simulation. The packing list names the
         // basket either way.
         CarryPlanner.BasketPlace basket = CarryPlanner.basketPlace(plans, cropFor, state, inputs);

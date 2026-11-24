@@ -198,7 +198,7 @@ final class RunPlanning {
      *
      * <p>{@code adviseOnGroup}'s planting tally counts every stop at an arrival whose lead is
      * visited, so a stranded stop beside a visited one would otherwise print "plant a yew"
-     * for a patch the row is not working. Both re-planning passes need this.
+     * for a patch the row is not working. Every re-planning pass needs this.
      */
     static List<List<Crop>> cropsWithoutTheStopsThatLeft(List<StopPlan> plans, List<List<Crop>> cropFor) {
         List<List<Crop>> kept = new ArrayList<>(cropFor);
@@ -249,41 +249,35 @@ final class RunPlanning {
     }
 
     /**
-     * The trip with each cooldown teleport used once: the first journey in walk order whose
-     * route takes it claims it, and every later journey that would take it too is routed
-     * again without it. A minigame or home teleport's cooldown, 20 or 30 minutes, outlasts
-     * the walk between two of the trip's journeys.
+     * One arrival's stops routed again without the cooldown teleports an earlier journey on
+     * the trip casts. A minigame or home teleport's cooldown, 20 or 30 minutes, outlasts the
+     * walk between two of the trip's journeys, so each is cast once. A stop that loses its
+     * route plants nothing.
      *
-     * <p>A journey, not a stop: every patch at the arrival shares the one cast, so the
-     * claim lands only once the whole arrival is planned. An arrival the player skips casts
-     * nothing and claims nothing.
+     * @param claiming the planner that offers none of {@code claimed}
+     * @param start what the journey before this one left the player, such as the fairy ring
+     *     beside the Monastery bushes, so the next stop keeps the walk from there
      */
-    static Itinerary.Trip claimCooldowns(Itinerary.Trip trip, RunPlanner planner, PlayerState state) {
-        List<StopPlan> plans = new ArrayList<>(trip.getPlans());
-        Set<Capability> claimed = EnumSet.noneOf(Capability.class);
-        // The patches the trip reaches before each stop, so a route leaning on one survives.
-        Map<PatchRef, CapabilityState> reached = new HashMap<>();
-        for (List<Integer> visit : trip.getVisits()) {
-            for (int index : visit) {
-                StopPlan plan = plans.get(index);
-                if (plan.isVisit() && !Collections.disjoint(plan.getRoute().getRequires().leafCapabilities(), claimed)) {
-                    plans.set(index, new RunPlanner(planner.resolver().claiming(claimed)).planStop(plan.getStop(), state, reached, false));
-                }
-            }
-            if (!StopRowWriter.isJourney(visit, plans)) {
-                continue;
-            }
-            for (int index : visit) {
-                StopPlan plan = plans.get(index);
-                if (plan.isVisit()) {
-                    plan.getRoute().getRequires().leafCapabilities().stream().filter(CapabilitySources::hasCooldown).forEach(claimed::add);
-                    for (PatchRef patch : plan.getStop().getPatches()) {
-                        reached.put(patch, plan.getConfidence());
-                    }
+    static void routeAroundClaims(List<Integer> visit, List<StopPlan> plans, List<List<Crop>> cropFor, Set<Capability> claimed,
+            RunPlanner claiming, PlayerState state, Map<PatchRef, CapabilityState> reached, RunPlanner.Start start) {
+        for (int index : visit) {
+            StopPlan plan = plans.get(index);
+            if (plan.isVisit() && !Collections.disjoint(cooldownsOf(plan), claimed)) {
+                plans.set(index, claiming.planStop(plan.getStop(), state, reached, false, start));
+                if (!plans.get(index).isVisit()) {
+                    cropFor.set(index, List.of());
                 }
             }
         }
-        return trip.rerouted(plans, cropsWithoutTheStopsThatLeft(plans, trip.getCropFor()));
+    }
+
+    /** The cooldown teleports this plan's route casts; none for a stop routed from where the player stands. */
+    static Set<Capability> cooldownsOf(StopPlan plan) {
+        Set<Capability> cooldowns = EnumSet.noneOf(Capability.class);
+        if (plan.getRoute() != null) {
+            plan.getRoute().getRequires().leafCapabilities().stream().filter(CapabilitySources::hasCooldown).forEach(cooldowns::add);
+        }
+        return cooldowns;
     }
 
     /**
