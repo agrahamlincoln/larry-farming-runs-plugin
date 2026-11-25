@@ -3,6 +3,7 @@ package com.larryfarming.model;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -193,5 +194,34 @@ public class PlayerState {
 
     public Map<Integer, Integer> getSeedBoxWatchedNet() {
         return seedBoxWatchedNet != null ? seedBoxWatchedNet : (seedBoxWatchedNet = new HashMap<>());
+    }
+
+    /**
+     * Answers worked out once while a plan is built, or null between plans. A plan asks the
+     * same questions of the state thousands of times, and nothing changes the state while
+     * it runs, so each answer holds until the plan returns. Client thread only.
+     */
+    @Getter
+    private transient Recall recall;
+
+    /** What a plan has already counted, kept only for that plan. */
+    public static final class Recall {
+        /** How many of each item, by id, the player owns anywhere. */
+        public final Map<Integer, Integer> owned = new HashMap<>();
+        /** The bank's loose stacks summed by item id, or null until a count first needs them. */
+        public Map<Integer, Integer> banked;
+    }
+
+    /** Builds a plan, remembering answers until it returns; a plan inside another shares its answers. */
+    public <T> T recalling(Supplier<T> plan) {
+        if (recall != null) {
+            return plan.get();
+        }
+        recall = new Recall();
+        try {
+            return plan.get();
+        } finally {
+            recall = null;
+        }
     }
 }

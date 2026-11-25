@@ -92,8 +92,19 @@ public class StateEngine {
         afterEvent();
     }
 
+    /**
+     * A skill gained experience. Only a new level is news to the plan: experience moves on
+     * almost every tick in combat or while skilling, and each plan costs the client thread.
+     * The experience is saved now, and a goal's figure for it catches up at the next plan.
+     */
     public void onStatChanged(String skillName, long xp, int level) {
-        change(() -> EventApplier.applyStatChanged(playerState, skillName, xp, level));
+        Skill skill = Skill.fromString(skillName);
+        if (playerState == null || skill == null) return;
+        SkillState held = playerState.getSkills().get(skill);
+        boolean newLevel = held == null || held.getLevel() != level;
+        EventApplier.applyStatChanged(playerState, skillName, xp, level);
+        persistence.markDirty();
+        dirty |= newLevel;
     }
 
     /** Applies a change to the player state, if an account is loaded. */

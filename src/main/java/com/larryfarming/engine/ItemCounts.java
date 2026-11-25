@@ -31,8 +31,34 @@ public final class ItemCounts {
         if (state == null || itemId == 0) {
             return 0;
         }
-        return countIn(state.getInventory(), itemId) + countItemInStorage(state.getEquipment().values(), itemId)
-                + countIn(state.getBank(), itemId) + sideContainerCount(state, itemId, false);
+        // A plan asks about the same items again and again, and each count walks the bank.
+        PlayerState.Recall recall = state.getRecall();
+        Integer known = recall != null ? recall.owned.get(itemId) : null;
+        if (known != null) {
+            return known;
+        }
+        int owned = countIn(state.getInventory(), itemId) + countItemInStorage(state.getEquipment().values(), itemId)
+                + countBanked(state, recall, itemId) + sideContainerCount(state, itemId, false);
+        if (recall != null) {
+            recall.owned.put(itemId, owned);
+        }
+        return owned;
+    }
+
+    /** The bank's count of the item, from a single pass over the bank for the whole plan. */
+    private static int countBanked(PlayerState state, PlayerState.Recall recall, int itemId) {
+        if (recall == null) {
+            return countIn(state.getBank(), itemId);
+        }
+        if (recall.banked == null) {
+            recall.banked = new HashMap<>();
+            if (state.getBank() != null) {
+                for (ItemStack item : state.getBank()) {
+                    recall.banked.merge(item.getItemId(), item.getQuantity(), Integer::sum);
+                }
+            }
+        }
+        return recall.banked.getOrDefault(itemId, 0) + countContainerContents(state.getBank(), itemId);
     }
 
     /**

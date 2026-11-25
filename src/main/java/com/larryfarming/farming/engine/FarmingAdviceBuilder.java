@@ -32,6 +32,12 @@ public final class FarmingAdviceBuilder {
      * on a quiet day, usually the herb run, so a quiet day still shows what the feature does.
      */
     public static FarmingAdvice forPlayer(PlayerState state, FarmingInputs inputs, long nowEpochSec) {
+        // Built on the client thread on every tick that brings a change, so the plan
+        // remembers what it has counted rather than walking the bank for each question.
+        return state.recalling(() -> plan(state, inputs, nowEpochSec));
+    }
+
+    private static FarmingAdvice plan(PlayerState state, FarmingInputs inputs, long nowEpochSec) {
         // The caller's clock overrides the inputs' clock, so one second is in play. Inputs
         // built without a clock would otherwise never say what any stop was for.
         FarmingInputs given = (inputs != null ? inputs : FarmingInputs.none()).withNowEpochSec(nowEpochSec).seeing(state);

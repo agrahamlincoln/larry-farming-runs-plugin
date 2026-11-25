@@ -61,7 +61,6 @@ public final class CapabilityResolver {
     private final Set<TravelMethod> switchedOff;
 
     /** House items the player has declared built. See {@link #declaringHouse}. */
-    @With(AccessLevel.PRIVATE)
     private final Set<Capability> houseDeclared;
 
     /**
@@ -80,6 +79,19 @@ public final class CapabilityResolver {
     @With(AccessLevel.PRIVATE)
     private final Set<Capability> claimed;
 
+    /**
+     * {@link #resolveOwnership}'s answers during one plan. Ownership reads only the book, the
+     * sight, the house and its declarations, so every copy keeping those four shares them.
+     * A copy that changes any of the four takes a fresh one, as {@link #declaringHouse} does.
+     */
+    private final Known known;
+
+    /** Ownership verdicts, kept for the plan that worked them out. */
+    private static final class Known {
+        PlayerState.Recall during;
+        final Map<Capability, CapabilityVerdict> verdicts = new EnumMap<>(Capability.class);
+    }
+
     /** The book this resolver plans for: the one the trip will be walked on. */
     public Spellbook getBook() {
         return onBook;
@@ -93,7 +105,8 @@ public final class CapabilityResolver {
      */
     public CapabilityResolver(Spellbook onBook, DailyTeleportLedger dailyLedger, long nowEpochSec, PatchSight sight, HouseSight house) {
         this(onBook != null ? onBook : Spellbook.STANDARD, dailyLedger, nowEpochSec, sight != null ? sight : PatchSight.blind(),
-                house != null ? house : HouseSight.unseen(), true, Set.of(), Set.of(), TravelTaken.NONE, Integer.MAX_VALUE, Set.of());
+                house != null ? house : HouseSight.unseen(), true, Set.of(), Set.of(), TravelTaken.NONE, Integer.MAX_VALUE, Set.of(),
+                new Known());
     }
 
     /**
@@ -131,7 +144,9 @@ public final class CapabilityResolver {
     public CapabilityResolver declaringHouse(Set<Capability> declared) {
         Set<Capability> wanted = declared == null || declared.isEmpty() ? Set.of()
                 : Collections.unmodifiableSet(EnumSet.copyOf(declared));
-        return wanted.equals(houseDeclared) ? this : withHouseDeclared(wanted);
+        // A declaration changes what is owned, so the copy keeps verdicts of its own.
+        return wanted.equals(houseDeclared) ? this : new CapabilityResolver(onBook, dailyLedger, nowEpochSec, sight, house, readsPosition,
+                switchedOff, wanted, taken, longestWalk, claimed, new Known());
     }
 
     /**
@@ -269,6 +284,24 @@ public final class CapabilityResolver {
 
     /** {@link #resolve}, before today's teleport allowance gets a say. */
     private CapabilityVerdict resolveOwnership(Capability capability, PlayerState state) {
+        // Every rung of every route asks this, so a plan answers each capability once.
+        PlayerState.Recall recall = state != null ? state.getRecall() : null;
+        if (recall == null) {
+            return ownership(capability, state);
+        }
+        if (known.during != recall) {
+            known.during = recall;
+            known.verdicts.clear();
+        }
+        CapabilityVerdict verdict = known.verdicts.get(capability);
+        if (verdict == null) {
+            verdict = ownership(capability, state);
+            known.verdicts.put(capability, verdict);
+        }
+        return verdict;
+    }
+
+    private CapabilityVerdict ownership(Capability capability, PlayerState state) {
         // A spell on another book is a LACK for this plan, whatever the account has
         // unlocked. ANY means no book is settled, so it falls through to the rules.
         Spellbook needs = CapabilitySources.spellbookFor(capability);

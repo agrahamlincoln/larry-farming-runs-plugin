@@ -554,6 +554,14 @@ public class FarmingPlanner implements EngineListener {
         if (state == null) {
             return;
         }
+        // Up to three plans below read the same state, so they share what they count.
+        FarmingAdvice next = state.recalling(() -> plan(state, nowEpochSec));
+        armWake(next, nowEpochSec);
+        publish(next);
+    }
+
+    /** The advice to publish, planned again when the heading stop or the packed set moves. */
+    private FarmingAdvice plan(PlayerState state, long nowEpochSec) {
         // The clock enters the farming layer here and nowhere below it. Everything under
         // the scheduler takes the epoch second as an argument, so the time can be fixed.
         CompostStock compost = compostStock(state);
@@ -574,11 +582,7 @@ public class FarmingPlanner implements EngineListener {
         DepositPlanner.TripRecord record = DepositPlanner.record(state, next, tripRecord);
         boolean replan = !record.getPacked().equals(tripRecord.getPacked());
         tripRecord = record;
-        if (replan) {
-            next = advisor.advise(state, inputs.withPackedThisTrip(record.getPacked()), nowEpochSec);
-        }
-        armWake(next, nowEpochSec);
-        publish(next);
+        return replan ? advisor.advise(state, inputs.withPackedThisTrip(record.getPacked()), nowEpochSec) : next;
     }
 
     /** Every field of the advice is drawn, so it compares whole. */
