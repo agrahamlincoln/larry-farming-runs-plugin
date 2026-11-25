@@ -262,8 +262,8 @@ public class IconProvider
 	}
 
 	/**
-	 * An item sprite at a fixed size, greyed out for gear the player has not earned yet,
-	 * with the option of cropping the sprite's transparent margin first.
+	 * An item sprite at a fixed size, in full colour, with the option of cropping the
+	 * sprite's transparent margin first.
 	 *
 	 * <p>Cropping keeps a small icon legible by spending its pixels on the art. Use it only
 	 * for a row showing one item at a time: cropping gives each sprite its own scale, which
@@ -271,13 +271,12 @@ public class IconProvider
 	 *
 	 * @param itemId     the item to draw
 	 * @param size       width and height in pixels
-	 * @param earned     false to render in greyscale
 	 * @param fillSquare true to crop the transparent margin away before scaling
 	 */
-	public ImageIcon getGearIcon(int itemId, int size, boolean earned, boolean fillSquare)
+	public ImageIcon getGearIcon(int itemId, int size, boolean fillSquare)
 	{
-		return cache.computeIfAbsent("gear:" + itemId + ":" + size + ":" + earned + ":" + fillSquare,
-			key -> styled(() -> itemImage(itemId, 1, false), "gear", itemId, art -> styleGear(art, size, earned, fillSquare)));
+		return cache.computeIfAbsent("gear:" + itemId + ":" + size + ":" + fillSquare,
+			key -> styled(() -> itemImage(itemId, 1, false), "gear", itemId, art -> fitTo(fillSquare ? cropToArt(art) : art, size)));
 	}
 
 	/**
@@ -357,12 +356,6 @@ public class IconProvider
 		// same instance, since labels already hold it.
 		return cache.computeIfAbsent("inv:" + itemId + ":" + stack + ":" + held, key -> styled(() -> itemImage(itemId, stack, stack > 1),
 			"inventory", itemId, held ? UnaryOperator.identity() : ImageUtil::grayscaleImage));
-	}
-
-	private static BufferedImage styleGear(BufferedImage sprite, int size, boolean earned, boolean fillSquare)
-	{
-		BufferedImage styled = earned ? sprite : ImageUtil.grayscaleImage(sprite);
-		return fitTo(fillSquare ? cropToArt(styled) : styled, size);
 	}
 
 	/**

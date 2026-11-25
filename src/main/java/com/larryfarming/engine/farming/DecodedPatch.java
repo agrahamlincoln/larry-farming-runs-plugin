@@ -69,13 +69,4 @@ public final class DecodedPatch {
                 return 0;
         }
     }
-
-    /**
-     * True when nothing is effectively in progress at the patch: weeds, or a
-     * compost bin standing empty or still being filled. Idle patches carry no
-     * timer and are hidden from the timer displays, exactly like unplanted soil.
-     */
-    public boolean isIdle() {
-        return crop == Crop.WEEDS || state == CropState.FILLING || state == CropState.EMPTY;
-    }
 }

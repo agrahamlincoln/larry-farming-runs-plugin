@@ -79,8 +79,7 @@ public final class PatchPrediction {
 
     /**
      * True when nothing is effectively in progress at the patch: weeds, or a
-     * compost bin standing empty or still being filled. Mirrors
-     * {@link DecodedPatch#isIdle()} for callers holding a prediction.
+     * compost bin standing empty or still being filled.
      */
     public boolean isIdle() {
         return crop == Crop.WEEDS || state == CropState.FILLING || state == CropState.EMPTY;

@@ -7,8 +7,9 @@
 # site KEY FAMILY, with switch CONFIG_KEY LABEL, pick CONFIG_KEY COMPOST_KEY FARM
 #   TITLE CROP_SWITCHES for a patch whose crop the player picks, attributes IMMUNE DIARY TIER
 #   QUEST EASY RESERVED, yieldTier and xpTier DIARY TIER PERCENT, and claim DIARY
-#   TIER PATCH CROP. Then stop BOOKS PATCHES and one line for each change to the
-#   stop (at, accessGate, gate, plants, skipIfUnreachable, ...).
+#   TIER PATCH CROP. Then stop BOOKS PATCHES, its actions ACTION... (every stop
+#   names them), and one line for each other change to the stop (at, accessGate,
+#   gate, plants, skipIfUnreachable, ...).
 # A rung is via REQUIREMENT TEXT, to DESTINATION [REQUIREMENT] TEXT,
 #   swapTo DESTINATION TEXT, and the lines after it change it
 #   (walks TILES COST, banks TILES BANK, banksUpstairs, fare COINS, floor,
@@ -206,6 +207,7 @@ walks	9	FREE
 to	HOUSE	POH_NEXUS_WEISS	then Weiss from the Portal Nexus
 walks	9	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 stop	LUNAR	WEISS_HERB
 at	WEISS
 accessGate	WEISS_HERB_PATCH
@@ -220,6 +222,7 @@ walks	9	FREE
 to	HOUSE	POH_NEXUS_WEISS	then Weiss from the Portal Nexus
 walks	9	CONSUMABLE
 noFallbackGiven
+actions	HARVEST COMPOST PLANT
 
 site	TROLLHEIM	HERB
 switch	visitTrollheim	Trollheim
@@ -278,6 +281,7 @@ walks	172	FREE
 to	HOUSE	all(POH_NEXUS_TROLLHEIM,TROLLHEIM_CLIMBS)	then Trollheim from the Portal Nexus, then climb down the rocks west to the Troll Stronghold and go up through it to the roof
 walks	172	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 stop	LUNAR	TROLLHEIM_HERB
 at	TROLL_STRONGHOLD
 accessGate	TROLL_STRONGHOLD_HERB_PATCH
@@ -332,6 +336,7 @@ walks	172	FREE
 to	HOUSE	all(POH_NEXUS_TROLLHEIM,TROLLHEIM_CLIMBS)	then Trollheim from the Portal Nexus, then climb down the rocks west to the Troll Stronghold and go up through it to the roof
 walks	172	CONSUMABLE
 noFallbackGiven
+actions	HARVEST COMPOST PLANT
 
 site	MORYTANIA	HERB
 switch	visitMorytania	Morytania
@@ -378,6 +383,7 @@ walks	186	FREE
 to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
 walks	186	CONSUMABLE
 noAlternative
+actions	HARVEST COMPOST PLANT
 stop	LUNAR	MORYTANIA_HERB
 at	CANIFIS
 accessGate	MORYTANIA_ACCESS
@@ -428,6 +434,7 @@ walks	186	FREE
 to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
 walks	186	CONSUMABLE
 noAlternative
+actions	HARVEST COMPOST PLANT
 
 site	FALADOR_HERB	HERB
 switch	visitFaladorHerb	Falador
@@ -487,6 +494,7 @@ to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 
 site	CATHERBY_HERB	HERB
 switch	visitCatherbyHerb	Catherby
@@ -521,6 +529,7 @@ via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run north-east
 banks	40	CATHERBY
 walks	144	FREE
 noFallbackGiven
+actions	HARVEST COMPOST PLANT
 
 site	ARDOUGNE_HERB	HERB
 switch	visitArdougneHerb	Ardougne
@@ -575,6 +584,7 @@ to	CAMELOT	then run south-west
 banks	153	ARDOUGNE_NORTH
 walks	132	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 
 site	HOSIDIUS_HERB	HERB
 switch	visitHosidiusHerb	Hosidius
@@ -637,6 +647,7 @@ walks	190	CONSUMABLE
 to	KOUREND_CASTLE	then run south-east
 walks	185	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 
 site	HARMONY_HERB	HERB
 switch	visitHarmony	Harmony
@@ -662,6 +673,7 @@ to	CATHERBY	CHARTER_SHIP	then run south to the dock and charter a ship to Mos Le
 fare	2500
 walks	116	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 gate	-	0	0	0	Morytania	Elite
 
 site	ORTUS_FARM	HERB
@@ -697,6 +709,7 @@ to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fo
 banks	87	HUNTER_GUILD
 walks	127	CONSUMABLE
 noFallbackGiven
+actions	HARVEST COMPOST PLANT
 optional	No fixed place in the run; weave it in
 
 site	CATHERBY_NORTH_ALLOTMENT	HERB
@@ -728,6 +741,7 @@ via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run north-east
 banks	40	CATHERBY
 walks	137	FREE
 noFallbackGiven
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	CATHERBY_SOUTH_ALLOTMENT	HERB
@@ -759,6 +773,7 @@ via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run north-east
 banks	40	CATHERBY
 walks	144	FREE
 noFallbackGiven
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	CATHERBY_FLOWER	HERB
@@ -790,6 +805,7 @@ via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run north-east
 banks	40	CATHERBY
 walks	138	FREE
 noFallbackGiven
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	HOSIDIUS_NORTH_EAST_ALLOTMENT	HERB
@@ -851,6 +867,7 @@ walks	190	CONSUMABLE
 to	KOUREND_CASTLE	then run south-east
 walks	185	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	HOSIDIUS_SOUTH_WEST_ALLOTMENT	HERB
@@ -912,6 +929,7 @@ walks	190	CONSUMABLE
 to	KOUREND_CASTLE	then run south-east
 walks	185	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	HOSIDIUS_FLOWER	HERB
@@ -1029,6 +1047,7 @@ to	CAMELOT	then run south-west
 banks	153	ARDOUGNE_NORTH
 walks	132	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	ARDOUGNE_SOUTH_ALLOTMENT	HERB
@@ -1084,6 +1103,7 @@ to	CAMELOT	then run south-west
 banks	153	ARDOUGNE_NORTH
 walks	132	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	ARDOUGNE_FLOWER	HERB
@@ -1139,6 +1159,7 @@ to	CAMELOT	then run south-west
 banks	153	ARDOUGNE_NORTH
 walks	132	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	FALADOR_NORTH_WEST_ALLOTMENT	HERB
@@ -1197,6 +1218,7 @@ to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	FALADOR_SOUTH_EAST_ALLOTMENT	HERB
@@ -1255,6 +1277,7 @@ to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	FALADOR_FLOWER	HERB
@@ -1313,6 +1336,7 @@ to	FALADOR	then run south-east
 banks	22	FALADOR_EAST
 walks	129	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	MORYTANIA_NORTH_WEST_ALLOTMENT	HERB
@@ -1360,6 +1384,7 @@ walks	186	FREE
 to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
 walks	186	CONSUMABLE
 noAlternative
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 stop	LUNAR	MORYTANIA_NORTH_WEST_ALLOTMENT
 at	CANIFIS
@@ -1411,6 +1436,7 @@ walks	186	FREE
 to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
 walks	186	CONSUMABLE
 noAlternative
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	MORYTANIA_SOUTH_EAST_ALLOTMENT	HERB
@@ -1458,6 +1484,7 @@ walks	186	FREE
 to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
 walks	186	CONSUMABLE
 noAlternative
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 stop	LUNAR	MORYTANIA_SOUTH_EAST_ALLOTMENT
 at	CANIFIS
@@ -1509,6 +1536,7 @@ walks	186	FREE
 to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
 walks	186	CONSUMABLE
 noAlternative
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	MORYTANIA_FLOWER	HERB
@@ -1556,6 +1584,7 @@ walks	186	FREE
 to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
 walks	186	CONSUMABLE
 noAlternative
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 stop	LUNAR	MORYTANIA_FLOWER
 at	CANIFIS
@@ -1607,6 +1636,7 @@ walks	186	FREE
 to	HOUSE	POH_PORTAL_SALVE_GRAVEYARD	then the Salve Graveyard portal, then run east
 walks	186	CONSUMABLE
 noAlternative
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	ORTUS_NORTH_ALLOTMENT	HERB
@@ -1642,6 +1672,7 @@ to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fo
 banks	87	HUNTER_GUILD
 walks	127	CONSUMABLE
 noFallbackGiven
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	ORTUS_SOUTH_ALLOTMENT	HERB
@@ -1677,6 +1708,7 @@ to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fo
 banks	87	HUNTER_GUILD
 walks	127	CONSUMABLE
 noFallbackGiven
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	ORTUS_FLOWER	HERB
@@ -1712,6 +1744,7 @@ to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fo
 banks	87	HUNTER_GUILD
 walks	127	CONSUMABLE
 noFallbackGiven
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	HARMONY_ALLOTMENT	HERB
@@ -1737,6 +1770,7 @@ to	CATHERBY	CHARTER_SHIP	then run south to the dock and charter a ship to Mos Le
 fare	2500
 walks	116	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 optional	Worked while at the herb patch beside it
 
 site	POTATO_CACTUS	HERB
@@ -1777,6 +1811,7 @@ fare	10
 banks	71	AL_KHARID
 walks	131	FREE
 noFallbackGiven
+actions	CHECK_HEALTH HARVEST DIG_UP COMPOST PLANT
 plants	POTATO_CACTUS
 optional	Replanted each visit for its health check
 
@@ -1808,6 +1843,7 @@ to	VARROCK	SPIRIT_TREE_NETWORK	then run north to the Grand Exchange spirit tree,
 banks	110	ARDOUGNE_SOUTH
 walks	170	CONSUMABLE
 noFallbackGiven
+actions	CHECK_HEALTH HARVEST DIG_UP COMPOST PLANT
 plants	WHITEBERRIES
 optional	Grows more slowly than a herb run comes round
 everyNthRun	2
@@ -1837,6 +1873,7 @@ walks	70	CHARGE
 to	FENKENSTRAINS_CASTLE	then run south-west into Mort Myre
 walks	106	CONSUMABLE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 plants	MUSHROOM
 optional	Grows more slowly than a herb run comes round
 everyNthRun	3
@@ -1871,6 +1908,7 @@ walks	141	FREE
 via	RING_OF_THE_ELEMENTS	Ring of the elements to the air altar, then run north-east
 walks	179	CHARGE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 plants	BELLADONNA
 optional	Grows more slowly than a herb run comes round
 everyNthRun	4
@@ -1894,6 +1932,7 @@ walks	116	CONSUMABLE
 via	all(PENDANT_OF_ATES,ATES_STATUE_NEMUS_RETREAT)	Pendant of Ates to Nemus Retreat, then run north-east
 walks	121	CHARGE
 skipIfUnreachable
+actions	HARVEST COMPOST PLANT
 plants	BELLADONNA
 optional	Grows more slowly than a herb run comes round
 everyNthRun	4
@@ -1955,6 +1994,7 @@ to	VARROCK	all(CANAL_BARGE,FOSSIL_ISLAND_HOLE)	then run east to the barge and th
 banks	32	MUSEUM_CAMP
 walks	179	CONSUMABLE
 skipIfUnreachable
+actions	CHECK_HEALTH DIG_UP COMPOST PLANT
 
 site	LOCUS_OASIS	HARDWOOD
 switch	visitLocusOasis	Locus Oasis
@@ -2002,6 +2042,7 @@ walks	168	CONSUMABLE
 to	VARROCK	RENU	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to the Hunter Guild, then run south-east
 walks	183	CONSUMABLE
 noFallbackGiven
+actions	CHECK_HEALTH DIG_UP COMPOST PLANT
 
 site	TAI_BWO_WANNAI_CALQUAT	CALQUAT
 switch	visitTaiBwoWannaiCalquat	Tai Bwo Wannai
@@ -2034,6 +2075,7 @@ fare	30
 walks	171	CONSUMABLE
 onlyWhenCertain
 noFallbackGiven
+actions	CHECK_HEALTH HARVEST DIG_UP COMPOST PLANT
 
 site	KASTORI_CALQUAT	CALQUAT
 switch	visitKastoriCalquat	Kastori
@@ -2067,6 +2109,7 @@ walks	124	FREE
 to	HOUSE	all(POH_PORTAL_CIVITAS,RENU)	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
 walks	124	CONSUMABLE
 skipIfUnreachable
+actions	CHECK_HEALTH HARVEST DIG_UP COMPOST PLANT
 
 site	GREAT_CONCH_CALQUAT	CALQUAT
 switch	visitGreatConchCalquat	Great Conch
@@ -2079,6 +2122,7 @@ via	all(SAILORS_AMULET,CHARTER_SHIP)	Sailors' amulet to Deepfin Point, then char
 fare	1800
 walks	76	CHARGE
 skipIfUnreachable
+actions	CHECK_HEALTH HARVEST DIG_UP COMPOST PLANT
 
 site	VARROCK_TREE	REGULAR_TREE
 switch	visitVarrockTree	Varrock
@@ -2143,6 +2187,7 @@ walks	149	CONSUMABLE
 via	AMULET_OF_GLORY	Amulet of glory to Edgeville, then run east
 walks	197	CHARGE
 skipIfUnreachable
+actions	CHECK_HEALTH DIG_UP COMPOST PLANT
 
 site	LUMBRIDGE_TREE	REGULAR_TREE
 switch	visitLumbridgeTree	Lumbridge
@@ -2180,6 +2225,7 @@ walks	99	FREE
 to	HOUSE	POH_JEWELLERY_BOX_ORNATE	then its jewellery box to Draynor Village, then run east
 walks	99	CONSUMABLE
 skipIfUnreachable
+actions	CHECK_HEALTH DIG_UP COMPOST PLANT
 
 site	FALADOR_TREE	REGULAR_TREE
 switch	visitFaladorTree	Falador
@@ -2217,6 +2263,7 @@ via	EXPLORERS_RING_2	Explorer's ring to the cabbage patch, then run north
 banks	14	FALADOR_EAST
 walks	129	CHARGE
 skipIfUnreachable
+actions	CHECK_HEALTH DIG_UP COMPOST PLANT
 
 site	TAVERLEY_TREE	REGULAR_TREE
 switch	visitTaverleyTree	Taverley
@@ -2258,6 +2305,7 @@ walks	134	FREE
 via	RING_OF_THE_ELEMENTS	Ring of the elements to the air altar, then run north-west to Taverley
 walks	181	CHARGE
 skipIfUnreachable
+actions	CHECK_HEALTH DIG_UP COMPOST PLANT
 
 site	GRAND_TREE	REGULAR_TREE
 switch	visitGnomeStrongholdTree	Stronghold
@@ -2307,6 +2355,7 @@ to	BARBARIAN_OUTPOST	all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED)
 banks	4	GNOME_STRONGHOLD_SOUTH
 walks	174	CONSUMABLE
 skipIfUnreachable
+actions	CHECK_HEALTH DIG_UP COMPOST PLANT
 
 site	NEMUS_RETREAT_TREE	REGULAR_TREE
 switch	visitNemusRetreatTree	Nemus Retreat
@@ -2332,6 +2381,7 @@ walks	111	FREE
 to	VARROCK	all(RENU,MOUNTAIN_GUIDE)	then run east to Primio at the east gate, fly to Civitas illa Fortis, and ride Renu to Quetzacalli Gorge, then follow the mountain guide
 walks	124	CONSUMABLE
 skipIfUnreachable
+actions	CHECK_HEALTH DIG_UP COMPOST PLANT
 
 site	BRIMHAVEN_FRUIT	FRUIT_TREE
 switch	visitBrimhavenFruit	Brimhaven
@@ -2358,6 +2408,7 @@ onlyWhenCertain
 via	AMULET_OF_GLORY	Amulet of glory to Karamja, then run west
 walks	166	CHARGE
 skipIfUnreachable
+actions	CHECK_HEALTH HARVEST DIG_UP COMPOST PLANT
 
 site	CATHERBY_FRUIT	FRUIT_TREE
 switch	visitCatherbyFruit	Catherby
@@ -2388,6 +2439,7 @@ via	QUEST_CAPE	Quest point cape to the Legends' Guild, then run north-east
 banks	11	CATHERBY
 walks	177	FREE
 noFallbackGiven
+actions	CHECK_HEALTH HARVEST DIG_UP COMPOST PLANT
 
 site	GRAND_TREE_FRUIT	FRUIT_TREE
 switch	visitGnomeStrongholdFruit	Stronghold
@@ -2435,6 +2487,7 @@ to	BARBARIAN_OUTPOST	all(GNOME_STRONGHOLD_ROCKS,GNOME_STRONGHOLD_ROCKS_UNLOCKED)
 banks	65	GNOME_STRONGHOLD_SOUTH
 walks	141	CONSUMABLE
 noFallbackGiven
+actions	CHECK_HEALTH HARVEST DIG_UP COMPOST PLANT
 
 site	TREE_GNOME_VILLAGE_FRUIT	FRUIT_TREE
 switch	visitTreeGnomeVillageFruit	Gnome Village
@@ -2463,6 +2516,7 @@ walks	160	CONSUMABLE
 via	all(@SPIRIT_TREE_DEPARTURE,SPIRIT_TREE_NETWORK)	Ride a spirit tree to the Tree Gnome Village from your house, the Grand Exchange or the Battlefield of Khazard, then ask Elkoy to lead you out of the maze and run north-west
 walks	48	FREE
 noFallbackGiven
+actions	CHECK_HEALTH HARVEST DIG_UP COMPOST PLANT
 
 site	LLETYA_FRUIT	FRUIT_TREE
 switch	visitLletyaFruit	Lletya
@@ -2473,6 +2527,7 @@ via	all(LLETYA_ACCESS,TELEPORT_CRYSTAL)	Teleport crystal to Lletya, then run eas
 banks	41	LLETYA
 walks	16	CHARGE
 skipIfUnreachable
+actions	CHECK_HEALTH HARVEST DIG_UP COMPOST PLANT
 
 site	KASTORI_FRUIT	FRUIT_TREE
 switch	visitKastoriFruit	Kastori
@@ -2506,6 +2561,7 @@ walks	109	FREE
 to	HOUSE	all(POH_PORTAL_CIVITAS,RENU)	then the Civitas illa Fortis portal, then run east to the quetzal landing site, ride Renu to Tal Teklan, walk north-east to the jetty, then Achilka's boat to Kastori and run south-west
 walks	109	CONSUMABLE
 skipIfUnreachable
+actions	CHECK_HEALTH HARVEST DIG_UP COMPOST PLANT
 
 site	HESPORI	HESPORI
 stop	ANY	HESPORI
@@ -2562,6 +2618,7 @@ via	LOVAKENGJ_MINECART	Minecart to the Farming Guild stop, beside the gate
 banks	25	FARMING_GUILD
 floor
 noFallbackGiven
+actions	KILL_HESPORI COMPOST PLANT
 plants	HESPORI
 
 site	ANIMA	ANIMA
@@ -2619,6 +2676,7 @@ via	LOVAKENGJ_MINECART	Minecart to the Farming Guild stop, beside the gate
 banks	25	FARMING_GUILD
 floor
 noFallbackGiven
+actions	PLANT
 plants	ATTAS
 
 site	SEAWEED	SEAWEED
@@ -2697,6 +2755,7 @@ via	LOVAKENGJ_MINECART	Minecart to the Farming Guild stop, beside the gate
 banks	25	FARMING_GUILD
 floor
 noFallbackGiven
+actions	HARVEST COMPOST PLANT
 errand	The contract is Guildmaster Jane's errand, not the herb patch's crop
 
 # --- The guild patches a contract can name ---

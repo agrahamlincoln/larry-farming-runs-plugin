@@ -39,6 +39,18 @@ He learns your teleports and unlocks as you play, so there's nothing to set up.
 - Larry plans bank stops when the run needs more than one inventory.
 - Each bank stop says what to withdraw there and how far out of the way it is.
 
+## Nothing due?
+
+<img src="images/between-runs.png" width="235" alt="Between runs: quests, diaries, levels, house builds and gear that would improve your runs">
+
+- Between runs, Larry lists what would improve your runs: quests, diary tiers, skill levels,
+  house builds and gear.
+- Each goal says what it gives you: a patch, a shorter walk, more Farming experience, or a
+  better tool or teleport.
+- Goals that open a patch come first, then the rest. Each group starts with the goals you are
+  closest to reaching.
+- A goal that pays off only with another unlock names that unlock too.
+
 ## Do I have to set anything up?
 
 <img src="images/settings.png" width="235" alt="The settings fold: runs, planning and route options">

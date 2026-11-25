@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.JPanel;
+import javax.swing.border.Border;
 import net.runelite.client.ui.ColorScheme;
 
 /**
@@ -19,10 +20,10 @@ class CarryView extends StretchPanel
 	/** The game inventory's width. */
 	static final int COLUMNS = 4;
 
-	/** Already in the bag. */
-	private static final Color COLOR_HELD = ColorScheme.PROGRESS_COMPLETE_COLOR;
 	/** Owned but not carried: one withdrawal away. */
 	static final Color COLOR_TO_WITHDRAW = ColorScheme.BRAND_ORANGE;
+	/** The orange outline of an item still to withdraw. */
+	static final Border TO_WITHDRAW_BORDER = BorderFactory.createLineBorder(COLOR_TO_WITHDRAW);
 
 	/**
 	 * Shown when the seeds are only accounted for inside a seed box whose contents have not
@@ -94,23 +95,23 @@ class CarryView extends StretchPanel
 		switch (item.getAvailability())
 		{
 			case CARRIED:
-				cell.setBorder(BorderFactory.createLineBorder(COLOR_HELD));
+				cell.setBorder(SettingSquare.ON_BORDER);
 				break;
 			case AT_LEPRECHAUN:
 				// Green like CARRIED: nothing to do before leaving. Taken out on arrival.
-				cell.setBorder(BorderFactory.createLineBorder(COLOR_HELD));
+				cell.setBorder(SettingSquare.ON_BORDER);
 				cell.setToolTipText(twoLines(label(item), "With the leprechaun."));
 				break;
 			case IN_SEED_BOX:
 				// Orange like BANKED: not settled until the player checks the box.
-				cell.setBorder(BorderFactory.createLineBorder(COLOR_TO_WITHDRAW));
+				cell.setBorder(TO_WITHDRAW_BORDER);
 				cell.setToolTipText(twoLines(label(item), CHECK_SEED_BOX + "."));
 				break;
 			case BANKED:
-				cell.setBorder(BorderFactory.createLineBorder(COLOR_TO_WITHDRAW));
+				cell.setBorder(TO_WITHDRAW_BORDER);
 				break;
 			default:
-				cell.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+				cell.setBorder(SettingSquare.PLAIN_BORDER);
 				break;
 		}
 		return cell;

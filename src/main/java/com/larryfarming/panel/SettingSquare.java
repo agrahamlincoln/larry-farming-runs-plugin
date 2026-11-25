@@ -33,8 +33,10 @@ class SettingSquare extends JPanel
 	private static final Color COLOR_LOCK = ColorScheme.LIGHT_GRAY_COLOR;
 	private static final Color COLOR_LOCK_BACK = new Color(0, 0, 0, 160);
 
-	private static final Border PLAIN_BORDER = BorderFactory.createEmptyBorder(1, 1, 1, 1);
-	private static final Border ON_BORDER = BorderFactory.createLineBorder(ColorScheme.PROGRESS_COMPLETE_COLOR);
+	/** The unmarked square: no outline, but the same footprint as the outlined one. */
+	static final Border PLAIN_BORDER = BorderFactory.createEmptyBorder(1, 1, 1, 1);
+	/** The green outline of an item carried or a setting on. */
+	static final Border ON_BORDER = BorderFactory.createLineBorder(ColorScheme.PROGRESS_COMPLETE_COLOR);
 
 	private final ImageIcon sprite;
 	private final ImageIcon greySprite;

@@ -103,8 +103,8 @@ public final class CapabilitySources {
             "Camelot", state -> {
                 Integer done = state.getVarbits().get(KNIGHT_WAVES_VARBIT);
                 if (done != null) {
-                    return done >= KNIGHT_WAVES_DONE ? CapabilityVerdict.have(Source.DETECTED,
-                                    "you have finished the Knight Waves Training Grounds") : CapabilityVerdict.lack(Source.DETECTED,
+                    return done >= KNIGHT_WAVES_DONE ? CapabilityVerdict.detected(
+                                    "you have finished the Knight Waves Training Grounds") : CapabilityVerdict.ruledOut(
                                     "the Knight Waves Training Grounds unlocks respawning at Camelot");
                 }
                 return quest("King's Ransom", "respawning at Camelot").detect(state);
@@ -194,6 +194,8 @@ public final class CapabilitySources {
             HouseLocation.HOUSE_LOCATION_VARBIT,
             SPELLBOOK_VARBIT,
             KNIGHT_WAVES_VARBIT,
+            // The goals ask an ironman to make what another player can buy.
+            VarbitID.IRONMAN,
             // A contract assigned before login never announces itself.
             CONTRACT_PRODUCE_VARBIT,
             CONTRACT_COMPLETE_VARBIT,
@@ -431,14 +433,14 @@ public final class CapabilitySources {
         CapabilityVerdict detect(PlayerState state, HouseSight house, boolean declared) {
             HouseSighting seen = sighting(house);
             if (seen == HouseSighting.BUILT) {
-                return CapabilityVerdict.have(Source.DETECTED, seenBuilt);
+                return CapabilityVerdict.detected(seenBuilt);
             }
             CapabilityVerdict tooEarly = floor.detect(state);
             if (tooEarly.getState() == CapabilityState.LACK) {
                 return tooEarly;
             }
             if (seen == HouseSighting.ABSENT) {
-                return CapabilityVerdict.lack(Source.DETECTED, nexusGone(house) ? "your house has no Portal Nexus" : seenAbsent);
+                return CapabilityVerdict.ruledOut(nexusGone(house) ? "your house has no Portal Nexus" : seenAbsent);
             }
             if (declared) {
                 return CapabilityVerdict.have(Source.DECLARED, "you said " + seenBuilt);
@@ -512,9 +514,9 @@ public final class CapabilitySources {
                 return CapabilityVerdict.lack(Source.INFERRED, "check the " + where + " spirit tree patch");
             }
             if (seen.getCrop() == Crop.SPIRIT_TREE && seen.getState() == CropState.GROWING && seen.getStage() >= seen.getStages() - 1) {
-                return CapabilityVerdict.have(Source.DETECTED, "a grown spirit tree was seen in the " + where + " patch");
+                return CapabilityVerdict.detected("a grown spirit tree was seen in the " + where + " patch");
             }
-            return CapabilityVerdict.lack(Source.DETECTED, "the " + where + " spirit tree patch holds no grown tree");
+            return CapabilityVerdict.ruledOut("the " + where + " spirit tree patch holds no grown tree");
         };
     }
 
@@ -530,7 +532,7 @@ public final class CapabilitySources {
     private static PatchDetector weissHerbPatch() {
         Detector unlit = new Floor("a fire of nourishment at Weiss").quest("Making Friends with My Arm");
         return (state, sight) -> sight.at(FarmingCatalogue.patchFor(Capability.WEISS_HERB_PATCH)) != null
-                        ? CapabilityVerdict.have(Source.DETECTED, "the Weiss herb patch has been seen, so the fire is lit")
+                        ? CapabilityVerdict.detected("the Weiss herb patch has been seen, so the fire is lit")
                         : unlit.detect(state);
     }
 
@@ -621,9 +623,9 @@ public final class CapabilitySources {
         return state -> {
             switch (DiaryTiers.completed(area, tier, state)) {
                 case HAVE:
-                    return CapabilityVerdict.have(Source.DETECTED, have);
+                    return CapabilityVerdict.detected(have);
                 case LACK:
-                    return CapabilityVerdict.lack(Source.DETECTED, lack);
+                    return CapabilityVerdict.ruledOut(lack);
                 default:
                     return CapabilityVerdict.unknown(unsure);
             }
@@ -666,7 +668,7 @@ public final class CapabilitySources {
                 return diaryTier(row.text(2), row.text(3), row.text(4), row.text(5), row.text(6));
             case "open":
                 String because = row.requireWidth(3).text(2);
-                return state -> CapabilityVerdict.have(Source.DETECTED, because);
+                return state -> CapabilityVerdict.detected(because);
             case "gate":
             case "cooldown":
             case "house":
@@ -735,11 +737,11 @@ public final class CapabilitySources {
             }
             Integer page = state.getVarbits().get(LANCALLIUMS_PAGE_VARBIT);
             if (page != null && page == 0) {
-                return CapabilityVerdict.lack(Source.DETECTED, "your book is missing the Lunch by the Lancalliums page");
+                return CapabilityVerdict.ruledOut("your book is missing the Lunch by the Lancalliums page");
             }
             Integer charges = state.getVarbits().get(MEMOIRS_CHARGES_VARBIT);
             if (charges != null && charges == 0) {
-                return CapabilityVerdict.lack(Source.DETECTED, "your book has no charges. Recharge it at the Old Memorial");
+                return CapabilityVerdict.ruledOut("your book has no charges. Recharge it at the Old Memorial");
             }
             return holding.getState() == CapabilityState.HAVE && (page == null || charges == null)
                     ? CapabilityVerdict.unknown("not sure whether your book has a charge") : holding;
@@ -756,13 +758,13 @@ public final class CapabilitySources {
         return state -> {
             for (int itemId : itemIds) {
                 if (ItemCounts.ownsAny(state, itemId)) {
-                    return CapabilityVerdict.have(Source.DETECTED, "you have " + description);
+                    return CapabilityVerdict.detected("you have " + description);
                 }
             }
             if (state.getBankLastSeen() == null) {
                 return CapabilityVerdict.unknown("not sure whether you have " + description + " until you open your bank");
             }
-            return CapabilityVerdict.lack(Source.DETECTED, "you have no " + bare(description));
+            return CapabilityVerdict.ruledOut("you have no " + bare(description));
         };
     }
 
@@ -797,7 +799,7 @@ public final class CapabilitySources {
                 return noStaffNeeded;
             }
             if (noStaffNeeded.getState() == CapabilityState.LACK && staff.detect(state).getState() == CapabilityState.LACK) {
-                return CapabilityVerdict.lack(Source.DETECTED, "you need a dramen or lunar staff to use fairy rings");
+                return CapabilityVerdict.ruledOut("you need a dramen or lunar staff to use fairy rings");
             }
             // A staff held, or an unread diary or unseen bank: keep the rungs. The packing
             // list still names the staff, so a player who has one is not sent off without it.
@@ -862,13 +864,13 @@ public final class CapabilitySources {
         return state -> {
             QuestStatus status = state.getQuests().get(questName);
             if (status == QuestStatus.COMPLETED) {
-                return CapabilityVerdict.have(Source.DETECTED, "you have finished " + questName);
+                return CapabilityVerdict.detected("you have finished " + questName);
             }
             if (status == null) {
                 // Quest state arrives as it is observed, so silence is not a no.
                 return CapabilityVerdict.unknown("not sure whether you have finished " + questName);
             }
-            return CapabilityVerdict.lack(Source.DETECTED, questName + " unlocks " + description);
+            return CapabilityVerdict.ruledOut(questName + " unlocks " + description);
         };
     }
 
@@ -883,18 +885,18 @@ public final class CapabilitySources {
     private static Detector questProgressAtLeast(String questName, int opensAt, String unlocks) {
         return state -> {
             if (state.getQuests().get(questName) == QuestStatus.COMPLETED) {
-                return CapabilityVerdict.have(Source.DETECTED, "you have finished " + questName);
+                return CapabilityVerdict.detected("you have finished " + questName);
             }
             Integer progress = state.getQuestProgress().get(questName);
             if (progress == null) {
                 // The login scan stores only non-zero counters, so an absent one means
                 // untouched or unscanned. The status tells them apart when present.
-                return state.getQuests().get(questName) == QuestStatus.NOT_STARTED ? CapabilityVerdict.lack(Source.DETECTED,
+                return state.getQuests().get(questName) == QuestStatus.NOT_STARTED ? CapabilityVerdict.ruledOut(
                                 questName + " opens " + unlocks) : CapabilityVerdict.unknown(
                                 "not sure how far you have got in " + questName);
             }
             if (progress >= opensAt) {
-                return CapabilityVerdict.have(Source.DETECTED, "you are far enough into " + questName);
+                return CapabilityVerdict.detected("you are far enough into " + questName);
             }
             return CapabilityVerdict.unknown("you have started " + questName + ", which opens " + unlocks + " partway through");
         };
@@ -906,19 +908,28 @@ public final class CapabilitySources {
      */
     private static Detector spell(int magicLevel, String questName, String spellName) {
         return state -> {
-            int magic = state.getSkillLevel(Skill.MAGIC);
-            if (magic < magicLevel) {
-                return CapabilityVerdict.lack(Source.DETECTED, spellName + " needs " + magicLevel + " Magic and you have " + magic);
-            }
-            QuestStatus status = questName == null ? null : state.getQuests().get(questName);
-            if (questName == null || status == QuestStatus.COMPLETED) {
-                return CapabilityVerdict.have(Source.DETECTED, "you can cast " + spellName);
-            }
-            if (status == null) {
-                return CapabilityVerdict.unknown("not sure whether you have finished " + questName + ", which " + spellName + " needs");
-            }
-            return CapabilityVerdict.lack(Source.DETECTED, spellName + " needs " + questName);
+            CapabilityVerdict barred = spellBarred(spellName, magicLevel, questName, state);
+            return barred != null ? barred : CapabilityVerdict.detected("you can cast " + spellName);
         };
+    }
+
+    /**
+     * Why a spell's Magic level or quest bars the player, or null when both are met. A null
+     * quest asks for none. An unobserved quest answers UNKNOWN.
+     */
+    static CapabilityVerdict spellBarred(String spellName, int magicLevel, String questName, PlayerState state) {
+        int magic = state.getSkillLevel(Skill.MAGIC);
+        if (magic < magicLevel) {
+            return CapabilityVerdict.ruledOut(spellName + " needs " + magicLevel + " Magic and you have " + magic);
+        }
+        if (questName == null) {
+            return null;
+        }
+        QuestStatus status = state.getQuests().get(questName);
+        if (status == null) {
+            return CapabilityVerdict.unknown("not sure whether you have finished " + questName + ", which " + spellName + " needs");
+        }
+        return status == QuestStatus.COMPLETED ? null : CapabilityVerdict.ruledOut(spellName + " needs " + questName);
     }
 
     /**
@@ -934,7 +945,7 @@ public final class CapabilitySources {
                 if (storedInBook(capability, state) == 0 || book.detect(state).getState() != CapabilityState.HAVE) {
                     return held;
                 }
-                held = CapabilityVerdict.have(Source.DETECTED, "your master scroll book holds one");
+                held = CapabilityVerdict.detected("your master scroll book holds one");
             }
             CapabilityVerdict gate = unlocked == null ? held : unlocked.detect(state);
             return gate.getState() == CapabilityState.HAVE ? held : gate;
@@ -951,7 +962,7 @@ public final class CapabilitySources {
             if (current == null) {
                 return CapabilityVerdict.unknown("not sure whether " + have);
             }
-            return current >= value ? CapabilityVerdict.have(Source.DETECTED, have) : CapabilityVerdict.lack(Source.DETECTED, lack);
+            return current >= value ? CapabilityVerdict.detected(have) : CapabilityVerdict.ruledOut(lack);
         };
     }
 
@@ -970,8 +981,8 @@ public final class CapabilitySources {
             // The setting outranks the unlock, which only says they could choose it.
             String selected = selectedRespawnTown(state);
             if (selected != null) {
-                return selected.equals(town) ? CapabilityVerdict.have(Source.DETECTED, "your respawn point is " + town)
-                        : CapabilityVerdict.lack(Source.DETECTED, "your respawn point is " + selected + ", not " + town);
+                return selected.equals(town) ? CapabilityVerdict.detected("your respawn point is " + town)
+                        : CapabilityVerdict.ruledOut("your respawn point is " + selected + ", not " + town);
             }
             CapabilityVerdict verdict = unlocked.detect(state);
             return verdict.getState() == CapabilityState.HAVE ? CapabilityVerdict.unknown("set your respawn point to " + town
@@ -1041,9 +1052,9 @@ public final class CapabilitySources {
         return state -> {
             int current = state.getSkillLevel(skill);
             if (current >= level) {
-                return CapabilityVerdict.have(Source.DETECTED, "your " + skill.getDisplayName() + " is high enough");
+                return CapabilityVerdict.detected("your " + skill.getDisplayName() + " is high enough");
             }
-            return CapabilityVerdict.lack(Source.DETECTED, description + " needs " + level + " " + skill.getDisplayName()
+            return CapabilityVerdict.ruledOut(description + " needs " + level + " " + skill.getDisplayName()
                             + " and you have " + current);
         };
     }
@@ -1059,9 +1070,9 @@ public final class CapabilitySources {
                 return CapabilityVerdict.unknown("not sure where your house is");
             }
             if (Boolean.FALSE.equals(HouseLocation.ownsHouse(state.getVarbits()))) {
-                return CapabilityVerdict.lack(Source.DETECTED, "you do not own a house");
+                return CapabilityVerdict.ruledOut("you do not own a house");
             }
-            return here ? CapabilityVerdict.have(Source.DETECTED, "your house is in " + town) : CapabilityVerdict.lack(Source.DETECTED,
+            return here ? CapabilityVerdict.detected("your house is in " + town) : CapabilityVerdict.ruledOut(
                             "your house is not in " + town);
         };
     }
@@ -1075,7 +1086,7 @@ public final class CapabilitySources {
             Capability earned = DiaryRewards.bestEarnedTier(capability.getTierFamily(), state.getVarbits());
             if (earned == null) {
                 // A lower tier the routes cannot use, such as Explorer's ring 1, is held but no help.
-                return CapabilityVerdict.lack(Source.DETECTED, "this needs " + capability.getDisplayName() + " or better, from "
+                return CapabilityVerdict.ruledOut("this needs " + capability.getDisplayName() + " or better, from "
                         + DiaryRewards.earnedBy(capability));
             }
             if (capability.isSatisfiedBy(earned)) {
@@ -1083,7 +1094,7 @@ public final class CapabilitySources {
                         : "you have " + earned.getDisplayName() + ", which does the same";
                 return CapabilityVerdict.have(Source.INFERRED, because);
             }
-            return CapabilityVerdict.lack(Source.DETECTED, "you have " + earned.getDisplayName() + ", not " + capability.getDisplayName());
+            return CapabilityVerdict.ruledOut("you have " + earned.getDisplayName() + ", not " + capability.getDisplayName());
         };
     }
 }

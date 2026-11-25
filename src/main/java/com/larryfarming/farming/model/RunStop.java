@@ -4,6 +4,7 @@ import com.larryfarming.engine.farming.*;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.*;
+import lombok.experimental.Accessors;
 
 /**
  * One stop on a run: somewhere the player travels to, and what they do once there.
@@ -42,63 +43,7 @@ public class RunStop {
         COMPOST,
         PLANT,
         PAY_PROTECTION,
-        KILL_HESPORI;
-
-        /**
-         * The ordinary working of a patch of this type.
-         *
-         * <p>Stops use these defaults unless a stop states its own technique.
-         *
-         * <p>Every supported type is named explicitly, so an unhandled type (a spirit tree,
-         * a vinery) throws instead of getting a tree's actions.
-         */
-        public static List<StopAction> defaultsFor(PatchType type) {
-            switch (type) {
-                // Picked clean and then gone, with nothing to dig up. Mushrooms belong
-                // here, not with the bushes: the patch has no regrow and goes straight to
-                // weeds after the last picking.
-                //
-                // No PAY_PROTECTION: the wiki lists the mushroom patch "unprotectable", no
-                // gardener stands by the belladonna, and InventoryDemands.collectProtection
-                // reads this list to know that.
-                case HERB:
-                case ALLOTMENT:
-                case FLOWER:
-                case HOPS:
-                case SEAWEED:
-                case MUSHROOM:
-                case BELLADONNA:
-                    return List.of(HARVEST, COMPOST, PLANT);
-                // A grown bush or cactus wants its health check before the first picking,
-                // as a fruit tree does. Unlike a fruit tree, picking never makes it spent
-                // ground (PatchWork.standsEmpty). Once grown it is dug up and replanted each
-                // visit, so a fresh plant pays its check again (PatchWork.comesOut).
-                //
-                // Fruit trees, calquat and celastrus are checked and then picked: fruit trees
-                // and calquat offer Pick-fruit once healthy, and celastrus offers Harvest.
-                // Without HARVEST a grown fruit tree reads as empty ground wanting a replant.
-                case BUSH:
-                case CACTUS:
-                case FRUIT_TREE:
-                case CALQUAT:
-                case CELASTRUS:
-                    return List.of(CHECK_HEALTH, HARVEST, DIG_UP, COMPOST, PLANT);
-                case HESPORI:
-                    return List.of(KILL_HESPORI, COMPOST, PLANT);
-                // Nothing to pick and no disease to compost against: an anima plant is
-                // planted, and cleared once it dies.
-                case ANIMA:
-                    return List.of(PLANT);
-                // The health check pays the Farming experience. Cutting the logs is a
-                // Woodcutting errand, so it is not an action here.
-                case TREE:
-                case HARDWOOD_TREE:
-                case REDWOOD:
-                    return List.of(CHECK_HEALTH, DIG_UP, COMPOST, PLANT);
-                default:
-                    throw new IllegalArgumentException("no default actions for a " + type + " patch");
-            }
-        }
+        KILL_HESPORI
     }
 
     /** One or more patches worked as a single visit. Never empty. */
@@ -117,6 +62,7 @@ public class RunStop {
 
     TerminalBehavior terminal;
 
+    /** What the player does at the patch, in order. Every stop states its own. */
     List<StopAction> actions;
 
     /**
@@ -212,7 +158,7 @@ public class RunStop {
 
     /** Whether something is planted here, as against a contract errand alone. */
     public boolean isPlanting() {
-        return actions != null && actions.contains(StopAction.PLANT);
+        return actions.contains(StopAction.PLANT);
     }
 
     /**
@@ -247,22 +193,34 @@ public class RunStop {
     }
 
     /**
-     * Hand-written rather than Lombok's so it can derive the action list from the patch
-     * type and reject a stop that does not hold together.
+     * Hand-written rather than Lombok's so it can reject a stop that does not hold
+     * together. Lombok writes the plain setters, each named for its field.
      */
+    @Accessors(fluent = true)
     public static final class Builder {
 
         private final List<PatchRef> patches;
-        private Arrival arrival;
+        /** Where the stop is worked from. Required. */
+        @Setter
+        private Arrival at;
         private final List<TravelOption> travel = new ArrayList<>();
         private TerminalBehavior terminal;
         private List<StopAction> actions;
+        @Setter
         private UnlockGate gate;
-        private Crop fixedCrop;
+        /** @see RunStop#fixedCrop */
+        @Setter
+        private Crop plants;
         private boolean picked;
-        private String optionalReason;
-        private String errandReason;
+        /** @see RunStop#optionalReason */
+        @Setter
+        private String optional;
+        /** @see RunStop#errandReason */
+        @Setter
+        private String errand;
         private int everyNthRun = 1;
+        /** What the player needs before the place is somewhere they can go at all. */
+        @Setter
         private Capability accessGate;
 
         private Builder(PatchRef... patches) {
@@ -270,12 +228,6 @@ public class RunStop {
                 throw new IllegalArgumentException("a stop must name at least one patch");
             }
             this.patches = List.of(patches);
-        }
-
-        /** Where the stop is worked from. Required. */
-        public Builder at(Arrival arrival) {
-            this.arrival = arrival;
-            return this;
         }
 
         /** The stop's route, every rung in ranking order, each already carrying its figures. */
@@ -316,35 +268,8 @@ public class RunStop {
             return this;
         }
 
-        /** What the player needs before the place is somewhere they can go at all. */
-        public Builder accessGate(Capability capability) {
-            this.accessGate = capability;
-            return this;
-        }
-
-        public Builder gate(UnlockGate gate) {
-            this.gate = gate;
-            return this;
-        }
-
-        public Builder plants(Crop crop) {
-            this.fixedCrop = crop;
-            return this;
-        }
-
         public Builder picked() {
             this.picked = true;
-            return this;
-        }
-
-        public Builder optional(String reason) {
-            this.optionalReason = reason;
-            return this;
-        }
-
-        /** @see RunStop#errandReason */
-        public Builder errand(String reason) {
-            this.errandReason = reason;
             return this;
         }
 
@@ -357,8 +282,8 @@ public class RunStop {
         }
 
         public RunStop build() {
-            PatchType type = resolvePatchType();
-            if (arrival == null) {
+            requireOnePatchType();
+            if (at == null) {
                 throw new IllegalStateException("no arrival named for " + patches.get(0).getLabel());
             }
             if (travel.isEmpty()) {
@@ -377,16 +302,18 @@ public class RunStop {
                     }
                 }
             }
-            List<StopAction> resolved = actions != null ? actions : StopAction.defaultsFor(type);
-            return new RunStop(patches, arrival, List.copyOf(travel), terminal, resolved, gate, fixedCrop, picked, optionalReason, everyNthRun,
-                    errandReason, accessGate);
+            if (actions == null) {
+                throw new IllegalStateException("no actions named for " + patches.get(0).getLabel());
+            }
+            return new RunStop(patches, at, List.copyOf(travel), terminal, actions, gate, plants, picked, optional, everyNthRun,
+                    errand, accessGate);
         }
 
         /**
-         * The patch type shared by every patch in this visit. Throws on a mix, since one
-         * visit needs one action list.
+         * Throws unless every patch in this visit is known and of one type, since one visit
+         * holds one action list.
          */
-        private PatchType resolvePatchType() {
+        private void requireOnePatchType() {
             PatchType shared = null;
             for (PatchRef patch : patches) {
                 FarmingWorldMap.PatchDef def = patch.resolve();
@@ -400,7 +327,6 @@ public class RunStop {
                             + def.getType() + " patches at " + patches.get(0).getLabel());
                 }
             }
-            return shared;
         }
     }
 }

@@ -26,9 +26,9 @@ final class RunPlanning {
 
     /**
      * One run planned as far as it can be on its own: which stops are worth making, what
-     * each patch takes, and the seeds that answer came out of.
+     * each patch takes, and which patch each seed landed in.
      *
-     * <p>Held together because the three only agree with each other: crops are allocated
+     * <p>Held together because they only agree with each other: crops are allocated
      * against seeds sized for these stops, then stops the seeds ran out before are dropped.
      *
      * <p><b>{@link #plans} and {@link #cropFor} stay index-aligned only because
@@ -42,7 +42,6 @@ final class RunPlanning {
         private final FarmingRun run;
         final List<StopPlan> plans;
         final List<List<Crop>> cropFor;
-        final SeedPlan seeds;
         /** Which patch each seed landed in; {@link #cropFor} is per stop, not per patch. */
         final Map<PatchRef, Crop> plantedIn;
 
@@ -105,7 +104,7 @@ final class RunPlanning {
         List<List<Crop>> cropFor = CropAssigner.assignCrops(plans, seeds, state, inputs, walk, plantedIn);
         List<StopPlan> settled = replanWhatLeanedOnAstopThatLeft(
                 StopSkipRules.dropStopsTheSeedsRanOutBefore(plans, cropFor, inputs), planner, state);
-        return new RunPlan(run, settled, cropsWithoutTheStopsThatLeft(settled, cropFor), seeds, plantedIn);
+        return new RunPlan(run, settled, cropsWithoutTheStopsThatLeft(settled, cropFor), plantedIn);
     }
 
     /**

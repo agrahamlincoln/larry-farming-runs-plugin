@@ -55,23 +55,16 @@ public final class DiaryRewards {
 
     /** The best tier of this family the player has earned, or null if none. */
     public static Capability bestEarnedTier(Capability.TierFamily family, Map<Integer, Integer> varbits) {
-        if (family == Capability.TierFamily.NONE || varbits == null) {
+        if (varbits == null) {
             return null;
         }
-        Capability best = null;
+        List<Capability> earned = new ArrayList<>();
         for (Map.Entry<Capability, Integer> entry : GRANTED_BY.entrySet()) {
-            Capability capability = entry.getKey();
-            if (capability.getTierFamily() != family) {
-                continue;
-            }
             Integer done = varbits.get(entry.getValue());
-            if (done == null || done == 0) {
-                continue;
-            }
-            if (best == null || capability.getTier() > best.getTier()) {
-                best = capability;
+            if (done != null && done != 0) {
+                earned.add(entry.getKey());
             }
         }
-        return best;
+        return Capability.bestHeldTier(family, earned);
     }
 }

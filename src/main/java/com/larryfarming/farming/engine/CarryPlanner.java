@@ -9,6 +9,7 @@ import com.larryfarming.farming.detection.*;
 import com.larryfarming.farming.model.*;
 import com.larryfarming.model.*;
 import com.larryfarming.snapshot.FarmingCarryItem;
+import com.larryfarming.snapshot.FarmingCarryItem.Availability;
 import java.util.*;
 import java.util.stream.Collectors;
 import net.runelite.api.gameval.ItemID;
@@ -75,19 +76,16 @@ public final class CarryPlanner {
      *
      * <p>Takes every stop at once rather than being called per run: runes and tablets are
      * deduplicated per <em>arrival</em>, and that dedupe must span run boundaries. Seeds
-     * arrive already split per run and are merged here.
+     * are tallied across every run's stops into one line per crop.
      *
      * @param plans   the stops as planned, so only routes actually being taken are packed
      *                for; in any order
-     * @param seeds   one allocation per run, in any order
-     * @param cropFor what goes in the ground at each stop, index-aligned with {@code plans},
-     *                or null where the caller does not know. The seed lines and the axe both
-     *                read it. Null falls back to the allocation, which packs every seed
-     *                dealt and keeps the axe on the list
+     * @param cropFor what goes in the ground at each stop, index-aligned with {@code plans}.
+     *                The seed lines, the fees, the casts and the axe all read it
      * @param inputs what has been seen at each patch: decides whether a patch holds a tree to
      *               fell and whether it is diseased. An unseen patch keeps the axe on the list
      */
-    public static List<FarmingCarryItem> plan(List<StopPlan> plans, List<SeedPlan> seeds,
+    public static List<FarmingCarryItem> plan(List<StopPlan> plans,
             List<List<Crop>> cropFor, PlayerState state, CapabilityResolver resolver, FarmingInputs inputs) {
         if (inputs == null) {
             inputs = FarmingInputs.none();
@@ -111,7 +109,7 @@ public final class CarryPlanner {
             boolean inTheBag = BottomlessBucket.ITEM_IDS.stream().anyMatch(id -> ItemCounts.countCarried(state, id) > 0);
             carry.add(new FarmingCarryItem(FarmingCarryItem.Kind.TOOL,
                     ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED, "Bottomless compost bucket", 0, inTheBag
-                            ? FarmingCarryItem.Availability.CARRIED : FarmingCarryItem.Availability.BANKED,
+                            ? Availability.CARRIED : Availability.BANKED,
                     // Carried count is capped at one: a second bottomless bucket is no spare.
                     "", "", inTheBag ? 1 : 0));
         } else if (packsCompost(plans, fertile)) {
@@ -127,7 +125,7 @@ public final class CarryPlanner {
         // What is actually going in the ground, not what the rotation dealt out: a seat can
         // decline its dealt seed, such as a fruit tree left standing because no sapling on
         // hand matches or beats it, as the replant setting asks.
-        List<SeedAllocation.Tally> planting = cropFor == null ? SeedPlan.shoppingList(seeds) : SeedPlan.goingInTheGround(plans, cropFor);
+        List<SeedAllocation.Tally> planting = SeedPlan.goingInTheGround(plans, cropFor);
         addSeedBox(carry, planting, state);
         addSeeds(carry, planting, state);
         addFixedSeeds(carry, plans, cropFor, state, inputs);
@@ -173,7 +171,7 @@ public final class CarryPlanner {
         if (line.getKind() == FarmingCarryItem.Kind.RUNES) {
             return !ownsRunePouch;
         }
-        return line.getItemId() != RING_OF_CHAROS_ACTIVATED && line.getAvailability() != FarmingCarryItem.Availability.AT_LEPRECHAUN
+        return line.getItemId() != RING_OF_CHAROS_ACTIVATED && line.getAvailability() != Availability.AT_LEPRECHAUN
                 && Arrays.stream(STAFF_IDS).noneMatch(staff -> staff == line.getItemId());
     }
 
@@ -544,8 +542,7 @@ public final class CarryPlanner {
      * the player already owns, so this line never asks for something to gather, and
      * {@code InventoryDemands} keeps a slot for exactly these.
      *
-     * @param cropFor what goes in the ground at each stop, or null, which pays for every
-     *                patch at the stop
+     * @param cropFor what goes in the ground at each stop, which sets the patches paid for
      */
     private static void addProtectionPayments(List<FarmingCarryItem> carry,
             List<StopPlan> plans, List<List<Crop>> cropFor, PlayerState state) {
@@ -554,7 +551,7 @@ public final class CarryPlanner {
             if (!plan.isVisit()) {
                 continue;
             }
-            int planting = cropFor == null ? plan.getStop().getPatches().size() : cropFor.get(index).size();
+            int planting = cropFor.get(index).size();
             Protection.Fee fee = Protection.paymentAt(plan.getStop(), planting, state);
             if (fee == null) {
                 continue;
@@ -596,10 +593,10 @@ public final class CarryPlanner {
 
     /**
      * Whether this stop puts nothing in the ground, so nothing there needs clearing first.
-     * A null or short {@code cropFor} answers false, keeping the axe.
+     * A short {@code cropFor} answers false, keeping the axe.
      */
     private static boolean nothingIsPlantedAt(List<List<Crop>> cropFor, int index) {
-        return cropFor != null && index < cropFor.size() && cropFor.get(index).isEmpty();
+        return index < cropFor.size() && cropFor.get(index).isEmpty();
     }
 
     /**
@@ -630,7 +627,7 @@ public final class CarryPlanner {
             }
             for (PatchRef ref : plan.getStop().getPatches()) {
                 PatchType type = ref.type();
-                if (type == null || !standsDiseased(inputs, ref) || !counted.add(ref)) {
+                if (type == null || !CropAssigner.diseased(ref, inputs) || !counted.add(ref)) {
                     continue;
                 }
                 // Counted before the tables: a cast cures any patch type.
@@ -680,12 +677,6 @@ public final class CarryPlanner {
      */
     private static boolean canCastCurePlant(PlayerState state) {
         return FarmingAdviceBuilder.openBookOf(state) == Spellbook.LUNAR && state.getSkillLevel(Skill.MAGIC) >= CURE_PLANT_MAGIC_LEVEL;
-    }
-
-    /** Whether this patch has been seen diseased. */
-    private static boolean standsDiseased(FarmingInputs inputs, PatchRef ref) {
-        PatchPrediction seen = inputs.patchAt(ref);
-        return seen != null && seen.getState() == CropState.DISEASED;
     }
 
     /**
@@ -768,9 +759,9 @@ public final class CarryPlanner {
         int stored = ItemCounts.countInLeprechaunStorage(state, ItemID.BUCKET_EMPTY);
         if (!bins.isRestock()) {
             // The bins share only the buckets the player owns, so the bank covers a shortfall.
-            FarmingCarryItem.Availability availability = carried >= need ? FarmingCarryItem.Availability.CARRIED
-                    : carried + stored >= need ? FarmingCarryItem.Availability.AT_LEPRECHAUN : FarmingCarryItem.Availability.BANKED;
-            boolean banked = availability == FarmingCarryItem.Availability.BANKED;
+            Availability availability = carried >= need ? Availability.CARRIED
+                    : carried + stored >= need ? Availability.AT_LEPRECHAUN : Availability.BANKED;
+            boolean banked = availability == Availability.BANKED;
             return List.of(bucketLine(ItemID.Cert.BUCKET_EMPTY, banked ? need - stored : need, availability, carried,
                     banked ? "Noted, for the compost bins." : "For the compost bins."));
         }
@@ -780,18 +771,18 @@ public final class CarryPlanner {
         List<FarmingCarryItem> lines = new ArrayList<>(2);
         if (toHand > 0) {
             lines.add(bucketLine(ItemID.Cert.BUCKET_EMPTY, toHand,
-                    banked ? FarmingCarryItem.Availability.BANKED : FarmingCarryItem.Availability.CARRIED, carried,
+                    banked ? Availability.BANKED : Availability.CARRIED, carried,
                     banked ? "Noted, to store with the leprechaun." : "For the compost bins."));
         }
         if (toHand < BUCKET_RESTOCK) {
-            lines.add(bucketLine(ItemID.BUCKET_EMPTY, BUCKET_RESTOCK - toHand, FarmingCarryItem.Availability.MISSING, 0,
+            lines.add(bucketLine(ItemID.BUCKET_EMPTY, BUCKET_RESTOCK - toHand, Availability.MISSING, 0,
                     (banked ? "" : "Noted, to store with the leprechaun. ") + "Farming shops sell them."));
         }
         return lines;
     }
 
     /** One empty bucket line: the noted or plain sprite, how many, and where they are. */
-    private static FarmingCarryItem bucketLine(int itemId, int quantity, FarmingCarryItem.Availability availability, int carried,
+    private static FarmingCarryItem bucketLine(int itemId, int quantity, Availability availability, int carried,
             String note) {
         return new FarmingCarryItem(FarmingCarryItem.Kind.TOOL, itemId, "Empty bucket", quantity, availability, "", "", carried)
                 .withNote(note);
@@ -799,7 +790,7 @@ public final class CarryPlanner {
 
     /** Whether the bag packs noted empty buckets from the bank, which take a slot. */
     static boolean bringsBuckets(CompostBins.Needs bins, PlayerState state) {
-        return emptyBuckets(bins, state).stream().anyMatch(line -> line.getAvailability() == FarmingCarryItem.Availability.BANKED);
+        return emptyBuckets(bins, state).stream().anyMatch(line -> line.getAvailability() == Availability.BANKED);
     }
 
     /**
@@ -809,8 +800,8 @@ public final class CarryPlanner {
      */
     private static FarmingCarryItem potion(int doses, PlayerState state) {
         int carried = CompostBins.doses(state, true);
-        FarmingCarryItem.Availability availability = carried >= doses ? FarmingCarryItem.Availability.CARRIED
-                : CompostBins.doses(state, false) >= doses ? FarmingCarryItem.Availability.BANKED : FarmingCarryItem.Availability.MISSING;
+        Availability availability = carried >= doses ? Availability.CARRIED
+                : CompostBins.doses(state, false) >= doses ? Availability.BANKED : Availability.MISSING;
         return new FarmingCarryItem(FarmingCarryItem.Kind.TOOL, ItemID.SUPERCOMPOST_POTION_4, "Compost potion", doses, availability, "", "", carried);
     }
 
@@ -964,8 +955,7 @@ public final class CarryPlanner {
      * <p>The count is {@code seedsPerPatch} times the patches the stop plants, because one
      * stop can cover several patches (the two seaweed patches are one dive). Those are the
      * patches dealt a seed, which the stock bounds across the trip, so one crop picked at
-     * many patches packs what is owned and a later stretch asks for no more. Without the
-     * deal, every open patch: a patch holding any living crop takes no seed.
+     * many patches packs what is owned and a later stretch asks for no more.
      */
     private static void addFixedSeeds(List<FarmingCarryItem> carry, List<StopPlan> plans, List<List<Crop>> cropFor, PlayerState state,
             FarmingInputs inputs) {
@@ -980,7 +970,7 @@ public final class CarryPlanner {
             if (crop == null) {
                 continue;
             }
-            int open = cropFor != null ? cropFor.get(index).size() : CropAssigner.openFixedPatches(plan.getStop(), inputs, state);
+            int open = cropFor.get(index).size();
             CropData data = CropData.forCrop(crop);
             if (data != null && open > 0) {
                 needed.merge(crop, data.getSeedsPerPatch() * open, Integer::sum);
@@ -1149,17 +1139,17 @@ public final class CarryPlanner {
             stored += ItemCounts.countInLeprechaunStorage(state, itemId);
             owned += ItemCounts.countOwned(state, itemId);
         }
-        FarmingCarryItem.Availability availability;
+        Availability availability;
         if (carried >= needed) {
-            availability = FarmingCarryItem.Availability.CARRIED;
+            availability = Availability.CARRIED;
         } else if (carried + stored >= needed) {
             // Ranked above BANKED: the leprechaun is at the patch, so nothing needs fetching.
-            availability = FarmingCarryItem.Availability.AT_LEPRECHAUN;
+            availability = Availability.AT_LEPRECHAUN;
         } else if (owned >= needed) {
             availability = theBoxWouldFinishIt(state, needed - carried - stored, owned - carried - stored, ids)
-                    ? FarmingCarryItem.Availability.IN_SEED_BOX : FarmingCarryItem.Availability.BANKED;
+                    ? Availability.IN_SEED_BOX : Availability.BANKED;
         } else {
-            availability = FarmingCarryItem.Availability.MISSING;
+            availability = Availability.MISSING;
         }
         return new FarmingCarryItem(kind, iconItemId, name, quantity, availability, CropData.tagForPlantable(iconItemId), "", carried);
     }

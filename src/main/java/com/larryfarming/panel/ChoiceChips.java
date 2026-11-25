@@ -5,10 +5,8 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
-import javax.swing.BorderFactory;
 import javax.swing.JPanel;
 import javax.swing.border.Border;
-import net.runelite.client.ui.ColorScheme;
 
 /**
  * A setting that takes one of a few values, drawn as a row of chips. The picked chip wears
@@ -23,7 +21,6 @@ class ChoiceChips extends JPanel
 {
 	private static final int CHIP_HEIGHT = 20;
 	private static final int GAP = 2;
-	private static final Border ON_BORDER = BorderFactory.createLineBorder(ColorScheme.PROGRESS_COMPLETE_COLOR);
 
 	private final BiConsumer<String, String> send;
 	private final List<SmallButton> chips = new ArrayList<>();
@@ -106,7 +103,7 @@ class ChoiceChips extends JPanel
 		{
 			boolean on = values.get(i).equals(value);
 			SmallButton chip = chips.get(i);
-			chip.setBorder(on ? ON_BORDER : plainBorder);
+			chip.setBorder(on ? SettingSquare.ON_BORDER : plainBorder);
 			chip.setForeground(on ? Color.WHITE : plainText);
 		}
 	}

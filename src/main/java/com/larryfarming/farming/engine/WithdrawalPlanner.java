@@ -101,15 +101,14 @@ public final class WithdrawalPlanner {
      * @param made  the arrivals the bag was planned over, each a list of positions in
      *              {@code plans} — the same list handed to {@code InventoryDemands.forTrip},
      *              since a leg's ends and an offer's index are positions in it
-     * @param seeds every run's allocation, read only where {@code cropFor} cannot answer
      * @param underway whether the player is partway round. The starting chance then stands
      *     for the next bank they reach rather than the one they pack at, so it keeps its
      *     list even with no bank after it
      */
     static Withdrawals forBankStops(InventorySim.Plan bag, List<List<Integer>> made,
-            List<StopPlan> plans, List<List<Crop>> cropFor, List<SeedPlan> seeds,
+            List<StopPlan> plans, List<List<Crop>> cropFor,
             PlayerState state, CapabilityResolver resolver, FarmingInputs inputs, boolean underway) {
-        Trip trip = new Trip(made, plans, cropFor, seeds, state, resolver, inputs);
+        Trip trip = new Trip(made, plans, cropFor, state, resolver, inputs);
         List<Chance> chances = bankStopsIn(bag, !inputs.hidesOfferedBanks());
         // With only the starting bank, its list would repeat the packing list. With any later
         // bank, the starting row is drawn even if the later banks want nothing. Partway
@@ -374,7 +373,6 @@ public final class WithdrawalPlanner {
         private final List<List<Integer>> made;
         private final List<StopPlan> plans;
         private final List<List<Crop>> cropFor;
-        private final List<SeedPlan> seeds;
         private final PlayerState state;
         private final CapabilityResolver resolver;
         private final FarmingInputs inputs;
@@ -384,9 +382,8 @@ public final class WithdrawalPlanner {
          * stops.
          *
          * <p>Slicing works because the planner derives its seed tallies from the stops it is
-         * given ({@code SeedPlan.goingInTheGround}), and reads the run-wide allocation only
-         * where nothing says what is going in the ground. Travel lines dedupe per arrival
-         * within the slice.
+         * given ({@code SeedPlan.goingInTheGround}). Travel lines dedupe per arrival within
+         * the slice.
          *
          * @param arrived whether the player is already standing at the first arrival, so its
          *     travel was packed for by the stretch before
@@ -406,7 +403,7 @@ public final class WithdrawalPlanner {
             if (stretchPlans.isEmpty()) {
                 return List.of();
             }
-            return CarryPlanner.plan(stretchPlans, seeds, stretchCrops, state, resolver, inputs);
+            return CarryPlanner.plan(stretchPlans, stretchCrops, state, resolver, inputs);
         }
 
         /** The whole trip's packing list. */

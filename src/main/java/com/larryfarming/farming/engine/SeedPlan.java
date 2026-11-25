@@ -20,27 +20,6 @@ public class SeedPlan {
     SeedAllocation bad;
 
     /**
-     * What to carry out of the bank for a trip: every crop across both ends of every run
-     * with its patch count, in the order the trip first meets each, good seeds first.
-     *
-     * <p>Each run allocates against its own rotation, so a trip has one plan per run. The
-     * crops merge because late in the rotation both ends can land on one crop, and
-     * "2 avantoe, 5 avantoe" describes one handful of seeds.
-     */
-    public static List<SeedAllocation.Tally> shoppingList(List<SeedPlan> plans) {
-        Map<Crop, Integer> perCrop = new LinkedHashMap<>();
-        for (SeedPlan plan : plans) {
-            for (Crop crop : plan.good.getPerPatch()) {
-                perCrop.merge(crop, 1, Integer::sum);
-            }
-            for (Crop crop : plan.bad.getPerPatch()) {
-                perCrop.merge(crop, 1, Integer::sum);
-            }
-        }
-        return tallies(perCrop);
-    }
-
-    /**
      * What the trip is actually going to put in the ground, one entry per crop with the
      * patches taking it.
      *
@@ -66,10 +45,6 @@ public class SeedPlan {
                 perCrop.merge(crop, 1, Integer::sum);
             }
         }
-        return tallies(perCrop);
-    }
-
-    private static List<SeedAllocation.Tally> tallies(Map<Crop, Integer> perCrop) {
         List<SeedAllocation.Tally> tallies = new ArrayList<>(perCrop.size());
         for (Map.Entry<Crop, Integer> wanted : perCrop.entrySet()) {
             tallies.add(new SeedAllocation.Tally(wanted.getKey(), wanted.getValue()));

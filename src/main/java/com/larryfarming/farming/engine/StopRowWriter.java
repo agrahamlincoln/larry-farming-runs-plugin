@@ -12,6 +12,7 @@ import com.larryfarming.model.PlayerState;
 import com.larryfarming.snapshot.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 
 /**
@@ -20,11 +21,26 @@ import lombok.AllArgsConstructor;
  *
  * <p>Everything here is already decided by the time it is called. {@link FarmingAdviceBuilder}
  * plans the run and the trip and hands each arrival over, as indices into its plans.
+ *
+ * <p>An instance holds one arrival while its row is written; every method other classes
+ * call is static.
  */
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 final class StopRowWriter {
 
-    private StopRowWriter() {
-    }
+    /** The arrival, as indices into {@link #plans}. */
+    private final List<Integer> group;
+    private final List<StopPlan> plans;
+    /** The seeds dealt to each stop, which say a fixed-crop stop's replanting. */
+    private final List<List<Crop>> cropFor;
+    /**
+     * Which patch each seed landed in, from {@code assignCrops}; empty when the caller has no
+     * allocation, which under-states rather than invents.
+     */
+    private final Map<PatchRef, Crop> plantedIn;
+    private final FarmingInputs inputs;
+    /** The player, or null to skip the level and stock checks. */
+    private final PlayerState state;
 
     /**
      * One arrival, rendered: where it is, how to get there, and everything to plant.
@@ -38,6 +54,10 @@ final class StopRowWriter {
      */
     static FarmingStopAdvice adviseOnGroup(List<Integer> group, List<StopPlan> plans,
             List<List<Crop>> cropFor, Map<PatchRef, Crop> plantedIn, FarmingInputs inputs, StopPlan routing, PlayerState state) {
+        return new StopRowWriter(group, plans, cropFor, plantedIn, inputs, state).advise(routing);
+    }
+
+    private FarmingStopAdvice advise(StopPlan routing) {
         StopPlan lead = leadOf(group, plans);
         StopPlan travel = routing != null ? routing : lead;
         // The two enums name the same four outcomes.
@@ -71,7 +91,7 @@ final class StopRowWriter {
                 workedAreExtras &= plan.getStop().isOptional();
             }
             everyStopIsAnExtra &= plan.getStop().isOptional();
-            String own = noteFor(plan, cropFor.get(index), inputs, state);
+            String own = noteFor(plan, cropFor.get(index));
             if (note.isEmpty() && !own.isEmpty()) {
                 note = own;
             }
@@ -86,24 +106,24 @@ final class StopRowWriter {
         List<FarmingPlantAdvice> plants = new ArrayList<>(patchesPerCrop.size());
         patchesPerCrop.forEach((crop, patches) -> plants.add(new FarmingPlantAdvice(displayNameOf(crop), crop.getItemId(), patches)));
 
-        Map<PatchRef, Crop> felling = plants.isEmpty() ? Collections.emptyMap() : treesMakingWay(group, plans, plantedIn, inputs);
-        Map<PatchRef, Crop> diggingUp = visiting ? plantsComingOut(group, plans, cropFor, inputs, state) : Collections.emptyMap();
+        Map<PatchRef, Crop> felling = plants.isEmpty() ? Collections.emptyMap() : treesMakingWay();
+        Map<PatchRef, Crop> diggingUp = visiting ? plantsComingOut() : Collections.emptyMap();
         // Only where the player is going: leadOf hands the row to a skip when every visit
         // here is an extra. Read once, for the sentence and for the contract-line check.
-        List<Work> waiting = visiting ? worksAt(group, plans, cropFor, inputs, bin.getFills(), felling, diggingUp, plantedIn) : Collections.emptyList();
+        List<Work> waiting = visiting ? worksAt(bin.getFills(), felling, diggingUp) : Collections.emptyList();
         int iconItemId = pictureOf(plants, waiting);
-        List<String> actions = actionAt(waiting, plants, felling.values(), diggingUp.values(), state);
+        List<String> actions = actionAt(waiting, plants, felling.values(), diggingUp.values());
         // The bin first: emptying it stocks the bucket for the patches here, and a full bin
         // closed at once starts rotting sooner.
         actions.addAll(0, bin.getLines());
         if (visiting) {
             // Last, because the farmer protects what has gone in. The bag packs the same fee.
-            actions.addAll(payTheFarmer(group, plans, cropFor, state));
+            actions.addAll(payTheFarmer());
         }
         // The errand goes first: Jane names the next contract's crop, and planting the guild
         // patches before hearing her can fill the very patch it wants. The sentence is
         // borrowed from RunScheduler so the two never disagree.
-        if (visiting && anErrandIsBeingRun(group, plans) && !theWorkLineAlreadySaysIt(waiting, patchesPerCrop.keySet(), inputs)
+        if (visiting && anErrandIsBeingRun() && !theWorkLineAlreadySaysIt(waiting, patchesPerCrop.keySet())
                 && !inputs.contractDetail().isEmpty() && !inputs.contractDetail().startsWith(RunScheduler.HERB_PATCH_WORK)) {
             actions.add(0, capitalise(inputs.contractDetail()));
         }
@@ -132,22 +152,22 @@ final class StopRowWriter {
                     plan.getSkipReason(), plan.getBecause(), plan.getReadyAtEpochSec()));
         }
 
-        return FarmingStopAdvice.builder().patchName(nameOfGroup(group, plans)).arrival(lead.getStop().getArrival().name()).outcome(outcome)
+        return FarmingStopAdvice.builder().patchName(nameOfGroup()).arrival(lead.getStop().getArrival().name()).outcome(outcome)
                 // The planner's composed sentence. A destination-named rung stores only its
                 // tail ("then run east"); the teleport clause is added at planning time.
                 .instruction(visiting ? travel.getBecause() : "").actions(actions).iconItemId(iconItemId).because(travel.getBecause())
                 // No skip reason on a visited arrival; set-aside lines carry per-patch
                 // detail. From the lead, so heading and sentence describe the same patch.
-                .skipReason(visiting ? null : lead.getSkipReason()).subject(subjectOf(lead, inputs))
+                .skipReason(visiting ? null : lead.getSkipReason()).subject(subjectOf(lead))
                 // The lead's clock, matching the rest of the heading.
                 .readyAtEpochSec(lead.getReadyAtEpochSec()).uncertain(uncertain).optional(optional)
                 .optionalReason(optional && lead.getStop().getOptionalReason() != null ? lead.getStop().getOptionalReason() : "")
-                .plants(plants).setAside(setAside).travelItemId(travelItemOf(travel, state)).travelSpriteId(travelSpriteOf(travel))
-                .landing(landingOf(travel)).note(note).assumption(visiting ? assumptionAt(group, plans, inputs) : "").build();
+                .plants(plants).setAside(setAside).travelItemId(travelItemOf(travel)).travelSpriteId(travelSpriteOf(travel))
+                .landing(landingOf(travel)).note(note).assumption(visiting ? assumptionAt() : "").build();
     }
 
     /** Whether a stop being visited here is an errand rather than patch work. */
-    private static boolean anErrandIsBeingRun(List<Integer> group, List<StopPlan> plans) {
+    private boolean anErrandIsBeingRun() {
         return visitsIn(group, plans).stream().anyMatch(plan -> plan.getStop().isErrand());
     }
 
@@ -176,7 +196,7 @@ final class StopRowWriter {
      * health check and a harvest word the same tree differently. An act covering two crops
      * names neither, so the contract's line survives.
      */
-    private static boolean theWorkLineAlreadySaysIt(List<Work> waiting, Collection<Crop> planting, FarmingInputs inputs) {
+    private boolean theWorkLineAlreadySaysIt(List<Work> waiting, Collection<Crop> planting) {
         Crop contracted = inputs.getContractCrop();
         return contracted != null && inputs.contractIsAboutThePatch()
                 && (planting.contains(contracted) || waiting.stream().anyMatch(work -> work.crop == contracted));
@@ -193,8 +213,8 @@ final class StopRowWriter {
      * @param felling grown trees coming down for a sapling, one entry per tree
      * @param diggingUp grown bushes, cacti and calquats coming out for a fresh plant
      */
-    private static List<String> actionAt(List<Work> waiting, List<FarmingPlantAdvice> plants, Collection<Crop> felling,
-            Collection<Crop> diggingUp, PlayerState state) {
+    private List<String> actionAt(List<Work> waiting, List<FarmingPlantAdvice> plants, Collection<Crop> felling,
+            Collection<Crop> diggingUp) {
         // The +3 is the chopping, paying and digging lines, which no work carries.
         List<String> lines = new ArrayList<>(waiting.size() + 3);
         boolean dugUpSaid = false;
@@ -209,7 +229,7 @@ final class StopRowWriter {
             // and "Harvest, replant irit" rather than leaving both to the planting line.
             String phrase;
             if (i == 0 && work.crop != null && unspoken.contains(work.crop)) {
-                phrase = sayItIsAreplacement(work, plants, state);
+                phrase = sayItIsAreplacement(work, plants);
                 // Crossed off only for a harvest, which is the only act sayItIsAreplacement
                 // words as a felling, and only for as many trees as it claimed.
                 if (work.act == PatchWork.Act.HARVEST) {
@@ -248,7 +268,7 @@ final class StopRowWriter {
         List<Crop> paid = new ArrayList<>();
         List<Crop> chopped = new ArrayList<>();
         for (Crop tree : unspoken) {
-            (gardenerClears(tree, state) ? paid : chopped).add(tree);
+            (gardenerClears(tree) ? paid : chopped).add(tree);
         }
         int clearing = firstRoutine < 0 ? lines.size() : firstRoutine;
         int saidBefore = plants.size() - unsaid(plants).size();
@@ -333,7 +353,7 @@ final class StopRowWriter {
     }
 
     /** Whether the gardener clears this grown tree, the same answer the bag packs by. */
-    private static boolean gardenerClears(Crop tree, PlayerState state) {
+    private boolean gardenerClears(Crop tree) {
         CropData data = CropData.forCrop(tree);
         return data != null && CarryPlanner.gardenerClears(data.getPatchType(), tree, state);
     }
@@ -348,8 +368,7 @@ final class StopRowWriter {
      * up, checked or not; a dead one has its own line. Only the wording treats it as a bush:
      * planning keeps it a tree, spent once picked.
      */
-    private static Map<PatchRef, Crop> plantsComingOut(List<Integer> group, List<StopPlan> plans,
-            List<List<Crop>> cropFor, FarmingInputs inputs, PlayerState state) {
+    private Map<PatchRef, Crop> plantsComingOut() {
         Map<PatchRef, Crop> out = new LinkedHashMap<>();
         for (int index : group) {
             StopPlan plan = plans.get(index);
@@ -377,7 +396,7 @@ final class StopRowWriter {
      * The protection payment at this arrival, worded for the row. {@link Protection} decides
      * it from the same planting the bag reads, so the act and the packed fee always match.
      */
-    private static List<String> payTheFarmer(List<Integer> group, List<StopPlan> plans, List<List<Crop>> cropFor, PlayerState state) {
+    private List<String> payTheFarmer() {
         List<String> lines = new ArrayList<>(1);
         for (int index : group) {
             StopPlan plan = plans.get(index);
@@ -401,9 +420,9 @@ final class StopRowWriter {
      * fruit or none, the tree comes down. The planting keeps its own line unless the same
      * crop goes back in.
      */
-    private static String sayItIsAreplacement(Work work, List<FarmingPlantAdvice> plants, PlayerState state) {
+    private String sayItIsAreplacement(Work work, List<FarmingPlantAdvice> plants) {
         return work.act != PatchWork.Act.HARVEST ? work.word()
-                : sayItMustComeDown(Collections.nCopies(work.count, work.crop), gardenerClears(work.crop, state), plants);
+                : sayItMustComeDown(Collections.nCopies(work.count, work.crop), gardenerClears(work.crop), plants);
     }
 
     /**
@@ -418,13 +437,9 @@ final class StopRowWriter {
      * Island's three hardwood patches may take one sapling, and only that patch's tree comes
      * down. Only the allocation knows whether a tree is replaced ({@code dealOutUpgrades}
      * declines unworthy trades), and {@code CarryPlanner} packs its axe or the gardener's fee
-     * from the same allocation.
-     *
-     * @param plantedIn which patch each seed landed in, from {@code assignCrops}; empty when
-     *     the caller has no allocation, which under-states rather than invents
+     * from the same allocation. With no allocation it under-states rather than invents.
      */
-    private static Map<PatchRef, Crop> treesMakingWay(List<Integer> group, List<StopPlan> plans,
-            Map<PatchRef, Crop> plantedIn, FarmingInputs inputs) {
+    private Map<PatchRef, Crop> treesMakingWay() {
         Map<PatchRef, Crop> felling = new LinkedHashMap<>();
         for (StopPlan plan : visitsIn(group, plans)) {
             for (PatchRef ref : plan.getStop().getPatches()) {
@@ -514,12 +529,10 @@ final class StopRowWriter {
      * <p>A plant being felled or dug up is checked on the way, which the player knows, so its
      * check is not work of its own here; that line says only the checks of plants staying.
      *
-     * @param cropFor the seeds dealt to each stop, which say a fixed-crop stop's replanting
-     * @param plantedIn which patch each seed landed in, which says whether any other stop's
-     *     patches are the ones replanted; empty claims none of those
+     * <p>{@link #cropFor} says a fixed-crop stop's replanting, and {@link #plantedIn} whether
+     * any other stop's patches are the ones replanted; an empty allocation claims none of those.
      */
-    private static List<Work> worksAt(List<Integer> group, List<StopPlan> plans, List<List<Crop>> cropFor, FarmingInputs inputs,
-            Set<Integer> except, Map<PatchRef, Crop> felling, Map<PatchRef, Crop> diggingUp, Map<PatchRef, Crop> plantedIn) {
+    private List<Work> worksAt(Set<Integer> except, Map<PatchRef, Crop> felling, Map<PatchRef, Crop> diggingUp) {
         Map<PatchWork.Act, Integer> counts = new EnumMap<>(PatchWork.Act.class);
         Map<PatchWork.Act, Crop> only = new EnumMap<>(PatchWork.Act.class);
         // The acts with a patch that does not take its own crop back.
@@ -532,7 +545,7 @@ final class StopRowWriter {
             for (PatchRef ref : plan.getStop().getPatches()) {
                 // Predicted once, so the act and the crop come from one reading.
                 PatchPrediction seen = inputs.patchAt(ref);
-                PatchWork.Act act = PatchWork.at(seen, plan.getStop(), inputs.getPreferences(), inputs.getNowEpochSec());
+                PatchWork.Act act = PatchWork.at(seen, plan.getStop(), inputs);
                 if (act == null || act == PatchWork.Act.CHECK && (felling.containsKey(ref) || diggingUp.containsKey(ref))) {
                     continue;
                 }
@@ -566,7 +579,7 @@ final class StopRowWriter {
      * headed by, so heading and hover name the same crop. A seed shortfall stays empty —
      * its own clause names the seed, and "no seed" cannot absorb it.
      */
-    private static String subjectOf(StopPlan lead, FarmingInputs inputs) {
+    private String subjectOf(StopPlan lead) {
         if (lead.getSkipReason() != FarmingSkipReason.STILL_GROWING && lead.getSkipReason() != FarmingSkipReason.STANDING_CROP) {
             return "";
         }
@@ -674,7 +687,7 @@ final class StopRowWriter {
      *
      * <p>Counts patches, not plans: one Fossil Island stop is three hardwood patches.
      */
-    private static String nameOfGroup(List<Integer> group, List<StopPlan> plans) {
+    private String nameOfGroup() {
         PatchRef primary = plans.get(group.get(0)).getStop().primaryPatch();
         int patches = 0;
         for (int index : group) {
@@ -718,7 +731,7 @@ final class StopRowWriter {
      *
      * @param planted what the stop is planting, which names the crop being paced
      */
-    private static String noteFor(StopPlan plan, List<Crop> planted, FarmingInputs inputs, PlayerState state) {
+    private String noteFor(StopPlan plan, List<Crop> planted) {
         RunStop stop = plan.getStop();
         Crop crop = planted.isEmpty() ? FixedCrops.cropFor(stop, inputs.getPreferences(), state) : planted.get(0);
         int everyNth = FarmingCatalogue.everyNthRun(stop, crop);
@@ -733,7 +746,7 @@ final class StopRowWriter {
      * ground, which may be what sent the player here. "Unseen, assumed empty", with a count
      * when only some are. Empty when every patch the row visits to plant has been seen.
      */
-    private static String assumptionAt(List<Integer> group, List<StopPlan> plans, FarmingInputs inputs) {
+    private String assumptionAt() {
         // Every patch, as the scheduler counts them: Fossil Island's three hardwood patches
         // are one stop.
         int planting = 0;
@@ -764,7 +777,7 @@ final class StopRowWriter {
      * a rung is often an item plus something invisible (a cloak and a diary tier), and the
      * player clicks the item.
      */
-    private static int travelItemOf(StopPlan plan, PlayerState state) {
+    private int travelItemOf(StopPlan plan) {
         if (!plan.isVisit()) {
             return 0;
         }

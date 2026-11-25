@@ -53,9 +53,15 @@ public final class RunScheduler {
      *
      * @param openBook which spellbook the player is on, deciding which variant of a run
      *                 that has two gets scheduled. Null follows neither.
+     * @param reached filled with the labels of the patches each run's plan visits, so the
+     *                goals can tell what the runs already reach without planning them again
      */
-    public static List<FarmingRunStatus> schedule(PlayerState state, FarmingInputs inputs, Spellbook openBook, long nowEpochSec) {
-        FarmingInputs given = (inputs != null ? inputs : FarmingInputs.none()).seeing(state);
+    static List<FarmingRunStatus> schedule(PlayerState state, FarmingInputs inputs, Spellbook openBook, long nowEpochSec,
+            Map<RunId, Set<String>> reached) {
+        // The patch walk reads the clock from the inputs, so they carry this schedule's clock.
+        // The clock goes on before the inputs see the state, which judges against it.
+        FarmingInputs given = (inputs != null ? inputs : FarmingInputs.none()).withNowEpochSec(nowEpochSec)
+                .seeing(state);
         // One resolver per book, cached across the schedule: a run written for another book
         // is measured on both, and building a resolver is the expensive half.
         Map<Spellbook, CapabilityResolver> resolvers = RunVariants.newResolverCache();
@@ -72,6 +78,10 @@ public final class RunScheduler {
             // Scoring the variant already planned it, so reuse those plans, and the resolver
             // they were planned with.
             CapabilityResolver resolver = resolvers.computeIfAbsent(choice.getPlanFor(), given::resolverOn);
+            Set<String> visited = new HashSet<>();
+            choice.getPlans().stream().filter(StopPlan::isVisit).forEach(plan -> plan.getStop().getPatches()
+                    .forEach(patch -> visited.add(patch.getLabel())));
+            reached.put(choice.getRun().getId(), visited);
             statuses.add(statusOf(choice.getRun(), state, given, choice.getPlans(), resolver, nowEpochSec));
         }
         FarmingPreferences prefs = given.getPreferences();
@@ -120,7 +130,7 @@ public final class RunScheduler {
             }
             // A contract waiting on a crop outside the herb patch leaves that patch owed a
             // filler herb, and the contract's stop is the only one that visits it.
-            Tally tally = walkPatches(run, plans, inputs, state, nowEpochSec, false);
+            Tally tally = walkPatches(run, plans, inputs, state, false);
             return tally.actionable == 0 ? contract : build(run, RunStatus.DUE,
                     HERB_PATCH_WORK + dueDetail(tally), 0L);
         }
@@ -130,7 +140,7 @@ public final class RunScheduler {
             return build(run, RunStatus.LOCKED, noRoute, 0L);
         }
 
-        Tally tally = walkPatches(run, plans, inputs, state, nowEpochSec, false);
+        Tally tally = walkPatches(run, plans, inputs, state, false);
 
         if (tally.seen == 0 && tally.unseen == 0) {
             // Nothing observed, and no unseen patch the player could plant. Nothing seen
@@ -139,7 +149,7 @@ public final class RunScheduler {
             return build(run, RunStatus.UNSEEN, UNSEEN_DETAIL, 0L);
         }
 
-        Tally extras = walkPatches(run, plans, inputs, state, nowEpochSec, true);
+        Tally extras = walkPatches(run, plans, inputs, state, true);
         // A route proper never seen is nothing to be halfway round, however fresh an extra.
         boolean unfinished = tally.seen > 0 && tripUnfinished(tally, extras, nowEpochSec);
 
@@ -548,7 +558,7 @@ public final class RunScheduler {
      *               side only.
      */
     private static Tally walkPatches(FarmingRun run, List<StopPlan> plans,
-            FarmingInputs inputs, PlayerState state, long nowEpochSec, boolean extras) {
+            FarmingInputs inputs, PlayerState state, boolean extras) {
         FarmingPreferences prefs = inputs.getPreferences();
         Tally tally = new Tally();
         // One trip spans whichever runs the player is doing.
@@ -561,7 +571,7 @@ public final class RunScheduler {
                 continue;
             }
             boolean seedless = definitelyOutOfSeeds(run, stop, state, prefs);
-            walkPatches(stop, inputs, state, nowEpochSec, seedless, () -> knowsAseedFor(run, stop, state, prefs), tally);
+            walkPatches(stop, inputs, state, seedless, () -> knowsAseedFor(run, stop, state, prefs), tally);
         }
         return tally;
     }
@@ -633,7 +643,7 @@ public final class RunScheduler {
      *     asked only once a patch proves unseen, since the ladder costs a walk per stop
      */
     private static void walkPatches(RunStop stop, FarmingInputs inputs, PlayerState state,
-            long nowEpochSec, boolean seedless, BooleanSupplier known, Tally tally) {
+            boolean seedless, BooleanSupplier known, Tally tally) {
         Boolean knownHere = null;
         for (PatchRef patch : stop.getPatches()) {
             PatchPrediction prediction = inputs.patchAt(patch);
@@ -662,7 +672,7 @@ public final class RunScheduler {
             }
             tally.seen++;
             tally.lastSeen = Math.max(tally.lastSeen, prediction.getObservedAtEpochSec());
-            classify(prediction, stop, inputs.getPreferences(), state, tally, nowEpochSec, seedless);
+            classify(prediction, stop, inputs, state, tally, seedless);
         }
     }
 
@@ -672,9 +682,10 @@ public final class RunScheduler {
      * walkthrough on screen beside it agree.
      */
     private static void classify(PatchPrediction prediction, RunStop stop,
-            FarmingPreferences prefs, PlayerState player, Tally tally, long nowEpochSec, boolean seedless) {
+            FarmingInputs inputs, PlayerState player, Tally tally, boolean seedless) {
+        FarmingPreferences prefs = inputs.getPreferences();
         CropState state = prediction.getState();
-        PatchWork.Act act = PatchWork.at(prediction, stop, prefs, nowEpochSec);
+        PatchWork.Act act = PatchWork.at(prediction, stop, inputs);
         PatchType type = stop.patchType();
         // An anima plant dies at the end of its time, seen or not, and is cleared only to
         // plant the next one: with no seed for that, it is ground with nothing to plant.
@@ -708,7 +719,7 @@ public final class RunScheduler {
             tally.grownTrees++;
         }
         // A ripe or unchecked bush counts as ready below, though it comes out after.
-        if (PatchWork.standsEmpty(prediction, stop, prefs, nowEpochSec) || act == null
+        if (PatchWork.standsEmpty(prediction, stop, inputs) || act == null
                         && PatchWork.comesOut(prediction, stop, prefs, player)) {
             // An empty patch is as good a reason to go as a finished crop; see
             // RunStatus.DUE. A checked tree lands here rather than under "ready": it

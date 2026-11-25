@@ -249,15 +249,15 @@ public final class CapabilityResolver {
             return CapabilityVerdict.lack(CapabilityVerdict.Source.DECLARED, off.switchedOffReason());
         }
         if (readsPosition && taken.used(capability)) {
-            return CapabilityVerdict.have(CapabilityVerdict.Source.DETECTED,
+            return CapabilityVerdict.detected(
                     "you have used your " + capability.getDisplayName() + " on the way");
         }
         if (claimed.contains(capability)) {
-            return CapabilityVerdict.lack(CapabilityVerdict.Source.DETECTED,
+            return CapabilityVerdict.ruledOut(
                     "an earlier stop on this trip uses your " + capability.getDisplayName());
         }
         if (CapabilitySources.cooldownEndsAt(capability, state) > nowEpochSec) {
-            return CapabilityVerdict.lack(CapabilityVerdict.Source.DETECTED, capability.getDisplayName() + " is cooling down");
+            return CapabilityVerdict.ruledOut(capability.getDisplayName() + " is cooling down");
         }
         CapabilityVerdict verdict = resolveOwnership(capability, state);
         if (verdict.getState() != CapabilityState.HAVE) {
@@ -273,7 +273,7 @@ public final class CapabilityResolver {
         // unlocked. ANY means no book is settled, so it falls through to the rules.
         Spellbook needs = CapabilitySources.spellbookFor(capability);
         if (needs != null && onBook != Spellbook.ANY && needs != onBook) {
-            return CapabilityVerdict.lack(CapabilityVerdict.Source.DETECTED,
+            return CapabilityVerdict.ruledOut(
                     capability.getDisplayName() + " is on the " + needs.getDisplayName()
                             + " spellbook. You are on the " + onBook.getDisplayName() + " spellbook");
         }
@@ -316,7 +316,7 @@ public final class CapabilityResolver {
             held = Capability.bestHeldTier(capability.getTierFamily(), owned);
         }
         return held != null && held.isRationedDaily() && dailyLedger.isExhausted(held, nowEpochSec)
-                ? CapabilityVerdict.lack(CapabilityVerdict.Source.DETECTED, "you have used today's " + held.getDisplayName() + " teleports")
+                ? CapabilityVerdict.ruledOut("you have used today's " + held.getDisplayName() + " teleports")
                 : null;
     }
 

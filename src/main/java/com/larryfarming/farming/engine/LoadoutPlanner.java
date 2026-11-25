@@ -21,7 +21,8 @@ import java.util.*;
  * saves a slot.
  *
  * <p>Nothing here is a requirement. A farm run with an empty cape slot still works, so
- * the output is graded advice, and unearned tiers are reported as goals.
+ * the output is graded advice. Gear the player owns none of earns no row here;
+ * {@link GoalPlanner} names the gear worth working toward.
  */
 public final class LoadoutPlanner {
 
@@ -30,7 +31,7 @@ public final class LoadoutPlanner {
 
     /**
      * Item names that start with a proper noun keep their capital mid-sentence ("your
-     * Explorer's ring 2"). Every other name is lower-cased there ("your magic secateurs").
+     * Explorer's ring 2"). Every other name is lower-cased there ("your dramen staff").
      */
     private static final Set<String> PROPER_FIRST_WORDS = Set.of("Farming", "Ardougne", "Explorer's", "Xeric's", "Farmer's");
 
@@ -49,7 +50,7 @@ public final class LoadoutPlanner {
      *     needs a cape's teleport (see {@code CarryPlanner.basketPlace})
      */
     public static List<SlotAdvice> plan(PlayerState state, boolean staffWielded, boolean ringTeleports, boolean basketWorn) {
-        List<LoadoutSlot> slots = Loadouts.forRun(staffWielded, basketWorn, ItemCounts.ownsAny(state, Loadouts.MAGIC_SECATEURS));
+        List<LoadoutSlot> slots = Loadouts.forRun(staffWielded, basketWorn);
         List<SlotAdvice> advice = new ArrayList<>(slots.size());
         for (LoadoutSlot slot : slots) {
             if (slot.getSlot() == EquipmentSlot.RING) {
@@ -71,8 +72,8 @@ public final class LoadoutPlanner {
 
     /**
      * The slot's verdict, decided by the first tier the player holds: best-first order
-     * makes it the best they own, on hand or not. Nothing held is a goal, whether or not the
-     * bank has been seen.
+     * makes it the best they own, on hand or not. Nothing held earns no row here, whether or
+     * not the bank has been seen.
      */
     private static SlotAdvice planSlot(LoadoutSlot slot, PlayerState state) {
         ItemStack worn = state != null ? state.getEquipment().get(slot.getSlot()) : null;
@@ -137,13 +138,12 @@ public final class LoadoutPlanner {
     }
 
     /**
-     * The gear list as rows, ready to render: what to put on or bring now, then what to
-     * work toward. Every row's detail is the whole sentence to show.
+     * The gear to put on or bring now, as rows ready to render. Every row's detail is the
+     * whole sentence to show. Gear not owned at all earns no row; {@link GoalPlanner} names
+     * the gear worth working toward.
      *
      * <p>Slots that are already right are left out. Grouped slots collapse to one row: the
-     * Farmer's outfit is one decision across four slots.
-     *
-     * <p>Things to act on come first, and among them the essential slots before the
+     * Farmer's outfit is one decision across four slots. The essential slots come before the
      * nice-to-have ones.
      */
     public static List<FarmingUpgrade> upgrades(List<SlotAdvice> plan) {
@@ -152,7 +152,6 @@ public final class LoadoutPlanner {
         Set<String> groupsDone = new HashSet<>();
         addEquips(plan, rows, false, groupsDone);
         addEquips(plan, rows, true, groupsDone);
-        addGoals(plan, rows, groupsDone);
         return rows;
     }
 
@@ -171,43 +170,5 @@ public final class LoadoutPlanner {
                         advice.getBest().getIconItemId(), group, Loadouts.OUTFIT_TIP));
             }
         }
-    }
-
-    private static void addGoals(List<SlotAdvice> plan, List<FarmingUpgrade> rows, Set<String> groupsDone) {
-        for (SlotAdvice advice : plan) {
-            LoadoutSlot slot = advice.getSlot();
-            if (advice.getVerdict() != SlotAdvice.Verdict.NOTHING_YET) {
-                continue;
-            }
-            if (slot.getGroup() == null) {
-                GearPick goal = slot.getGoal();
-                rows.add(new FarmingUpgrade(FarmingUpgrade.Kind.GOAL, goal.getIconItemId(), goal.getDisplayName(), slot.getGoalSentence()));
-            } else if (groupsDone.add(slot.getGroup())) {
-                rows.add(groupRow(plan, slot.getGroup()));
-            }
-        }
-    }
-
-    /** One row standing for every slot in a group, counting how far along the player is. */
-    private static FarmingUpgrade groupRow(List<SlotAdvice> plan, String group) {
-        int total = 0;
-        int have = 0;
-        int icon = 0;
-        for (SlotAdvice advice : plan) {
-            if (!group.equals(advice.getSlot().getGroup())) {
-                continue;
-            }
-            total++;
-            if (advice.getVerdict() == SlotAdvice.Verdict.NOTHING_YET) {
-                // Draw the group as the first piece still missing.
-                if (icon == 0) {
-                    icon = advice.getSlot().getGoal().getIconItemId();
-                }
-            } else {
-                have++;
-            }
-        }
-        String progress = group + ": you have " + have + " of " + total + " pieces. The set gives 2.5% more Farming experience.";
-        return new FarmingUpgrade(FarmingUpgrade.Kind.GOAL, icon, group, progress);
     }
 }

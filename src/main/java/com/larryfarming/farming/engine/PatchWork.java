@@ -14,7 +14,7 @@ import lombok.AllArgsConstructor;
  * <p>The runs list and the walkthrough both ask this class, so they cannot disagree about
  * whether a patch has work.
  *
- * <p>The verb comes from the stop's actions ({@link RunStop.StopAction#defaultsFor}), not
+ * <p>The verb comes from the stop's actions ({@link RunStop#getActions}), not
  * the patch type: bushes and cacti want a health check <em>and</em> a harvest.
  *
  * <p>A stop naming both does them as separate acts: the check first, then the produce.
@@ -34,8 +34,10 @@ final class PatchWork {
      * this agrees with every other "is it ready" answer. That keeps the
      * {@code LIKELY_READY} window (up to a full growth tick before a farm tick is witnessed)
      * on the side of saying nothing rather than sending the player early.
+     *
+     * <p>Read against the inputs' own preferences and clock.
      */
-    static Act at(PatchPrediction seen, RunStop stop, FarmingPreferences prefs, long nowEpochSec) {
+    static Act at(PatchPrediction seen, RunStop stop, FarmingInputs inputs) {
         // Never seen is not empty: say nothing.
         if (seen == null || seen.getCrop() == null || seen.isIdle()) {
             return null;
@@ -48,10 +50,10 @@ final class PatchWork {
         }
         // A standing guard crop, such as a white lily, wants nothing while it lives. Checked
         // after disease and death, the states where a guard does need help.
-        if (FixedCrops.stands(stop, seen.getCrop(), prefs) && FixedCrops.grows(stop, seen.getCrop())) {
+        if (FixedCrops.stands(stop, seen.getCrop(), inputs.getPreferences()) && FixedCrops.grows(stop, seen.getCrop())) {
             return null;
         }
-        if (!seen.isReadyAt(nowEpochSec)) {
+        if (!seen.isReadyAt(inputs.getNowEpochSec())) {
             return null;
         }
         // An anima plant's growth ends in its death, so one whose time has run out is dead,
@@ -102,7 +104,7 @@ final class PatchWork {
      * waiting: a hespori ready to fight decodes HARVESTABLE with no HARVEST action, and a
      * fruit tree with fruit back reports work.
      */
-    static boolean standsEmpty(PatchPrediction seen, RunStop stop, FarmingPreferences prefs, long nowEpochSec) {
+    static boolean standsEmpty(PatchPrediction seen, RunStop stop, FarmingInputs inputs) {
         // Unseen is not empty; treating it as empty would drop a stop with real work.
         if (seen == null || seen.getCrop() == null) {
             return false;
@@ -115,7 +117,7 @@ final class PatchWork {
         if (!stop.isPlanting() || seen.getState() != CropState.HARVESTABLE || pickingIsAllItOffers) {
             return false;
         }
-        return at(seen, stop, prefs, nowEpochSec) == null;
+        return at(seen, stop, inputs) == null;
     }
 
     /**

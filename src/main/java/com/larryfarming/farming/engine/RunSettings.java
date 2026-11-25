@@ -8,6 +8,8 @@ import com.larryfarming.farming.model.*;
 import com.larryfarming.model.*;
 import com.larryfarming.snapshot.*;
 import java.util.*;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 
 /**
  * The farming settings the panel draws under each run, read off the run's structure and the
@@ -20,14 +22,26 @@ import java.util.*;
  *
  * <p>Each control carries its {@link FarmingKeys} key, because the snapshot takes it to the
  * panel, which passes a click back to the plugin unread.
+ *
+ * <p>An instance holds one run's values while its settings are drawn; every public method
+ * is static.
  */
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RunSettings {
 
     /** A switched-off run's status in {@code FarmingAdvice.switchedOff}. */
     public static final String STATUS_OFF = "OFF";
 
-    private RunSettings() {
-    }
+    private final RunId id;
+    private final FarmingPreferences prefs;
+    /** {@link #farmingLevel}, the ceiling above which a crop is locked. */
+    private final int level;
+    /** {@link #sites} for this run. */
+    private final List<FarmingSettingChoice> sites;
+    private final boolean castsFertileSoil;
+    /** {@link #quietPicks} for these preferences, this player and this sight. */
+    private final Set<String> quiet;
+    private final CompostStock compost;
 
     /**
      * The runs the player has switched off, as rows for the panel to draw dimmed. The panel puts
@@ -60,8 +74,8 @@ public final class RunSettings {
         int level = farmingLevel(state);
         List<FarmingRunSettings> all = new ArrayList<>();
         for (Map.Entry<RunId, List<FarmingRun>> entry : FarmingCatalogue.runsById().entrySet()) {
-            FarmingRunSettings settings = forRun(entry.getKey(), entry.getValue(), prefs, level, sites(entry.getKey(), prefs, state, sight),
-                    FertileSoil.couldCast(state), quiet, compost);
+            FarmingRunSettings settings = new RunSettings(entry.getKey(), prefs, level, sites(entry.getKey(), prefs, state, sight),
+                    FertileSoil.couldCast(state), quiet, compost).forRun(entry.getValue());
             if (settings != null) {
                 all.add(settings);
             }
@@ -70,27 +84,25 @@ public final class RunSettings {
     }
 
     /** Null for a run the player has no say over, such as the contract. */
-    private static FarmingRunSettings forRun(RunId id, List<FarmingRun> variants,
-            FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites, boolean castsFertileSoil,
-            Set<String> quiet, CompostStock compost) {
+    private FarmingRunSettings forRun(List<FarmingRun> variants) {
         // Jane decides what the contract grows.
         if (id == RunId.CONTRACT) {
             return null;
         }
         FarmingRun run = variants.get(0);
         if (run.getSeedPatchType() != null) {
-            return forNamedSeeds(id, run.getSeedPatchType(), prefs, level, sites);
+            return forNamedSeeds(run.getSeedPatchType());
         }
         PatchType rotation = PlantingGate.rotationFamilyOf(run);
         if (rotation == PatchType.HERB) {
-            return herbs(id, variants, prefs, level, sites, castsFertileSoil, quiet, compost);
+            return herbs(variants);
         }
         Set<Crop> fixed = switchableFixedCrops(variants);
         if (fixed.size() == 1) {
-            return oneCrop(id, fixed.iterator().next(), prefs, level, sites);
+            return oneCrop(fixed.iterator().next());
         }
         if (fixed.size() > 1) {
-            return severalCrops(id, fixed, prefs, level, sites);
+            return severalCrops(fixed);
         }
         return null;
     }
@@ -98,8 +110,7 @@ public final class RunSettings {
     /**
      * A run naming its own seeds: a tick per crop of a tree family, or its one crop.
      */
-    private static FarmingRunSettings forNamedSeeds(RunId id, PatchType family,
-            FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites) {
+    private FarmingRunSettings forNamedSeeds(PatchType family) {
         List<Crop> trees = FarmingPreferences.familyChoices(family);
         if (!trees.isEmpty()) {
             List<FarmingSettingChoice> switches = family == PatchType.FRUIT_TREE ? List.of(checkbox(FarmingKeys.PICK_FRUIT_IN_PASSING,
@@ -111,13 +122,13 @@ public final class RunSettings {
             List<FarmingSettingChoice> choices = new ArrayList<>(trees.size());
             // The tree drawn, not its sapling: every sapling shares one pot sprite.
             for (Crop crop : byLevel(trees)) {
-                choices.add(toggle(crop, crop.getItemId(), prefs, level, null));
+                choices.add(toggle(crop, crop.getItemId(), null));
             }
-            return seeds(id, choices, sites).choicesCaption("Trees to plant").switches(switches).build();
+            return seeds(choices).choicesCaption("Trees to plant").switches(switches).build();
         }
         List<Crop> crops = CropData.plantableIn(family);
         if (crops.size() == 1 && FarmingPreferences.hasAswitch(crops.get(0))) {
-            return oneCrop(id, crops.get(0), prefs, level, sites);
+            return oneCrop(crops.get(0));
         }
         return null;
     }
@@ -132,18 +143,16 @@ public final class RunSettings {
     /**
      * The herb grid in Farming level order and the crops the run plants in passing.
      */
-    private static FarmingRunSettings herbs(RunId id, List<FarmingRun> variants,
-            FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites, boolean castsFertileSoil,
-            Set<String> quiet, CompostStock compost) {
+    private FarmingRunSettings herbs(List<FarmingRun> variants) {
         // The herb drawn, not its seed: every herb seed is the same pile of seeds. The tags
         // are longer than the bag's one-letter ones, since here they are the only name.
         List<FarmingSettingChoice> seeds = new ArrayList<>();
         for (Crop herb : byLevel(FarmingPreferences.HERB_CHOICES)) {
-            seeds.add(toggle(herb, herb.getItemId(), prefs, level, CropData.forCrop(herb).getGridTag()));
+            seeds.add(toggle(herb, herb.getItemId(), CropData.forCrop(herb).getGridTag()));
         }
         // The inventory's own tags. Only herbs and saplings draw one in the bag, but here each
         // extra stands beside the herbs and wants a name.
-        List<FarmingSettingChoice> extras = storedTagToggles(switchableFixedCrops(variants), prefs, level);
+        List<FarmingSettingChoice> extras = storedTagToggles(switchableFixedCrops(variants));
         // Each drawn only where it does something: the level wait below the level it waits
         // for, and the spell for a player who could cast it.
         List<FarmingSettingChoice> switches = new ArrayList<>(2);
@@ -155,7 +164,7 @@ public final class RunSettings {
             switches.add(checkbox(FarmingKeys.COMPOST_WITH_FERTILE_SOIL,
                     "Cast Fertile Soil with volcanic ash", prefs.compostsWithFertileSoil()));
         }
-        List<FarmingPatchPick> patchPicks = patchPicks(prefs, level, sites, quiet);
+        List<FarmingPatchPick> patchPicks = patchPicks();
         // The thresholds, the stock and the paused line show only while some allotment would
         // plant for compost. The thresholds come last, so the stock sits under them and their
         // coming and going moves no other row.
@@ -174,7 +183,7 @@ public final class RunSettings {
             picks.add(compostSteps("Stop at", FarmingKeys.STOP_COMPOST_AT, prefs.makeCompostBelow() + FarmingPreferences.COMPOST_STEP,
                     FarmingPreferences.COMPOST_MOST, prefs.stopCompostAt(), "Stop making compost once you have this many uses"));
         }
-        return seeds(id, seeds, sites).choicesCaption("Herbs to plant").extras(extras).patchPicks(patchPicks)
+        return seeds(seeds).choicesCaption("Herbs to plant").extras(extras).patchPicks(patchPicks)
                 .switches(switches).picks(picks).paused(composting ? compost.pausedLine(prefs.makeCompostBelow()) : null)
                 .stocked(stocked).stockedTip(stocked == null ? null : String.format(Locale.ENGLISH,
                         "Stop making compost until your stock drops below %,d", prefs.makeCompostBelow())).build();
@@ -197,8 +206,7 @@ public final class RunSettings {
      * shut to the account, as Harmony is before the elite Morytania diary, shows none: its
      * patches are worked only beside the herb patch.
      */
-    private static List<FarmingPatchPick> patchPicks(FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites,
-            Set<String> quiet) {
+    private List<FarmingPatchPick> patchPicks() {
         List<FarmingPatchPick> picks = new ArrayList<>();
         for (Map.Entry<PatchRef, PatchPick> patch : FarmingCatalogue.picksByPatch().entrySet()) {
             PatchPick pick = patch.getValue();
@@ -339,11 +347,11 @@ public final class RunSettings {
      * drawn as its seed. With site switches, as calquat has, it opens like the tree runs: its
      * crop is one square, drawn as the crop itself, above its sites.
      */
-    private static FarmingRunSettings oneCrop(RunId id, Crop crop, FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites) {
+    private FarmingRunSettings oneCrop(Crop crop) {
         if (sites.isEmpty()) {
-            return settings(id, FarmingRunSettings.Shape.SWITCH, List.of(), null).runSwitch(toggle(crop, prefs, level, null)).build();
+            return settings(FarmingRunSettings.Shape.SWITCH, List.of(), null).runSwitch(toggle(crop, null)).build();
         }
-        return seeds(id, List.of(toggle(crop, crop.getItemId(), prefs, level, null)), sites).build();
+        return seeds(List.of(toggle(crop, crop.getItemId(), null))).build();
     }
 
     /**
@@ -351,38 +359,36 @@ public final class RunSettings {
      * drawn as its seed with the inventory's tag, as the tree runs open. Larry plants the first
      * one ticked that the player holds seeds for.
      */
-    private static FarmingRunSettings severalCrops(RunId id, Set<Crop> crops,
-            FarmingPreferences prefs, int level, List<FarmingSettingChoice> sites) {
-        return seeds(id, storedTagToggles(crops, prefs, level), sites).choicesCaption("Plant one of").build();
+    private FarmingRunSettings severalCrops(Set<Crop> crops) {
+        return seeds(storedTagToggles(crops)).choicesCaption("Plant one of").build();
     }
 
     /** A tick per crop, drawn as its seed with the inventory's tag. */
-    private static List<FarmingSettingChoice> storedTagToggles(Collection<Crop> crops, FarmingPreferences prefs, int level) {
+    private List<FarmingSettingChoice> storedTagToggles(Collection<Crop> crops) {
         List<FarmingSettingChoice> toggles = new ArrayList<>(crops.size());
         for (Crop crop : crops) {
-            toggles.add(toggle(crop, prefs, level, CropData.forCrop(crop).getStoredTag()));
+            toggles.add(toggle(crop, CropData.forCrop(crop).getStoredTag()));
         }
         return toggles;
     }
 
-    private static FarmingRunSettings.FarmingRunSettingsBuilder seeds(RunId id,
-            List<FarmingSettingChoice> choices, List<FarmingSettingChoice> sites) {
-        return settings(id, FarmingRunSettings.Shape.SEEDS, choices, sites);
+    private FarmingRunSettings.FarmingRunSettingsBuilder seeds(List<FarmingSettingChoice> choices) {
+        return settings(FarmingRunSettings.Shape.SEEDS, choices, sites);
     }
 
     /** A run's settings with no extras and no switches until the caller sets them. */
-    private static FarmingRunSettings.FarmingRunSettingsBuilder settings(RunId id,
+    private FarmingRunSettings.FarmingRunSettingsBuilder settings(
             FarmingRunSettings.Shape shape, List<FarmingSettingChoice> choices, List<FarmingSettingChoice> sites) {
         return FarmingRunSettings.builder().runId(id.name()).shape(shape).choices(choices)
                 .sites(sites).extras(List.of()).switches(List.of());
     }
 
     /** One crop's tick, drawn as its seed: a click writes the opposite of what is set. */
-    private static FarmingSettingChoice toggle(Crop crop, FarmingPreferences prefs, int level, String tag) {
-        return toggle(crop, CropData.forCrop(crop).getSeedItemId(), prefs, level, tag);
+    private FarmingSettingChoice toggle(Crop crop, String tag) {
+        return toggle(crop, CropData.forCrop(crop).getSeedItemId(), tag);
     }
 
-    private static FarmingSettingChoice toggle(Crop crop, int itemId, FarmingPreferences prefs, int level, String tag) {
+    private FarmingSettingChoice toggle(Crop crop, int itemId, String tag) {
         CropData data = CropData.forCrop(crop);
         boolean on = prefs.allows(crop);
         return new FarmingSettingChoice(FarmingKeys.CROPS.get(crop), crop.getDisplayName(), itemId, tag != null ? tag : data.getTag(),

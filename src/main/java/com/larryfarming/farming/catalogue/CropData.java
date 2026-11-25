@@ -29,6 +29,7 @@ import com.larryfarming.data.Tables;
 import com.larryfarming.engine.farming.Crop;
 import com.larryfarming.engine.farming.PatchType;
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.Getter;
 
 /**
@@ -190,21 +191,10 @@ public final class CropData {
     private static final Map<PatchType, List<Crop>> BY_PATCH_TYPE = indexByPatchType();
 
     private static Map<PatchType, List<Crop>> indexByPatchType() {
-        Map<PatchType, List<CropData>> matching = new EnumMap<>(PatchType.class);
-        for (CropData data : ALL) {
-            matching.computeIfAbsent(data.patchType, type -> new ArrayList<>()).add(data);
-        }
-        Map<PatchType, List<Crop>> index = new EnumMap<>(PatchType.class);
-        for (Map.Entry<PatchType, List<CropData>> entry : matching.entrySet()) {
-            List<CropData> rows = entry.getValue();
-            rows.sort(Comparator.comparingInt(CropData::getFarmingLevel).reversed());
-            List<Crop> crops = new ArrayList<>(rows.size());
-            for (CropData data : rows) {
-                crops.add(data.crop);
-            }
-            index.put(entry.getKey(), List.copyOf(crops));
-        }
-        return Collections.unmodifiableMap(index);
+        return Collections.unmodifiableMap(ALL.stream()
+                .sorted(Comparator.comparingInt(CropData::getFarmingLevel).reversed())
+                .collect(Collectors.groupingBy(data -> data.patchType, () -> new EnumMap<>(PatchType.class),
+                        Collectors.mapping(data -> data.crop, Collectors.toUnmodifiableList()))));
     }
 
     /**

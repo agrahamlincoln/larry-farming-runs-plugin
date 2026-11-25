@@ -47,6 +47,8 @@ public class FarmingPlannerPersistence {
     public static final String SETTINGS_OPEN = "farmingSettingsOpen";
     /** Whether the side panel's house fold is open. Shut when unset. */
     public static final String HOUSE_OPEN = "farmingHouseOpen";
+    /** Whether the side panel's fold of further goals is open. Shut when unset. */
+    public static final String MORE_GOALS_OPEN = "farmingMoreGoalsOpen";
 
     private final ConfigStore store;
 

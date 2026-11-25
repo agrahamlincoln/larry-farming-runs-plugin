@@ -35,7 +35,6 @@ class Fold extends JPanel
 
 		toggle = new JLabel();
 		toggle.setFont(FontManager.getRunescapeSmallFont());
-		toggle.setAlignmentX(LEFT_ALIGNMENT);
 		toggle.setBorder(BorderFactory.createEmptyBorder(0, 2, 3, 0));
 		PanelText.onLeftClick(toggle, () ->
 		{

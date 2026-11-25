@@ -41,6 +41,16 @@ public class CapabilityVerdict {
         return new CapabilityVerdict(CapabilityState.LACK, source, because);
     }
 
+    /** The player has it, read from game state. */
+    public static CapabilityVerdict detected(String because) {
+        return have(Source.DETECTED, because);
+    }
+
+    /** The player lacks it, read from game state. */
+    public static CapabilityVerdict ruledOut(String because) {
+        return lack(Source.DETECTED, because);
+    }
+
     public static CapabilityVerdict unknown(String because) {
         return new CapabilityVerdict(CapabilityState.UNKNOWN, Source.UNDETERMINED, because);
     }

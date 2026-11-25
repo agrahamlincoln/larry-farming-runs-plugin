@@ -225,14 +225,12 @@ class RunsListView extends JPanel
 		JLabel name = PanelText.label(run.getRunName(),
 			onTrip || due ? FontManager.getRunescapeBoldFont() : FontManager.getRunescapeSmallFont(),
 			switchedOff ? COLOR_OFF : runColour(run.getStatus(), onTrip));
-		name.setAlignmentX(LEFT_ALIGNMENT);
 		text.add(name);
 
 		// Always added, even when empty, so showDetails can fill it in place later. Its
 		// colour depends on status, which is in the signature. A run not due yet keeps a
 		// quieter status line, but grey only when the run is not possible.
 		JLabel detail = PanelText.label("", switchedOff ? COLOR_OFF : due ? PanelColors.ROUTE : impossible ? PanelColors.SKIPPED : PanelColors.META);
-		detail.setAlignmentX(LEFT_ALIGNMENT);
 		text.add(detail);
 		runDetails.put(run.getRunId(), detail);
 		showRunDetail(detail, run.getDetail());

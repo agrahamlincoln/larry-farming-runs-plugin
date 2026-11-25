@@ -128,31 +128,26 @@ public final class SeedBoxChat
 			return Optional.empty();
 		}
 
-		Matcher stored = SEED_BOX_STORED.matcher(message);
-		if (stored.matches())
-		{
-			return moveOf(stored.group(2), Integer.parseInt(stored.group(1)));
-		}
+		return match(SEED_BOX_STORED, message, 1)
+				.or(() -> match(SEED_BOX_EMPTIED, message, -1))
+				.or(() -> match(SEED_BOX_TAKEN_ONE, message, -1))
+				.or(() -> match(SEED_BOX_TAKEN_MANY, message, -1));
+	}
 
-		Matcher emptied = SEED_BOX_EMPTIED.matcher(message);
-		if (emptied.matches())
+	/**
+	 * Applies one pattern: the count is group 1 when the pattern has two groups (one otherwise),
+	 * the name is the last group, and {@code sign} says whether seeds moved in or out.
+	 */
+	private static Optional<SeedBoxMove> match(Pattern pattern, String message, int sign)
+	{
+		Matcher matcher = pattern.matcher(message);
+		if (!matcher.matches())
 		{
-			return moveOf(emptied.group(2), -Integer.parseInt(emptied.group(1)));
+			return Optional.empty();
 		}
-
-		Matcher takenOne = SEED_BOX_TAKEN_ONE.matcher(message);
-		if (takenOne.matches())
-		{
-			return moveOf(takenOne.group(1), -1);
-		}
-
-		Matcher takenMany = SEED_BOX_TAKEN_MANY.matcher(message);
-		if (takenMany.matches())
-		{
-			return moveOf(takenMany.group(2), -Integer.parseInt(takenMany.group(1)));
-		}
-
-		return Optional.empty();
+		int groups = matcher.groupCount();
+		int count = groups == 2 ? Integer.parseInt(matcher.group(1)) : 1;
+		return moveOf(matcher.group(groups), sign * count);
 	}
 
 	/**
@@ -185,8 +180,7 @@ public final class SeedBoxChat
 		{
 			return Optional.empty();
 		}
-		Matcher entry = SEED_BOX_CONTENTS_ENTRY.matcher(message);
-		return entry.matches() ? moveOf(entry.group(2), Integer.parseInt(entry.group(1))) : Optional.empty();
+		return match(SEED_BOX_CONTENTS_ENTRY, message, 1);
 	}
 
 	/** Empty for a zero quantity, which is not a change. */

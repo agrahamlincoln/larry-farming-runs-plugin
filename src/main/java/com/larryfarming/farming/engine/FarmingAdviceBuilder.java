@@ -50,7 +50,8 @@ public final class FarmingAdviceBuilder {
     /** The advice for these inputs, already seen for this player. */
     private static FarmingAdvice advise(PlayerState state, FarmingInputs given, long nowEpochSec) {
         Spellbook openBook = openBookOf(state);
-        List<FarmingRunStatus> runs = RunScheduler.schedule(state, given, openBook, nowEpochSec);
+        Map<RunId, Set<String>> reached = new EnumMap<>(RunId.class);
+        List<FarmingRunStatus> runs = RunScheduler.schedule(state, given, openBook, nowEpochSec, reached);
         // Both paths below read the contract's row from the runs list's verdict, so the trip
         // and the quiet-day run cannot disagree about the contract.
         // Seen again, so the copy judges its bins once rather than at every reader.
@@ -58,11 +59,11 @@ public final class FarmingAdviceBuilder {
 
         FarmingAdvice trip = adviseOnTrip(runs, state, given);
         if (trip != null) {
-            return withRuns(trip, runs, state, given);
+            return withRuns(trip, runs, reached, state, given);
         }
 
         RunId walk = runForAquietDay(runs, RunScheduler.herbRunsWaitForTheLevel(given.getPreferences(), state));
-        return walk == null ? null : withRuns(adviseOnAquietDay(walk, state, given), runs, state, given);
+        return walk == null ? null : withRuns(adviseOnAquietDay(walk, state, given), runs, reached, state, given);
     }
 
     /**
@@ -75,25 +76,34 @@ public final class FarmingAdviceBuilder {
      * <p>Planned on its own only when the trip draws no row at all.
      */
     private static FarmingAdvice adviseOnAquietDay(RunId id, PlayerState state, FarmingInputs given) {
-        RunVariants.Choice pick = variantFor(id, state, given);
+        // One cache for the scoring and the walk, as on a trip: a resolver depends only on
+        // the inputs and the book.
+        Map<Spellbook, CapabilityResolver> resolvers = RunVariants.newResolverCache();
+        RunVariants.Choice pick = variantFor(id, state, given, resolvers);
         if (pick == null) {
             return null;
         }
-        FarmingAdvice trip = walkTrip(List.of(pick), id.getDisplayName(), state, given, RunVariants.newResolverCache());
+        FarmingAdvice trip = walkTrip(List.of(pick), id.getDisplayName(), state, given, resolvers);
         return trip != null ? trip : adviseOn(pick.getRun(), state, given, pick.getPlanFor());
     }
 
     /** {@link RunId#DISPLAY_ORDER} as the ids the snapshot carries. */
     private static final List<String> RUN_ORDER = namesOf(RunId.DISPLAY_ORDER);
 
-    /** The walkthrough with every run's standing and the panel's settings added. */
-    private static FarmingAdvice withRuns(FarmingAdvice advice, List<FarmingRunStatus> runs, PlayerState state, FarmingInputs inputs) {
+    /**
+     * The walkthrough with every run's standing and the panel's settings added.
+     *
+     * @param reached the labels of the patches each run's plan visits, from the schedule
+     */
+    private static FarmingAdvice withRuns(FarmingAdvice advice, List<FarmingRunStatus> runs, Map<RunId, Set<String>> reached,
+            PlayerState state, FarmingInputs inputs) {
         if (advice == null) {
             return null;
         }
         FarmingPreferences prefs = inputs.getPreferences();
         FarmingHouse house = RunSettings.house(prefs, state, inputs.getHouse());
-        return advice.toBuilder().lookOnce(LookOnce.sentence(state, house)).runs(runs).runOrder(RUN_ORDER)
+        return advice.toBuilder().upgrades(GoalPlanner.after(advice.getUpgrades(), state, inputs, runs, reached))
+                .lookOnce(LookOnce.sentence(state, house)).runs(runs).runOrder(RUN_ORDER)
                 .switchedOff(RunSettings.switchedOff(prefs)).runSettings(RunSettings.forRuns(prefs, state, inputs::patchAt, inputs.getCompost(),
                         inputs.quietPicks(state)))
                 .runFirst(RunSettings.runFirst(prefs)).waitForEveryPatch(RunSettings.waitForEveryPatch(prefs))
@@ -180,9 +190,8 @@ public final class FarmingAdviceBuilder {
         // settled its routes in the catalogue's order, so a rung leaning on another stop or
         // on where the player stands was decided for a position the stop no longer holds.
         Itinerary.Trip trip = RunPlanning.replanAcrossTheCircuit(Itinerary.alone(planned.forTrip(), state), planner, state);
-        // A one-element seed list so the bag takes the same calls as on a trip.
         return drawTrip(trip, false, run.getId().getDisplayName(), run, planned.plantedIn,
-                List.of(planned.seeds), state, planner, inputs, planFor);
+                state, planner, inputs, planFor);
     }
 
     // --- Planning a trip -----------------------------------------------------
@@ -242,7 +251,6 @@ public final class FarmingAdviceBuilder {
         CapabilityResolver resolver = resolvers.computeIfAbsent(planFor, inputs::resolverOn);
 
         List<Itinerary.Planned> planned = new ArrayList<>(merged.size());
-        List<SeedPlan> seeds = new ArrayList<>(merged.size());
         // One map for the whole trip. Patches are globally unique, and the rows are drawn
         // off the merged circuit, where a family is no longer indexable.
         Map<PatchRef, Crop> plantedIn = new HashMap<>();
@@ -266,7 +274,6 @@ public final class FarmingAdviceBuilder {
         }
         for (RunPlanning.RunPlan run : runs) {
             planned.add(run.forTrip());
-            seeds.add(run.seeds);
             plantedIn.putAll(run.plantedIn);
         }
 
@@ -281,7 +288,7 @@ public final class FarmingAdviceBuilder {
                 CloakToTheRings.bushesBeforeTheFirstRing(Itinerary.merge(planned, state), resolver, state), inputs), planner, state);
         // The respawn suggestion follows the family the ranking puts first, as the trip walks it.
         FarmingRun respawnFor = merged.get(sorted.indexOf(due.get(0))).getRun();
-        return drawTrip(trip, true, runName, respawnFor, plantedIn, seeds, state, planner, inputs, planFor);
+        return drawTrip(trip, true, runName, respawnFor, plantedIn, state, planner, inputs, planFor);
     }
 
     /**
@@ -296,7 +303,7 @@ public final class FarmingAdviceBuilder {
      */
     private static FarmingAdvice drawTrip(Itinerary.Trip planned, boolean merged,
             String runName, FarmingRun respawnFor, Map<PatchRef, Crop> plantedIn,
-            List<SeedPlan> seeds, PlayerState state, RunPlanner planner, FarmingInputs inputs, Spellbook planFor) {
+            PlayerState state, RunPlanner planner, FarmingInputs inputs, Spellbook planFor) {
         Itinerary.Trip trip = StopSkipRules.pickFruitOnlyInPassing(planned, inputs, planner, state);
         CapabilityResolver resolver = planner.resolver();
         // claimed holds the cooldown teleports the rows so far send the player by, and
@@ -381,8 +388,8 @@ public final class FarmingAdviceBuilder {
         List<SlotAdvice> loadout = LoadoutPlanner.plan(state, CarryPlanner.staffWielded(plans, state, resolver),
                 teleportsByExplorersRing(plans), basket == CarryPlanner.BasketPlace.BACK);
         WithdrawalPlanner.Withdrawals withdrawals = WithdrawalPlanner.forBankStops(bag, made,
-                plans, cropFor, seeds, state, resolver, inputs, underway);
-        List<FarmingCarryItem> carry = CarryPlanner.plan(plans, seeds, cropFor, state, resolver, inputs);
+                plans, cropFor, state, resolver, inputs, underway);
+        List<FarmingCarryItem> carry = CarryPlanner.plan(plans, cropFor, state, resolver, inputs);
         int fertileAsh = FertileSoil.inUse(inputs.getPreferences(), state, resolver.getBook())
                 ? FertileSoil.castsFor(plans, cropFor) * FertileSoil.ASH_PER_CAST : 0;
         return FarmingAdvice.builder().runName(runName).tripRuns(tripRuns).fertileAsh(fertileAsh)
@@ -620,16 +627,11 @@ public final class FarmingAdviceBuilder {
      * the most patches for this player, not by the book the default route prefers.
      *
      * <p>A preview book picks the variant written for it outright.
-     */
-    static RunVariants.Choice variantFor(RunId id, PlayerState state, FarmingInputs inputs) {
-        return variantFor(id, state, inputs, RunVariants.newResolverCache());
-    }
-
-    /**
+     *
      * @param resolvers one resolver per book, shared across calls because building them is
      *                  the expensive half of the answer
      */
-    private static RunVariants.Choice variantFor(RunId id, PlayerState state,
+    static RunVariants.Choice variantFor(RunId id, PlayerState state,
             FarmingInputs inputs, Map<Spellbook, CapabilityResolver> resolvers) {
         List<FarmingRun> variants = FarmingCatalogue.runsById().getOrDefault(id, List.of());
         if (variants.isEmpty()) {
@@ -681,13 +683,8 @@ public final class FarmingAdviceBuilder {
             rows.set(row, rows.get(row).toBuilder().leprechaun(LeprechaunPlanner.sentence(leave.getValue())).build());
         }
         if (underway && !made.isEmpty()) {
-            List<StopPlan> here = new ArrayList<>();
-            List<List<Crop>> plantedHere = new ArrayList<>();
-            for (int index : made.get(0)) {
-                here.add(plans.get(index));
-                plantedHere.add(cropFor.get(index));
-            }
-            String missing = MissingItems.at(here, plantedHere, LeprechaunPlanner.hasLeprechaun(made.get(0), plans),
+            List<StopPlan> here = StopPlan.pick(plans, made.get(0));
+            String missing = MissingItems.at(here, StopPlan.pick(cropFor, made.get(0)), LeprechaunPlanner.hasLeprechaun(made.get(0), plans),
                     bankBefore(bag, here), state, resolver, inputs);
             if (!missing.isEmpty()) {
                 int row = rowOf.get(0);

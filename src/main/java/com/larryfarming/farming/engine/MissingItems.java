@@ -55,7 +55,7 @@ final class MissingItems {
         List<StopPlan> standingThere = here.stream().map(CarryPlanner::withoutTravel).collect(Collectors.toList());
         List<FarmingCarryItem> missing = new ArrayList<>();
         List<FarmingCarryItem> tooFew = new ArrayList<>();
-        for (FarmingCarryItem line : CarryPlanner.plan(standingThere, List.of(), plantedHere, state, resolver, inputs)) {
+        for (FarmingCarryItem line : CarryPlanner.plan(standingThere, plantedHere, state, resolver, inputs)) {
             boolean needed = line.getKind() == FarmingCarryItem.Kind.SEED || NEEDED.contains(line.getItemId());
             boolean away = line.getAvailability() == FarmingCarryItem.Availability.BANKED || (!leprechaun
                             && line.getAvailability() == FarmingCarryItem.Availability.AT_LEPRECHAUN);

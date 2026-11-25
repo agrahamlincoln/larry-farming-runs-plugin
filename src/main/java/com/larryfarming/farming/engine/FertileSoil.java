@@ -60,14 +60,10 @@ final class FertileSoil {
     /**
      * One cast for every patch planted at a stop that composts. So the limpwurt patch, which
      * takes no compost, costs nothing.
-     * Zero when {@code cropFor} is null, as it is for a bag planned without the patches.
      *
      * @param cropFor what each stop is planting, index-aligned with {@code plans}
      */
     static int castsFor(List<StopPlan> plans, List<List<Crop>> cropFor) {
-        if (cropFor == null) {
-            return 0;
-        }
         int casts = 0;
         for (int i = 0; i < plans.size() && i < cropFor.size(); i++) {
             if (composts(plans.get(i))) {

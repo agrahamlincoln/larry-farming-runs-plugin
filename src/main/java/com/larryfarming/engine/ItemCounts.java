@@ -31,9 +31,8 @@ public final class ItemCounts {
         if (state == null || itemId == 0) {
             return 0;
         }
-        SideContainerCounts side = sideContainerCounts(state, itemId);
         return countIn(state.getInventory(), itemId) + countItemInStorage(state.getEquipment().values(), itemId)
-                + countIn(state.getBank(), itemId) + side.carried + side.banked + side.stored;
+                + countIn(state.getBank(), itemId) + sideContainerCount(state, itemId, false);
     }
 
     /**
@@ -46,7 +45,7 @@ public final class ItemCounts {
             return 0;
         }
         return countIn(state.getInventory(), itemId) + countItemInStorage(state.getEquipment().values(), itemId)
-                + sideContainerCounts(state, itemId).carried;
+                + sideContainerCount(state, itemId, true);
     }
 
     /**
@@ -106,28 +105,16 @@ public final class ItemCounts {
     // ---------------------------------------------------------------
 
     /**
-     * One item's holdings across every side container, split by where the count belongs.
-     * The buckets are exclusive, so an owned total never double-counts.
+     * One item's holdings across every side container: only the carried bucket when
+     * {@code carriedOnly}, otherwise all three buckets. The buckets are exclusive, so an owned
+     * total never double-counts.
      */
-    @Value
-    private static class SideContainerCounts {
-        /** Held in a container that travels, and that container is in the inventory. */
-        int carried;
-        /** Held in a container that travels, and that container is in the bank. */
-        int banked;
-        /** Held in storage the player owns and must travel to before use. */
-        int stored;
-
-        static final SideContainerCounts NONE = new SideContainerCounts(0, 0, 0);
-
-        static SideContainerCounts of(int carried, int banked, int stored) {
-            return (carried | banked | stored) == 0 ? NONE : new SideContainerCounts(carried, banked, stored);
-        }
-    }
-
-    private static SideContainerCounts sideContainerCounts(PlayerState state, int itemId) {
+    private static int sideContainerCount(PlayerState state, int itemId, boolean carriedOnly) {
+        // Held in a container that travels, and that container is in the inventory.
         int carried = 0;
+        // Held in a container that travels, and that container is in the bank.
         int banked = 0;
+        // Held in storage the player owns and must travel to before use.
         int stored = 0;
 
         int pouched = runePouchQuantity(state, itemId);
@@ -158,7 +145,7 @@ public final class ItemCounts {
 
         stored += countItemInStorage(state.getSeedVault(), itemId) + countInLeprechaunStorage(state, itemId);
 
-        return SideContainerCounts.of(carried, banked, stored);
+        return carriedOnly ? carried : carried + banked + stored;
     }
 
     private static int runePouchQuantity(PlayerState state, int itemId) {

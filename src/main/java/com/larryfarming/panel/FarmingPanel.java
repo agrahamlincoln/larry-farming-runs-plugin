@@ -119,9 +119,17 @@ public class FarmingPanel extends StretchPanel
 	private final JLabel stopsHeading;
 	private final JPanel stopsContainer;
 
-	/** Gear worth earning, shown only between runs, when there is time to act on it. */
+	/**
+	 * What to work toward, shown only between runs, when there is time to act on it: the
+	 * first {@link #GOALS_SHOWN} goals, then the rest up to {@link #GOALS_LISTED} in a shut
+	 * fold. Past that the heading counts what it leaves out.
+	 */
 	private final JLabel goalsHeading;
 	private final GearList goalsList;
+	private final Fold moreGoals;
+	private final GearList moreGoalsList;
+	static final int GOALS_SHOWN = 5;
+	static final int GOALS_LISTED = 10;
 
 	/**
 	 * The runs list: the panel's main content on a day with nothing due, and inside the
@@ -212,7 +220,6 @@ public class FarmingPanel extends StretchPanel
 		setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
 		titleLabel = PanelText.label("", FontManager.getRunescapeBoldFont(), Color.WHITE);
-		titleLabel.setAlignmentX(LEFT_ALIGNMENT);
 
 		brandHeader = new BrandHeader();
 		loggedOutCard = new LoggedOutCard();
@@ -235,7 +242,6 @@ public class FarmingPanel extends StretchPanel
 		herbNote = note(COLOR_UNCERTAIN, BorderFactory.createEmptyBorder(4, 0, 0, 0));
 
 		nextRunLabel = PanelText.label("", FontManager.getRunescapeFont(), Color.WHITE);
-		nextRunLabel.setAlignmentX(LEFT_ALIGNMENT);
 		nextRunLabel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
 
 		// Each heading carries the gap above its section, so hiding a section hides its
@@ -257,7 +263,7 @@ public class FarmingPanel extends StretchPanel
 		carryView = new CarryView();
 		laterContainer = PanelText.stack();
 		wearHeading = sectionHeading("Wear");
-		wearList = new GearList(FarmingUpgrade.Kind.EQUIP);
+		wearList = new GearList(FarmingUpgrade.Kind.EQUIP, 0, Integer.MAX_VALUE);
 
 		nowHeading = sectionHeading("First stop");
 		nowContainer = PanelText.stack();
@@ -265,7 +271,11 @@ public class FarmingPanel extends StretchPanel
 		stopsContainer = PanelColors.container(new JPanel());
 
 		goalsHeading = sectionHeading("Between runs");
-		goalsList = new GearList(FarmingUpgrade.Kind.GOAL);
+		goalsList = new GearList(FarmingUpgrade.Kind.GOAL, 0, GOALS_SHOWN);
+		moreGoals = new Fold("");
+		moreGoalsList = new GearList(FarmingUpgrade.Kind.GOAL, GOALS_SHOWN, GOALS_LISTED);
+		moreGoals.content().add(moreGoalsList);
+		moreGoals.setVisible(false);
 
 		runsList = new RunsListView(sectionHeading("Runs"), PanelColors.container(new JPanel()), this::sendSetting, () ->
 		{
@@ -332,6 +342,7 @@ public class FarmingPanel extends StretchPanel
 		add(stopsContainer);
 		add(goalsHeading);
 		add(goalsList);
+		add(moreGoals);
 		add(settingsFold);
 	}
 
@@ -370,6 +381,12 @@ public class FarmingPanel extends StretchPanel
 	public void restoreHouseOpen(boolean open, Consumer<Boolean> callback)
 	{
 		house.restore(open, callback);
+	}
+
+	/** Restores the open state of the fold holding the goals past the first few. */
+	public void restoreMoreGoalsOpen(boolean open, Consumer<Boolean> callback)
+	{
+		moreGoals.restore(open, callback);
 	}
 
 	/**
@@ -429,7 +446,6 @@ public class FarmingPanel extends StretchPanel
 		box.setForeground(PanelColors.HEADER);
 		box.setOpaque(false);
 		box.setFocusPainted(false);
-		box.setAlignmentX(LEFT_ALIGNMENT);
 		box.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 		box.setBorder(BorderFactory.createEmptyBorder(top, 0, 0, 0));
 		return box;
@@ -479,6 +495,7 @@ public class FarmingPanel extends StretchPanel
 			laterContainer.removeAll();
 			wearList.rebuild(null, icons, 0);
 			goalsList.rebuild(null, icons, 0);
+			moreGoalsList.rebuild(null, icons, 0);
 			titleLabel.setVisible(false);
 			loggedOutCard.setVisible(true);
 			brandHeader.showMood(BrandHeader.DESCRIPTOR, null);
@@ -660,8 +677,18 @@ public class FarmingPanel extends StretchPanel
 
 		boolean wear = wearList.rebuild(phase == Phase.PACKING ? advice.getUpgrades() : null, icons, width);
 		wearHeading.setVisible(wear);
-		boolean goals = goalsList.rebuild(idle ? advice.getUpgrades() : null, icons, width);
+		List<FarmingUpgrade> goalRows = idle ? advice.getUpgrades() : null;
+		boolean goals = goalsList.rebuild(goalRows, icons, width);
 		goalsHeading.setVisible(goals);
+		long found = PanelText.listOf(goalRows).stream().filter(upgrade -> upgrade.getKind() == FarmingUpgrade.Kind.GOAL).count();
+		goalsHeading.setText(sectionLabel(found > GOALS_LISTED ? "Between runs · top " + GOALS_LISTED + " of " + found : "Between runs"));
+		boolean more = moreGoalsList.rebuild(goalRows, icons, Math.max(0, width - moreGoals.content().getInsets().left));
+		moreGoals.setVisible(more);
+		if (more)
+		{
+			long rest = Math.min(found, GOALS_LISTED) - GOALS_SHOWN;
+			moreGoals.setHeader(rest + (rest == 1 ? " more goal" : " more goals"), PanelColors.HEADER);
+		}
 
 		// Inside the settings fold the list sits behind the fold content's left inset.
 		int runsWidth = idle || width == 0 ? width : Math.max(0, width - settingsFold.content().getInsets().left);
@@ -753,6 +780,7 @@ public class FarmingPanel extends StretchPanel
 		wearList.setVisible(packing && wearList.isVisible());
 		goalsHeading.setVisible(idle && goalsHeading.isVisible());
 		goalsList.setVisible(idle && goalsList.isVisible());
+		moreGoals.setVisible(idle && moreGoals.isVisible());
 		settingsFold.setVisible(any);
 		if (!any)
 		{
@@ -895,7 +923,7 @@ public class FarmingPanel extends StretchPanel
 		for (FarmingCarryItem item : items)
 		{
 			ItemSquare cell = ItemSquare.of(item, icons, true);
-			cell.setBorder(due ? BorderFactory.createLineBorder(CarryView.COLOR_TO_WITHDRAW) : BorderFactory.createEmptyBorder(1, 1, 1, 1));
+			cell.setBorder(due ? CarryView.TO_WITHDRAW_BORDER : SettingSquare.PLAIN_BORDER);
 			cell.setToolTipText(CarryView.label(item));
 			squares.add(cell);
 		}
@@ -1279,7 +1307,6 @@ public class FarmingPanel extends StretchPanel
 	private static JLabel cropIcon(FarmingPlantAdvice plant, IconProvider icons)
 	{
 		JLabel icon = new JLabel(icons == null ? null : icons.getInventoryIcon(plant.getProduceItemId(), true));
-		icon.setAlignmentX(LEFT_ALIGNMENT);
 		icon.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 		icon.setToolTipText(plant.getName());
 		return icon;
@@ -1296,7 +1323,7 @@ public class FarmingPanel extends StretchPanel
 		{
 			// Cropped to the art: a lone icon needs no shared scale, and a tablet needs
 			// every pixel at this size.
-			return icons.getGearIcon(stop.getTravelItemId(), TRAVEL_ICON, true, true);
+			return icons.getGearIcon(stop.getTravelItemId(), TRAVEL_ICON, true);
 		}
 		return icons.getSpriteIcon(stop.getTravelSpriteId(), TRAVEL_ICON);
 	}

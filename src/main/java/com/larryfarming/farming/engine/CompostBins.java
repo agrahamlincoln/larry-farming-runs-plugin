@@ -407,7 +407,7 @@ final class CompostBins {
                 continue;
             }
             PatchPrediction seen = inputs.patchAt(plan.getStop().primaryPatch());
-            if (PatchWork.at(seen, plan.getStop(), inputs.getPreferences(), inputs.getNowEpochSec()) == PatchWork.Act.HARVEST) {
+            if (PatchWork.at(seen, plan.getStop(), inputs) == PatchWork.Act.HARVEST) {
                 boolean high = CropData.forCrop(seen.getCrop()).getFarmingLevel() >= SUPERCOMPOSTABLE_LEVEL;
                 (high ? supers : plain).add(index);
                 onlyTomatoes &= seen.getCrop() == Crop.TOMATO;

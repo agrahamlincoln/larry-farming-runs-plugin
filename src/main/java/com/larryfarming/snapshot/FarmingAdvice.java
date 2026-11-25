@@ -41,7 +41,7 @@ public class FarmingAdvice {
     /** The trip stop by stop, in the order it is walked. Derive stop counts from this list. */
     List<FarmingStopAdvice> stops;
 
-    /** Gear to put on now, then gear to work toward. Already grouped and ordered. */
+    /** Gear to put on now, then what to work toward between runs. Already grouped and ordered. */
     List<FarmingUpgrade> upgrades;
 
     /** What to have in the bag: tools, seeds, and what the chosen routes need. */

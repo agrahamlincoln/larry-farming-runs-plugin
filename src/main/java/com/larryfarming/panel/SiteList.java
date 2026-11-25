@@ -83,7 +83,6 @@ final class SiteList extends JPanel
 	static JLabel caption(String text, int gapAbove)
 	{
 		JLabel caption = PanelText.label(text, PanelColors.HEADER);
-		caption.setAlignmentX(LEFT_ALIGNMENT);
 		caption.setBorder(BorderFactory.createEmptyBorder(gapAbove, 2, 3, 0));
 		return caption;
 	}
@@ -143,7 +142,6 @@ final class SiteList extends JPanel
 		label.setForeground(text);
 		label.setIconTextGap(like.getIconTextGap());
 		label.setBorder(like.getBorder());
-		label.setAlignmentX(Component.LEFT_ALIGNMENT);
 		return label;
 	}
 

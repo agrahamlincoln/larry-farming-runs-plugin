@@ -9,7 +9,7 @@ import lombok.Value;
  *
  * <p>Shaped like a travel chain: gear comes as ordered fallbacks, such as
  * "Max cape → Farming cape → Ardougne cloak". A player wears the best tier they have
- * reached. The panel shows every tier so the player can see the next upgrade.
+ * reached.
  */
 @Value
 public class LoadoutSlot {
@@ -20,8 +20,8 @@ public class LoadoutSlot {
     List<GearPick> tiers;
 
     /**
-     * True when leaving the slot empty costs only convenience: a missing cape costs a
-     * walk, while missing magic secateurs cost yield on every patch they work on.
+     * True when leaving the slot empty costs only convenience, as a log basket left unworn
+     * costs an inventory slot.
      */
     boolean niceToHave;
 
@@ -44,13 +44,4 @@ public class LoadoutSlot {
      * for the item's name mid-sentence: "Wear your %s to save an inventory slot."
      */
     String tip;
-
-    /**
-     * The tier to work toward while none is owned. The cheapest rung by default, since it
-     * is the one within reach.
-     */
-    GearPick goal;
-
-    /** The whole sentence for the goal row: "Earn Ardougne cloak 2 for …". */
-    String goalSentence;
 }

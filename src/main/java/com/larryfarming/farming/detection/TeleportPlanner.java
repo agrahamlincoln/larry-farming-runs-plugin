@@ -200,22 +200,8 @@ public final class TeleportPlanner {
      * UNKNOWN.
      */
     private static Choice locked(TeleportMeans means, PlayerState state) {
-        int magic = state.getSkillLevel(Skill.MAGIC);
-        if (magic < means.getMagicLevel()) {
-            return new Choice(means, CapabilityState.LACK, means.getDisplayName() + " needs " + means.getMagicLevel()
-                            + " Magic and you have " + magic);
-        }
-        if (means.getQuestName() != null) {
-            QuestStatus status = state.getQuests().get(means.getQuestName());
-            if (status == null) {
-                return new Choice(means, CapabilityState.UNKNOWN, "not sure whether you have finished " + means.getQuestName()
-                                + ", which " + means.getDisplayName() + " needs");
-            }
-            if (status != QuestStatus.COMPLETED) {
-                return new Choice(means, CapabilityState.LACK, means.getDisplayName() + " needs " + means.getQuestName());
-            }
-        }
-        return null;
+        CapabilityVerdict barred = CapabilitySources.spellBarred(means.getDisplayName(), means.getMagicLevel(), means.getQuestName(), state);
+        return barred == null ? null : new Choice(means, barred.getState(), barred.getBecause());
     }
 
     /** The first rune the player owns too few of for one cast, or null when none is short. */

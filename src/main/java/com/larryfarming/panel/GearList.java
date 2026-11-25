@@ -8,9 +8,10 @@ import javax.swing.*;
 import net.runelite.client.ui.ColorScheme;
 
 /**
- * One kind of farm-run gear advice as a boxed list: the gear to put on before setting off
- * ({@link FarmingUpgrade.Kind#EQUIP}), or the gear worth earning between runs
- * ({@link FarmingUpgrade.Kind#GOAL}). Hides itself when it has no rows.
+ * One kind of farm-run advice as a boxed list: the gear to put on before setting off
+ * ({@link FarmingUpgrade.Kind#EQUIP}), or what to work toward between runs
+ * ({@link FarmingUpgrade.Kind#GOAL}). Draws one stretch of that kind's rows, so the goals
+ * can split across the list and a fold. Hides itself when it has no rows.
  */
 class GearList extends StretchPanel
 {
@@ -19,10 +20,15 @@ class GearList extends StretchPanel
 	private static final Color COLOR_EQUIP = ColorScheme.BRAND_ORANGE;
 
 	private final FarmingUpgrade.Kind kind;
+	/** The first row of the kind this list draws, and the row after its last. */
+	private final int from;
+	private final int to;
 
-	GearList(FarmingUpgrade.Kind kind)
+	GearList(FarmingUpgrade.Kind kind, int from, int to)
 	{
 		this.kind = kind;
+		this.from = from;
+		this.to = to;
 		PanelColors.container(this);
 		setVisible(false);
 	}
@@ -38,7 +44,7 @@ class GearList extends StretchPanel
 	{
 		removeAll();
 		List<FarmingUpgrade> rows = PanelText.listOf(upgrades).stream().filter(upgrade -> upgrade.getKind() == kind)
-			.collect(Collectors.toList());
+			.skip(from).limit(to - from).collect(Collectors.toList());
 		setVisible(!rows.isEmpty());
 		boolean divider = false;
 		for (FarmingUpgrade upgrade : rows)
@@ -61,9 +67,11 @@ class GearList extends StretchPanel
 		JPanel row = PanelText.panel(new GridBagLayout());
 		row.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 4));
 
-		// Colour if owned, grey if not.
-		ImageIcon sprite = icons != null && upgrade.getItemId() > 0
-			? icons.getGearIcon(upgrade.getItemId(), ROW_ICON, equip, false) : null;
+		// In colour either way: grey means impossible, and a goal is within reach. An item is
+		// cropped to its art, which sits small in its inventory-sized box.
+		int id = upgrade.getItemId();
+		ImageIcon sprite = icons == null ? null
+			: id < 0 ? icons.getSpriteIcon(-id, ROW_ICON) : id > 0 ? icons.getGearIcon(id, ROW_ICON, true) : null;
 		// The engine words the whole sentence, so the row adds nothing to it.
 		PanelText.addIconAndFill(row, GridBagConstraints.CENTER, sprite, 5,
 			PanelText.small(upgrade.getDetail(), equip ? COLOR_EQUIP : PanelColors.HEADER));

@@ -155,7 +155,7 @@ final class InventoryDemands {
     private static void collectProduce(RunStop stop, FarmingInputs inputs, Set<Crop> produce) {
         for (PatchRef ref : stop.getPatches()) {
             PatchPrediction seen = inputs.patchAt(ref);
-            PatchWork.Act act = PatchWork.at(seen, stop, inputs.getPreferences(), inputs.getNowEpochSec());
+            PatchWork.Act act = PatchWork.at(seen, stop, inputs);
             // A check where the stop also picks fills the plant at once: a bush, cactus or
             // fruit tree bears its full load the moment it is checked.
             boolean picked = act == PatchWork.Act.HARVEST || (act == PatchWork.Act.CHECK

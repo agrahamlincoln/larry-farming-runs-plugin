@@ -21,16 +21,7 @@ public enum CapabilityState {
      * else is unknown. Empty yields LACK.
      */
     public static CapabilityState any(Collection<CapabilityState> states) {
-        boolean sawUnknown = false;
-        for (CapabilityState state : states) {
-            if (state == HAVE) {
-                return HAVE;
-            }
-            if (state == UNKNOWN) {
-                sawUnknown = true;
-            }
-        }
-        return sawUnknown ? UNKNOWN : LACK;
+        return states.contains(HAVE) ? HAVE : states.contains(UNKNOWN) ? UNKNOWN : LACK;
     }
 
     /**
@@ -39,15 +30,6 @@ public enum CapabilityState {
      * nothing is available to everyone.
      */
     public static CapabilityState all(Collection<CapabilityState> states) {
-        boolean sawUnknown = false;
-        for (CapabilityState state : states) {
-            if (state == LACK) {
-                return LACK;
-            }
-            if (state == UNKNOWN) {
-                sawUnknown = true;
-            }
-        }
-        return sawUnknown ? UNKNOWN : HAVE;
+        return states.contains(LACK) ? LACK : states.contains(UNKNOWN) ? UNKNOWN : HAVE;
     }
 }

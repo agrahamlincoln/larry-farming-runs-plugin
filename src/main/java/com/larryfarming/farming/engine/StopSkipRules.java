@@ -120,7 +120,7 @@ final class StopSkipRules {
      */
     private static boolean anythingToDoAt(RunStop stop, FarmingInputs inputs) {
         return stop.getPatches().stream()
-                .anyMatch(ref -> PatchWork.at(inputs.patchAt(ref), stop, inputs.getPreferences(), inputs.getNowEpochSec()) != null);
+                .anyMatch(ref -> PatchWork.at(inputs.patchAt(ref), stop, inputs) != null);
     }
 
     /**
@@ -207,7 +207,7 @@ final class StopSkipRules {
         }
         // A standing crop that does not regrow: a white lily picked for a flower patch. A
         // guard flower stands while it lives, so standsEmpty decides.
-        return PatchWork.standsEmpty(seen, stop, inputs.getPreferences(), inputs.getNowEpochSec()) ? null : seen.getCrop();
+        return PatchWork.standsEmpty(seen, stop, inputs) ? null : seen.getCrop();
     }
 
     /**
@@ -272,7 +272,7 @@ final class StopSkipRules {
         }
         boolean anythingToPick = false;
         for (PatchRef ref : plan.getStop().getPatches()) {
-            PatchWork.Act act = PatchWork.at(inputs.patchAt(ref), plan.getStop(), inputs.getPreferences(), inputs.getNowEpochSec());
+            PatchWork.Act act = PatchWork.at(inputs.patchAt(ref), plan.getStop(), inputs);
             if (act == null) {
                 continue;
             }
@@ -300,7 +300,7 @@ final class StopSkipRules {
 
     private static boolean everyPatchStandsEmpty(RunStop stop, FarmingInputs inputs) {
         for (PatchRef ref : stop.getPatches()) {
-            if (!PatchWork.standsEmpty(inputs.patchAt(ref), stop, inputs.getPreferences(), inputs.getNowEpochSec())) {
+            if (!PatchWork.standsEmpty(inputs.patchAt(ref), stop, inputs)) {
                 return false;
             }
         }

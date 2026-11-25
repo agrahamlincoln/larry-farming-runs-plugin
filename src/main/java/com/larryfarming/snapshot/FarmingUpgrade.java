@@ -3,9 +3,9 @@ package com.larryfarming.snapshot;
 import lombok.Value;
 
 /**
- * One line of the gear list: something to put on now, or something to work toward.
+ * One line of advice: gear to put on now, or something to work toward between runs.
  *
- * <p>Already reduced to a row: four outfit slots the player has none of are one line here.
+ * <p>Already reduced to a row: four outfit slots are one line here.
  */
 @Value
 public class FarmingUpgrade {
@@ -14,21 +14,22 @@ public class FarmingUpgrade {
     public enum Kind {
         /** Owned, not on. The only kind that can be acted on before setting off. */
         EQUIP,
-        /** Not owned yet. Shown so the next upgrade is visible, not as a task. */
+        /** A quest, diary tier, level, house build or item that would improve a run. */
         GOAL
     }
 
     Kind kind;
 
-    /** The sprite for the row. */
+    /** The row's item sprite, or minus an interface sprite's id, such as a spell's. */
     int itemId;
 
-    /** The thing itself: "Farming cape", "Farmer's outfit". */
+    /** The thing itself: "Farming cape", "Farmer's outfit", or a goal's action. */
     String name;
 
     /**
      * The whole sentence the row shows: "Wear your Explorer's ring 2 to save an inventory slot.",
-     * "Earn Ardougne cloak 2 for three teleports a day to the Ardougne patch."
+     * "Finish Plague City, then use Ardougne Teleport on your runs. Opens the Ardougne Monastery
+     * bush patch on the herb run."
      */
     String detail;
 }

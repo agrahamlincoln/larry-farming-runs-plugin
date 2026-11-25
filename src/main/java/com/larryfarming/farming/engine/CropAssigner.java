@@ -428,13 +428,13 @@ final class CropAssigner {
      *
      * <p>A fruit tree bears again and again, so felling it is a loss, unless the player
      * replants grown trees for the health check. A lumber tree pays out once, at its health
-     * check. Regrow tells them apart, as in {@link RunStop.StopAction#defaultsFor}.
+     * check. Regrow tells them apart.
      */
     private static boolean keepsGiving(Crop crop) {
         return crop != null && crop.getRegrowTickRateMinutes() > 0;
     }
 
-    private static boolean diseased(PatchRef patch, FarmingInputs inputs) {
+    static boolean diseased(PatchRef patch, FarmingInputs inputs) {
         PatchPrediction seen = inputs.patchAt(patch);
         return seen != null && seen.getState() == CropState.DISEASED;
     }

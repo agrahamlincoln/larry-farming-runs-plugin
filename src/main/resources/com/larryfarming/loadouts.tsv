@@ -2,71 +2,66 @@
 # fallbacks, best first. The first cell names the kind of row, which fixes its columns:
 #
 # slot	key	equipment slot	tip (%s is the gear's name)	nice to have	must wear	part of
-# tier	key	name	benefit	item ids	ItemID names
-# form	key	name	benefit	item ids	ItemID names
-# goal	key	form name	sentence
+# tier	key	name	item ids	ItemID names
+# form	key	name	item ids	ItemID names
 #
-# A tier with no ids is any one of the forms listed before it. A goal names the form a
-# player without the slot's gear is told to earn; without one, they are told to earn the
-# last tier. nice to have and must wear are yes or -; part of groups slots under one name.
+# A tier with no ids is any one of the forms listed before it. nice to have and must wear
+# are yes or -; part of groups slots under one name. Gear the player owns none of earns no
+# row; goals.tsv names the gear worth working toward.
 #
 # The slots come in the order the panel shows them. The staff shows only on a run that needs
-# one; the log basket takes the cape slot when worn.
-
-# Wiki "Magic secateurs": herbs, allotments, bushes and more, but not seaweed or cacti. The
-# benefit names the three a farm run sees most. They raise yield from the inventory as well
-# as the hand, so owned ones go on the packing list and this slot has no tip: it shows only
-# as a goal for a player without a pair.
-slot	SECATEURS	WEAPON	-	-	-	-
-tier	SECATEURS	Magic secateurs	more herbs, allotment crops and berries	7409	FAIRY_ENCHANTED_SECATEURS
+# one; the log basket takes the cape slot when worn. Magic secateurs work from the
+# inventory, so the packing list names them and they need no slot.
 
 # One tier, not two: the staves open a ring alike, so a ladder would ask a lunar-staff
-# wielder to swap to a dramen staff for nothing. The goal names the dramen staff, which Lost
-# City makes and which comes long before Lunar Diplomacy. A ring needs the staff wielded
-# unless the elite Lumbridge & Draynor diary is done.
+# wielder to swap to a dramen staff for nothing. A ring needs the staff wielded unless the
+# elite Lumbridge & Draynor diary is done.
 slot	STAFF	WEAPON	Wield your %s to use fairy rings.	-	yes	-
-form	STAFF	Dramen staff	fairy rings	772	DRAMEN_STAFF
-form	STAFF	Lunar staff	fairy rings	9084	LUNAR_MOONCLAN_LIMINAL_STAFF
-tier	STAFF	Dramen or lunar staff	fairy rings	-	-
-goal	STAFF	Dramen staff	Make a dramen staff in Lost City to use fairy rings.
+form	STAFF	Dramen staff	772	DRAMEN_STAFF
+form	STAFF	Lunar staff	9084	LUNAR_MOONCLAN_LIMINAL_STAFF
+tier	STAFF	Dramen or lunar staff	-	-
 
 # Only the max cape itself, inventory and worn, has the Farming cape teleport. Its variants
 # (infernal, fire, god, Ardougne and the rest) keep none of its teleports, and the Ardougne
-# max cape keeps the elite Ardougne cloak's (wiki "Max cape", Variants).
+# max cape keeps the elite Ardougne cloak's (wiki "Max cape", Variants). The Farming cape
+# teleports to the Farming Guild without limit, cloak 4 to the Ardougne patch without limit,
+# cloak 3 five times a day and cloak 2 three times.
 slot	CAPE	CAPE	Wear your %s to save an inventory slot.	-	-	-
-tier	CAPE	Max cape	the Farming cape teleport	13280 13342	SKILLCAPE_MAX SKILLCAPE_MAX_WORN
-tier	CAPE	Farming cape	unlimited teleports to the Farming Guild	9810 9811	SKILLCAPE_FARMING SKILLCAPE_FARMING_TRIMMED
-form	CAPE	Ardougne cloak 4	unlimited teleports to the Ardougne patch	13124	ARDY_CAPE_ELITE
-form	CAPE	Ardougne max cape	unlimited teleports to the Ardougne patch	20760	SKILLCAPE_MAX_ARDY
-tier	CAPE	Ardougne cloak 4	unlimited teleports to the Ardougne patch	-	-
-tier	CAPE	Ardougne cloak 3	five teleports a day to the Ardougne patch	13123	ARDY_CAPE_HARD
-tier	CAPE	Ardougne cloak 2	three teleports a day to the Ardougne patch	13122	ARDY_CAPE_MEDIUM
+tier	CAPE	Max cape	13280 13342	SKILLCAPE_MAX SKILLCAPE_MAX_WORN
+tier	CAPE	Farming cape	9810 9811	SKILLCAPE_FARMING SKILLCAPE_FARMING_TRIMMED
+form	CAPE	Ardougne cloak 4	13124	ARDY_CAPE_ELITE
+form	CAPE	Ardougne max cape	20760	SKILLCAPE_MAX_ARDY
+tier	CAPE	Ardougne cloak 4	-	-
+tier	CAPE	Ardougne cloak 3	13123	ARDY_CAPE_HARD
+tier	CAPE	Ardougne cloak 2	13122	ARDY_CAPE_MEDIUM
 
-# Ring 1 has no teleport, so it has no tier. The slot is dropped on a run that does not
-# teleport by the ring.
+# Ring 1 has no teleport, so it has no tier. Rings 3 and 4 teleport to Falador without
+# limit, ring 2 three times a day. The slot is dropped on a run that does not teleport by
+# the ring.
 slot	RING	RING	Wear your %s to save an inventory slot.	-	-	-
-tier	RING	Explorer's ring 4	unlimited Falador teleports	13128	LUMBRIDGE_RING_ELITE
-tier	RING	Explorer's ring 3	unlimited Falador teleports	13127	LUMBRIDGE_RING_HARD
-tier	RING	Explorer's ring 2	three Falador teleports a day	13126	LUMBRIDGE_RING_MEDIUM
+tier	RING	Explorer's ring 4	13128	LUMBRIDGE_RING_ELITE
+tier	RING	Explorer's ring 3	13127	LUMBRIDGE_RING_HARD
+tier	RING	Explorer's ring 2	13126	LUMBRIDGE_RING_MEDIUM
 
+# The skills necklace teleports to the Farming Guild, Xeric's talisman into Kourend.
 # Excludes the uncharged skills necklace (11113), which teleports nowhere.
 slot	AMULET	AMULET	Wear your %s to save an inventory slot.	yes	-	-
-tier	AMULET	Skills necklace	teleports to the Farming Guild	11105 11107 11109 11111 11968 11970	JEWL_NECKLACE_OF_SKILLS_4 JEWL_NECKLACE_OF_SKILLS_3 JEWL_NECKLACE_OF_SKILLS_2 JEWL_NECKLACE_OF_SKILLS_1 JEWL_NECKLACE_OF_SKILLS_6 JEWL_NECKLACE_OF_SKILLS_5
-tier	AMULET	Xeric's talisman	teleports into Kourend	13393	XERIC_TALISMAN
+tier	AMULET	Skills necklace	11105 11107 11109 11111 11968 11970	JEWL_NECKLACE_OF_SKILLS_4 JEWL_NECKLACE_OF_SKILLS_3 JEWL_NECKLACE_OF_SKILLS_2 JEWL_NECKLACE_OF_SKILLS_1 JEWL_NECKLACE_OF_SKILLS_6 JEWL_NECKLACE_OF_SKILLS_5
+tier	AMULET	Xeric's talisman	13393	XERIC_TALISMAN
 
 # The Farmer's outfit: four slots, one decision, grouped under one name in the panel. Its
 # experience bonus counts only while worn. The farmer's shirt counts the same as the jacket.
 slot	HEAD	HEAD	Wear your %s for more Farming experience.	yes	yes	Farmer's outfit
-tier	HEAD	Farmer's strawhat	Farming experience	13646 13647	TITHE_REWARD_HAT_MALE TITHE_REWARD_HAT_FEMALE
+tier	HEAD	Farmer's strawhat	13646 13647	TITHE_REWARD_HAT_MALE TITHE_REWARD_HAT_FEMALE
 slot	BODY	BODY	Wear your %s for more Farming experience.	yes	yes	Farmer's outfit
-tier	BODY	Farmer's jacket	Farming experience	13642 13643	TITHE_REWARD_TORSO_MALE TITHE_REWARD_TORSO_FEMALE
+tier	BODY	Farmer's jacket	13642 13643	TITHE_REWARD_TORSO_MALE TITHE_REWARD_TORSO_FEMALE
 slot	LEGS	LEGS	Wear your %s for more Farming experience.	yes	yes	Farmer's outfit
-tier	LEGS	Farmer's boro trousers	Farming experience	13640 13641	TITHE_REWARD_LEGS_MALE TITHE_REWARD_LEGS_FEMALE
+tier	LEGS	Farmer's boro trousers	13640 13641	TITHE_REWARD_LEGS_MALE TITHE_REWARD_LEGS_FEMALE
 slot	BOOTS	BOOTS	Wear your %s for more Farming experience.	yes	yes	Farmer's outfit
-tier	BOOTS	Farmer's boots	Farming experience	13644 13645	TITHE_REWARD_FEET_MALE TITHE_REWARD_FEET_FEMALE
+tier	BOOTS	Farmer's boots	13644 13645	TITHE_REWARD_FEET_MALE TITHE_REWARD_FEET_FEMALE
 
-# The log basket, worn in the cape slot (wiki infobox: slot cape). Worn, it costs no
-# inventory slot; carried, it costs the one slot that wearing it frees, so only wearing it
-# counts.
+# The log basket, worn in the cape slot (wiki infobox: slot cape). It holds 28 logs. Worn,
+# it costs no inventory slot; carried, it costs the one slot that wearing it frees, so only
+# wearing it counts.
 slot	LOG_BASKET	CAPE	Wear your %s to save an inventory slot.	yes	yes	-
-tier	LOG_BASKET	Log basket	28 logs without an inventory slot	28140 28142 28143 28145	LOG_BASKET_CLOSED LOG_BASKET_OPEN FORESTRY_BASKET_CLOSED FORESTRY_BASKET_OPEN
+tier	LOG_BASKET	Log basket	28140 28142 28143 28145	LOG_BASKET_CLOSED LOG_BASKET_OPEN FORESTRY_BASKET_CLOSED FORESTRY_BASKET_OPEN

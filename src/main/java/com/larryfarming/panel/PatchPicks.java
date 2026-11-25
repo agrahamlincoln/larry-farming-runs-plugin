@@ -94,12 +94,12 @@ final class PatchPicks extends JPanel
 		}
 		if (icons != null && patch.isComposting())
 		{
-			square.setBadge(icons.getGearIcon(ItemID.BUCKET_COMPOST, BADGE_SIZE, true, true));
+			square.setBadge(icons.getGearIcon(ItemID.BUCKET_COMPOST, BADGE_SIZE, true));
 		}
 		boolean opened = patch.getKey().equals(open);
 		// The patch square summarises the pick, so it takes no green on-outline: gold while
 		// its picker is open, the mark of what is current.
-		square.setBorder(opened ? BorderFactory.createLineBorder(FarmingPanel.COLOR_DUE) : BorderFactory.createEmptyBorder(1, 1, 1, 1));
+		square.setBorder(opened ? BorderFactory.createLineBorder(FarmingPanel.COLOR_DUE) : SettingSquare.PLAIN_BORDER);
 		square.setToolTipText(patch.getTitle() + ": " + picked.getLabel() + (patch.isComposting() ? ", for compost" : ""));
 		PanelText.onLeftClick(square, () -> show(opened ? null : patch.getKey()));
 		return square;

@@ -261,6 +261,7 @@ public class LarryPlugin extends Plugin
 		plannerPersistence.bindFlag(FarmingPlannerPersistence.TRAVEL_OPEN, farmingPanel::restoreTravelOpen);
 		plannerPersistence.bindFlag(FarmingPlannerPersistence.HOUSE_OPEN, farmingPanel::restoreHouseOpen);
 		plannerPersistence.bindFlag(FarmingPlannerPersistence.SETTINGS_OPEN, farmingPanel::restoreSettingsOpen);
+		plannerPersistence.bindFlag(FarmingPlannerPersistence.MORE_GOALS_OPEN, farmingPanel::restoreMoreGoalsOpen);
 
 		// A setting changed in the panel saves to its config key. The save posts a
 		// ConfigChanged, and onConfigChanged re-plans from it.
